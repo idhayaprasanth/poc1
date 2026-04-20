@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 
@@ -105,6 +106,7 @@ AI_ANALYSIS_COLUMNS = [
     "defender_remediation",
     "splunk_remediation",
     "bigfix_remediation",
+    "ai_analysis_source",
 ]
 
 FLOAT_AI_ANALYSIS_COLUMNS = {"risk_score", "anomaly_score"}
@@ -208,7 +210,16 @@ def apply_cached_ai_analysis(df: pd.DataFrame) -> pd.DataFrame:
             continue
         for column in AI_ANALYSIS_COLUMNS:
             df.at[idx, column] = cached.get(column, pd.NA)
-        df.at[idx, "ai_analysis_complete"] = True
+        cached_source = str(cached.get("ai_analysis_source") or "").strip().lower()
+        if not cached_source:
+            # Backward compatibility: infer fallback source from legacy ai_reason text.
+            ai_reason = str(cached.get("ai_reason") or "").strip().lower()
+            if "local fallback assessment used" in ai_reason:
+                cached_source = "local_fallback"
+                df.at[idx, "ai_analysis_source"] = "local_fallback"
+        gemini_key_available = bool((os.getenv("GEMINI_API_KEY") or "").strip())
+        should_retry_with_gemini = cached_source == "local_fallback" and gemini_key_available
+        df.at[idx, "ai_analysis_complete"] = not should_retry_with_gemini
         df.at[idx, "ai_analysis_error"] = pd.NA
     return df
 

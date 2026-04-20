@@ -10,6 +10,7 @@ from security_dashboard.data.datasets import (
 from security_dashboard.services.gemini_base import (
     GeminiRateLimitError,
     _TruncatedResponseError,
+    get_gemini_pause_status,
     _is_truncated_json,
 )
 
@@ -168,6 +169,7 @@ def generate_local_asset_analysis(*, asset_record: dict) -> dict:
         "defender_remediation": str(asset_record.get("threat_fix") or remediation).strip(),
         "splunk_remediation": "Investigate suspicious log activity and validate whether containment is needed.",
         "bigfix_remediation": str(asset_record.get("patch_recommendation") or remediation).strip(),
+        "ai_analysis_source": "local_fallback",
     }
 
 
@@ -255,7 +257,17 @@ class GeminiAnalysisMixin:
             raise ValueError("No asset data provided.")
 
         cached = self._cached_result_for_record(asset_record)
-        if cached:
+        cached_source = str((cached or {}).get("ai_analysis_source") or "").strip().lower()
+        if not cached_source:
+            ai_reason_text = str((cached or {}).get("ai_reason") or "").strip().lower()
+            if "local fallback assessment used" in ai_reason_text:
+                cached_source = "local_fallback"
+        can_retry_cached_fallback = (
+            cached_source == "local_fallback"
+            and self.enabled()
+            and not get_gemini_pause_status().get("active")
+        )
+        if cached and not can_retry_cached_fallback:
             cached_result = self._normalize_scores(cached.copy())
             cached_result.update({
                 "asset_name": str(cached_result.get("asset_name") or asset_record.get("asset_name") or "").strip(),
@@ -265,6 +277,7 @@ class GeminiAnalysisMixin:
                 "priority": str(cached_result.get("priority") or "Monitor"),
                 "asset_bucket": str(cached_result.get("asset_bucket") or "Low Risk"),
                 "risk_level": str(cached_result.get("risk_level") or "Unknown"),
+                "ai_analysis_source": str(cached_result.get("ai_analysis_source") or "cache"),
             })
             return cached_result
 
@@ -277,11 +290,13 @@ class GeminiAnalysisMixin:
         except ValueError:
             # Invalid/partial Gemini JSON should not block dashboard analysis.
             fallback = generate_local_asset_analysis(asset_record=asset_record)
+            fallback["ai_analysis_source"] = "local_fallback"
             persist_ai_analysis_result(asset_record, fallback)
             return fallback
 
         if not isinstance(data, dict):
             fallback = generate_local_asset_analysis(asset_record=asset_record)
+            fallback["ai_analysis_source"] = "local_fallback"
             persist_ai_analysis_result(asset_record, fallback)
             return fallback
 
@@ -297,6 +312,7 @@ class GeminiAnalysisMixin:
             "priority": str(result.get("priority") or "Monitor"),
             "asset_bucket": str(result.get("asset_bucket") or "Low Risk"),
             "risk_level": str(result.get("risk_level") or "Unknown"),
+            "ai_analysis_source": "gemini",
         })
 
         # Service-level persistence keeps Gemini calls idempotent for repeated inputs.
@@ -328,6 +344,7 @@ class GeminiAnalysisMixin:
                     "defender_remediation": str(cached_result.get("defender_remediation") or ""),
                     "splunk_remediation": str(cached_result.get("splunk_remediation") or ""),
                     "bigfix_remediation": str(cached_result.get("bigfix_remediation") or ""),
+                    "ai_analysis_source": str(cached_result.get("ai_analysis_source") or "cache"),
                     "anomaly_score": cached_result.get("anomaly_score"),
                     "risk_score": cached_result.get("risk_score"),
                     "risk_level": str(cached_result.get("risk_level") or "Unknown"),
@@ -373,6 +390,7 @@ class GeminiAnalysisMixin:
                     "defender_remediation": str(result.get("defender_remediation") or ""),
                     "splunk_remediation": str(result.get("splunk_remediation") or ""),
                     "bigfix_remediation": str(result.get("bigfix_remediation") or ""),
+                    "ai_analysis_source": "gemini",
                     "anomaly_score": result.get("anomaly_score"),
                     "risk_score": result.get("risk_score"),
                     "risk_level": str(result.get("risk_level") or "Unknown"),

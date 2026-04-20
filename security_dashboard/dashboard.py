@@ -189,6 +189,7 @@ def apply_local_analysis_fallback(df, pending_mask):
     for idx in df.index[pending_mask]:
         record = df.loc[idx].to_dict()
         ai_row = generate_local_asset_analysis(asset_record=record)
+        ai_row["ai_analysis_source"] = "local_fallback"
         for col in AI_ANALYSIS_COLUMNS:
             value = ai_row.get(col)
             if col in ("risk_score", "anomaly_score"):
@@ -265,6 +266,17 @@ def assign_asset_sections(df):
     mapped_from_bucket = asset_bucket.map(bucket_map)
     mapped_from_risk = risk_level.map(risk_map)
     df["asset_section"] = mapped_from_bucket.fillna(mapped_from_risk)
+
+    # Ensure analyzed rows are always visible in a risk section.
+    risk_scores = pd.to_numeric(df.get("risk_score", pd.Series(index=df.index, dtype="object")), errors="coerce")
+    fallback_from_score = pd.Series(index=df.index, dtype="object")
+    fallback_from_score.loc[risk_scores >= 75] = "high"
+    fallback_from_score.loc[(risk_scores >= 45) & (risk_scores < 75)] = "medium"
+    fallback_from_score.loc[risk_scores < 45] = "low"
+    df.loc[complete_mask, "asset_section"] = (
+        df.loc[complete_mask, "asset_section"].fillna(fallback_from_score.loc[complete_mask])
+    )
+
     df.loc[~complete_mask, "asset_section"] = "pending"
 
     # Debug visibility issues: analyzed rows that did not map to a visible section.
@@ -824,13 +836,13 @@ def update_table(json_data, search, risk_f, sort, date_from, date_to):
     df = assign_asset_sections(df)
     complete_mask = analysis_completion_mask(df)
     failed_mask = analysis_error_mask(df)
-    pending_count = int((~complete_mask & ~failed_mask).sum())
+    pending_count = int((~complete_mask).sum())
     failed_count = int(failed_mask.sum())
 
     sections = []
     for config in ASSET_TABLE_CONFIGS:
         if config["section"] == "pending":
-            section_df = df[(df["asset_section"] == "pending") & ~failed_mask].copy()
+            section_df = df[(df["asset_section"] == "pending")].copy()
         else:
             section_df = df[(df["asset_section"] == config["section"]) & complete_mask].copy()
         sections.append(build_asset_section(config, section_df))
@@ -839,7 +851,7 @@ def update_table(json_data, search, risk_f, sort, date_from, date_to):
     if pending_count:
         children.append(
             html.Div(
-                f"AI analysis is still running for {pending_count} row(s). Pending rows are listed below under Pending Analysis and will move automatically when complete.",
+                f"AI analysis is pending for {pending_count} row(s). Pending rows stay in Pending Analysis until they are successfully analyzed.",
                 style={
                     "padding": "14px 16px",
                     "borderRadius": "12px",
@@ -854,7 +866,7 @@ def update_table(json_data, search, risk_f, sort, date_from, date_to):
     if failed_count:
         children.append(
             html.Div(
-                f"{failed_count} row(s) failed AI analysis and were skipped. Check the terminal output for the full error.",
+                f"{failed_count} row(s) currently have AI analysis errors and remain in Pending Analysis until retried successfully. Check the terminal output for the full error.",
                 style={
                     "padding": "14px 16px",
                     "borderRadius": "12px",
@@ -1003,6 +1015,7 @@ def show_detail(selected_asset, backdrop_click, close_click, json_data):
 
     if pd.notna(row.get("threat_status")):
         children.append(section("AI Analysis", {
+            "Source": row.get("ai_analysis_source", "—"),
             "Threat Decision": row.get("threat_status", "—"),
             "Severity Check": row.get("severity_validation", "—"),
             "Priority": row.get("priority", "—"),
