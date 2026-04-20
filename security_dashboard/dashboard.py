@@ -15,6 +15,7 @@ from security_dashboard.config import get_ai_analysis_batch_size, load_env_file
 from security_dashboard.data.datasets import (
     AI_ANALYSIS_COLUMNS,
     build_merged_dataset,
+    coerce_ai_analysis_complete_series,
     ensure_ai_analysis_columns,
     persist_ai_analysis_result,
 )
@@ -29,14 +30,25 @@ AI_ANALYSIS_BATCH_SIZE = get_ai_analysis_batch_size()
 df_base = build_merged_dataset()
 logger = logging.getLogger(__name__)
 
-# ── Color palette ──
+# ── USWDS 3–aligned palette (light theme; designsystem.digital.gov tokens) ──
 COLORS = {
-    "bg": "#F8F9FA", "card": "#FFFFFF", "border": "#DEE2E6",
-    "primary": "#1A4480", "primary_light": "#E8EDF3",
-    "text": "#1B1B1B", "text_muted": "#6B7280",
-    "high": "#D32F2F", "high_bg": "#FDECEA",
-    "medium": "#ED6C02", "medium_bg": "#FFF4E5",
-    "low": "#2E7D32", "low_bg": "#EDF7ED",
+    "bg": "#f0f0f0",
+    "card": "#ffffff",
+    "border": "#dfe1e2",
+    "primary": "#005ea2",
+    "primary_dark": "#1a4480",
+    "primary_light": "#d9e8f6",
+    "primary_lighter": "#e7f6f8",
+    "text": "#1b1b1b",
+    "text_muted": "#565c65",
+    "high": "#b50909",
+    "high_bg": "#f4e3db",
+    "medium": "#c05600",
+    "medium_bg": "#faf3d1",
+    "low": "#008817",
+    "low_bg": "#ecf3ec",
+    "info_bg": "#e7f6f8",
+    "focus": "#2491ff",
 }
 
 primary_color = COLORS["primary"]
@@ -45,13 +57,22 @@ close_svg_str = close_svg_str.replace('stroke="currentColor"', f'stroke="{primar
 close_encoded = base64.b64encode(close_svg_str.encode('utf-8')).decode('utf-8')
 close_svg = html.Img(src=f"data:image/svg+xml;base64,{close_encoded}", style={"width": "20px", "height": "20px"})
 
-app = Dash(__name__, suppress_callback_exceptions=True)
+app = Dash(
+    __name__,
+    suppress_callback_exceptions=True,
+    external_stylesheets=[
+        "https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap",
+    ],
+)
 app.title = "Unified Security Risk Dashboard"
 
-# ── Styles ──
+# ── Styles (USWDS-style cards: crisp border, minimal shadow) ──
 card_style = {
-    "background": COLORS["card"], "borderRadius": "12px", "padding": "20px",
-    "border": f"1px solid {COLORS['border']}", "boxShadow": "0 1px 3px rgba(0,0,0,0.06)",
+    "background": COLORS["card"],
+    "borderRadius": "4px",
+    "padding": "24px",
+    "border": f"1px solid {COLORS['border']}",
+    "boxShadow": "0 2px 8px rgba(27, 27, 27, 0.06)",
 }
 
 def svg_icon(svg_str, stroke_color, size=20):
@@ -75,24 +96,35 @@ def kpi_card(title, value, color, icon_element):
     return html.Div([
         html.Div(style={"display": "flex", "alignItems": "center", "justifyContent": "space-between", "gap": "14px"}, children=[
             html.Div(children=[
-                html.Div(title, style={"fontSize": "12px", "fontWeight": "600", "color": COLORS["text_muted"]}),
-                html.Div(str(value), style={"fontSize": "30px", "fontWeight": "800", "color": COLORS["text"], "marginTop": "6px"}),
+                html.Div(
+                    title,
+                    style={
+                        "fontSize": "13px",
+                        "fontWeight": "700",
+                        "color": COLORS["text_muted"],
+                        "textTransform": "uppercase",
+                        "letterSpacing": "0.06em",
+                    },
+                ),
+                html.Div(str(value), style={"fontSize": "32px", "fontWeight": "700", "color": COLORS["text"], "marginTop": "8px", "lineHeight": "1.1"}),
             ]),
             html.Div(style={
-                "width": "48px", "height": "48px", "borderRadius": "14px",
+                "width": "48px", "height": "48px", "borderRadius": "4px",
                 "display": "flex", "alignItems": "center", "justifyContent": "center",
-                "background": color + "18",
+                "background": color + "22",
+                "border": f"1px solid {COLORS['border']}",
             }, children=[icon_element]),
         ]),
-    ], style={**card_style, "flex": "1", "minWidth": "180px"})
+    ], style={**card_style, "flex": "1", "minWidth": "200px"})
 
 
 def risk_badge(level):
     c = COLORS.get(level.lower(), COLORS["text_muted"])
-    bg = COLORS.get(f"{level.lower()}_bg", "#f3f4f6")
+    bg = COLORS.get(f"{level.lower()}_bg", COLORS["bg"])
     return html.Span(level, style={
-        "background": bg, "color": c, "padding": "3px 10px",
-        "borderRadius": "12px", "fontSize": "12px", "fontWeight": "600"
+        "background": bg, "color": c, "padding": "4px 10px",
+        "borderRadius": "2px", "fontSize": "12px", "fontWeight": "700",
+        "border": f"1px solid {COLORS['border']}",
     })
 
 def patch_color(status):
@@ -105,7 +137,7 @@ ASSET_TABLE_CONFIGS = [
         "title": "Pending Analysis",
         "section": "pending",
         "accent": COLORS["primary"],
-        "background": COLORS["primary_light"],
+        "background": COLORS["primary_lighter"],
         "empty": "No pending assets match the current filters.",
     },
     {
@@ -137,7 +169,7 @@ ASSET_TABLE_CONFIGS = [
         "title": "All Good Assets",
         "section": "all_good",
         "accent": COLORS["primary"],
-        "background": COLORS["primary_light"],
+        "background": COLORS["primary_lighter"],
         "empty": "No fully healthy assets match the current filters.",
     },
 ]
@@ -153,7 +185,7 @@ def analysis_is_complete(df):
 def analysis_completion_mask(df):
     if "ai_analysis_complete" not in df.columns:
         return pd.Series([False] * len(df), index=df.index, dtype=bool)
-    return df["ai_analysis_complete"].fillna(False).astype(bool)
+    return coerce_ai_analysis_complete_series(df["ai_analysis_complete"])
 
 
 def analysis_error_mask(df):
@@ -235,6 +267,7 @@ def prepare_filtered_assets(df, search, risk_f, sort, date_from, date_to):
 def assign_asset_sections(df):
     df = df.copy()
     complete_mask = analysis_completion_mask(df)
+    pending_analysis_mask = analysis_pending_mask(df)
     asset_bucket = (
         df.get("asset_bucket", pd.Series(index=df.index, dtype="object"))
         .fillna("")
@@ -274,11 +307,13 @@ def assign_asset_sections(df):
     fallback_from_score.loc[risk_scores >= 75] = "high"
     fallback_from_score.loc[(risk_scores >= 45) & (risk_scores < 75)] = "medium"
     fallback_from_score.loc[risk_scores < 45] = "low"
-    df.loc[complete_mask, "asset_section"] = (
-        df.loc[complete_mask, "asset_section"].fillna(fallback_from_score.loc[complete_mask])
+    # Rows not waiting for AI (complete, or failed with error) get a risk bucket for main tables.
+    not_waiting = ~pending_analysis_mask
+    df.loc[not_waiting, "asset_section"] = (
+        df.loc[not_waiting, "asset_section"].fillna(fallback_from_score.loc[not_waiting])
     )
-
-    df.loc[~complete_mask, "asset_section"] = "pending"
+    # Only rows that still need a first successful AI run stay in Pending Analysis.
+    df.loc[pending_analysis_mask, "asset_section"] = "pending"
 
     # Debug visibility issues: analyzed rows that did not map to a visible section.
     unmapped_complete = complete_mask & df["asset_section"].isna()
@@ -320,13 +355,26 @@ def build_asset_table(table_id, df):
         row_selectable="single",
         style_table={"overflowX": "auto"},
         style_header={
-            "backgroundColor": "#F1F5F9", "fontWeight": "600", "fontSize": "12px",
-            "color": COLORS["text_muted"], "border": "none", "padding": "12px 16px",
+            "backgroundColor": COLORS["bg"],
+            "fontWeight": "700",
+            "fontSize": "12px",
+            "textTransform": "uppercase",
+            "letterSpacing": "0.04em",
+            "color": COLORS["text_muted"],
+            "border": "none",
+            "borderBottom": f"2px solid {COLORS['border']}",
+            "padding": "14px 16px",
         },
         style_cell={
-            "fontSize": "13px", "padding": "10px 16px", "border": "none",
-            "borderBottom": f"1px solid {COLORS['border']}", "textAlign": "left",
-            "maxWidth": "180px", "overflow": "hidden", "textOverflow": "ellipsis",
+            "fontSize": "15px",
+            "padding": "12px 16px",
+            "border": "none",
+            "borderBottom": f"1px solid {COLORS['border']}",
+            "textAlign": "left",
+            "maxWidth": "180px",
+            "overflow": "hidden",
+            "textOverflow": "ellipsis",
+            "fontFamily": '"Source Sans 3", "Source Sans Pro", sans-serif',
         },
         style_data_conditional=[
             {"if": {"filter_query": '{Severity} = "Immediate"', "column_id": "priority"}, "color": COLORS["high"], "fontWeight": "600"},
@@ -356,12 +404,12 @@ def build_asset_section(config, df):
                 config["empty"],
                 style={
                     "marginBottom": "12px",
-                    "padding": "12px 14px",
+                    "padding": "14px 16px",
                     "border": f"1px dashed {COLORS['border']}",
-                    "borderRadius": "12px",
+                    "borderRadius": "4px",
                     "color": COLORS["text_muted"],
-                    "fontSize": "13px",
-                    "background": COLORS["card"],
+                    "fontSize": "15px",
+                    "background": COLORS["bg"],
                 },
             )
         )
@@ -376,41 +424,77 @@ def build_asset_section(config, df):
                     "justifyContent": "space-between",
                     "alignItems": "center",
                     "gap": "12px",
-                    "padding": "18px 20px",
+                    "padding": "16px 20px",
                     "background": config["background"],
                     "borderBottom": f"1px solid {COLORS['border']}",
                 },
                 children=[
                     html.Div(
                         [
-                            html.H3(config["title"], style={"margin": 0, "fontSize": "15px", "fontWeight": "700", "color": COLORS["text"]}),
-                            html.Div(f"{count} assets", style={"marginTop": "4px", "fontSize": "12px", "color": COLORS["text_muted"]}),
+                            html.H3(
+                                config["title"],
+                                style={
+                                    "margin": 0,
+                                    "fontSize": "17px",
+                                    "fontWeight": "700",
+                                    "color": COLORS["text"],
+                                    "lineHeight": "1.3",
+                                },
+                            ),
+                            html.Div(
+                                f"{count} assets",
+                                style={"marginTop": "6px", "fontSize": "13px", "color": COLORS["text_muted"]},
+                            ),
                         ]
                     ),
                     html.Div(
                         str(count),
                         style={
-                            "minWidth": "38px",
-                            "height": "38px",
-                            "borderRadius": "999px",
+                            "minWidth": "40px",
+                            "height": "40px",
+                            "borderRadius": "4px",
                             "display": "flex",
                             "alignItems": "center",
                             "justifyContent": "center",
-                            "fontWeight": "800",
-                            "fontSize": "13px",
+                            "fontWeight": "700",
+                            "fontSize": "14px",
                             "color": config["accent"],
                             "background": COLORS["card"],
-                            "border": f"1px solid {config['accent']}33",
+                            "border": f"2px solid {config['accent']}",
                         },
                     ),
                 ],
             ),
-            html.Div(style={"padding": "16px"}, children=body_children),
+            html.Div(style={"padding": "0 16px 16px"}, children=body_children),
         ],
     )
 
 
-app.layout = create_layout(df_base)
+def build_initial_analysis_status_payload():
+    """Match hydrate_dashboard_data status logic so the banner is correct on first paint."""
+    df = ensure_ai_analysis_columns(df_base.copy())
+    pending_count = int(analysis_pending_mask(df).sum())
+    failed_count = int(analysis_error_mask(df).sum())
+    pause = get_gemini_pause_status()
+    if pending_count and pause.get("active"):
+        return {
+            "state": "warning",
+            "message": build_gemini_pause_message(prefix=f"AI analysis is paused with {pending_count} row(s) still pending."),
+        }
+    if pending_count:
+        return {
+            "state": "running",
+            "message": f"Running AI analysis for {pending_count} pending row(s)...",
+        }
+    if failed_count:
+        return {
+            "state": "warning",
+            "message": f"{failed_count} row(s) previously failed AI analysis. Check the terminal logs.",
+        }
+    return {"state": "complete", "message": "AI analysis is up to date."}
+
+
+app.layout = create_layout(df_base, analysis_status_initial=build_initial_analysis_status_payload())
 
 
 # ── Callbacks ──
@@ -491,41 +575,13 @@ def sync_selected_asset(pending_rows, high_rows, medium_rows, low_rows, all_good
 
 
 @callback(
-    Output("merged-data-store", "data", allow_duplicate=True),
-    Output("analysis-status-store", "data", allow_duplicate=True),
-    Input("analysis-bootstrap", "n_intervals"),
-    prevent_initial_call=True,
-)
-def hydrate_dashboard_data(_bootstrap_tick):
-    df = build_merged_dataset()
-    pending_count = int(analysis_pending_mask(df).sum())
-    failed_count = int(analysis_error_mask(df).sum())
-    pause = get_gemini_pause_status()
-
-    if pending_count and pause.get("active"):
-        status = {"state": "warning", "message": build_gemini_pause_message(prefix=f"AI analysis is paused with {pending_count} row(s) still pending.")}
-    elif pending_count:
-        status = {"state": "running", "message": f"Running AI analysis for {pending_count} pending row(s)..."}
-    elif failed_count:
-        status = {"state": "warning", "message": f"{failed_count} row(s) previously failed AI analysis. Check the terminal logs."}
-    else:
-        status = {"state": "complete", "message": "AI analysis is up to date."}
-
-    return df.to_json(date_format="iso", orient="split"), status
-
-
-@callback(
     Output("analysis-request-store", "data"),
     Output("analysis-status-store", "data", allow_duplicate=True),
-    Input("analysis-bootstrap", "n_intervals"),
     Input("merged-data-store", "data"),
-    State("analysis-request-store", "data"),
-    prevent_initial_call=True,
+    Input("analysis-request-store", "data"),
+    prevent_initial_call="initial_duplicate",
 )
-def queue_dashboard_analysis(_bootstrap_tick, json_data, current_request):
-    if ctx.triggered_id == "analysis-bootstrap":
-        return no_update, no_update
-
+def queue_dashboard_analysis(json_data, current_request):
     df = ensure_ai_analysis_columns(pd.read_json(io.StringIO(json_data), orient="split"))
     pause = get_gemini_pause_status()
     pending = analysis_pending_mask(df)
@@ -613,144 +669,159 @@ def run_dashboard_analysis(analysis_request, json_data):
             None,
         )
 
-    batch_indices = list(df.index[pending][:AI_ANALYSIS_BATCH_SIZE])
-    batch_records = [df.loc[idx].to_dict() for idx in batch_indices]
-    batch_assets = [
-        str(record.get("asset_name") or record.get("asset_id") or f"row {idx + 1}")
-        for idx, record in zip(batch_indices, batch_records)
-    ]
-    logger.info(
-        "Starting AI analysis batch for %s row(s): %s",
-        len(batch_indices),
-        ", ".join(batch_assets),
-    )
-    try:
-        batch_result = client.generate_dashboard_analysis(asset_records=batch_records)
-    except GeminiRateLimitError as exc:
-        logger.warning("AI analysis paused for batch due to Gemini quota limits: %s", exc)
-        pending_after_pause = analysis_pending_mask(df)
-        df, completed_assets = apply_local_analysis_fallback(df, pending_after_pause)
+    # Process every pending row in this callback. Dash cannot reliably chain multiple
+    # analysis cycles via Stores alone; looping here matches user expectation (all rows).
+    batch_number = 0
+    max_batches = max(64, len(df) // max(AI_ANALYSIS_BATCH_SIZE, 1) + 10)
+
+    while analysis_pending_mask(df).any():
+        pending = analysis_pending_mask(df)
+        batch_number += 1
+        if batch_number > max_batches:
+            logger.error("AI analysis stopped after %s batch(es); possible loop guard.", max_batches)
+            break
+
+        batch_indices = list(df.index[pending][:AI_ANALYSIS_BATCH_SIZE])
+        batch_records = [df.loc[idx].to_dict() for idx in batch_indices]
+        batch_assets = [
+            str(record.get("asset_name") or record.get("asset_id") or f"row {idx + 1}")
+            for idx, record in zip(batch_indices, batch_records)
+        ]
+        logger.info(
+            "Starting AI analysis batch %s for %s row(s): %s",
+            batch_number,
+            len(batch_indices),
+            ", ".join(batch_assets),
+        )
+
+        try:
+            batch_result = client.generate_dashboard_analysis(asset_records=batch_records)
+        except GeminiRateLimitError as exc:
+            logger.warning("AI analysis paused for batch due to Gemini quota limits: %s", exc)
+            pending_after_pause = analysis_pending_mask(df)
+            df, completed_assets = apply_local_analysis_fallback(df, pending_after_pause)
+            return (
+                df.to_json(date_format="iso", orient="split"),
+                {
+                    "state": "warning",
+                    "message": (
+                        f"{build_gemini_pause_message(prefix='AI analysis paused before completing the active batch.')}"
+                        f" Completed {len(completed_assets)} pending row(s) using local fallback analysis."
+                    ),
+                },
+                None,
+            )
+        except Exception as exc:
+            logger.exception("AI analysis batch failed")
+            for idx in batch_indices:
+                df.at[idx, "ai_analysis_error"] = str(exc)
+            remaining_pending = analysis_pending_mask(df)
+            remaining_count = int(remaining_pending.sum())
+            if not remaining_count:
+                failed_count = int(analysis_error_mask(df).sum())
+                return (
+                    df.to_json(date_format="iso", orient="split"),
+                    {
+                        "state": "warning",
+                        "message": (
+                            f"AI analysis failed for the final batch of {len(batch_indices)} row(s). "
+                            f"No more pending rows remain. {failed_count} row(s) failed in total. Check the terminal logs."
+                        ),
+                    },
+                    None,
+                )
+            continue
+
+        assets = (batch_result or {}).get("assets", []) if isinstance(batch_result, dict) else []
+
+        index_to_record = {idx: record for idx, record in zip(batch_indices, batch_records)}
+        unresolved_indices = set(batch_indices)
+        id_to_indices = {}
+        name_to_indices = {}
+        for idx, record in index_to_record.items():
+            asset_id = str(record.get("asset_id") or "").strip()
+            asset_name = str(record.get("asset_name") or "").strip()
+            if asset_id:
+                id_to_indices.setdefault(asset_id, []).append(idx)
+            if asset_name:
+                name_to_indices.setdefault(asset_name, []).append(idx)
+
+        completed_assets = []
+        for ai_row in assets:
+            if not isinstance(ai_row, dict):
+                continue
+
+            matched_idx = None
+            ai_asset_id = str(ai_row.get("asset_id") or "").strip()
+            ai_asset_name = str(ai_row.get("asset_name") or "").strip()
+
+            if ai_asset_id and id_to_indices.get(ai_asset_id):
+                matched_idx = id_to_indices[ai_asset_id].pop(0)
+            elif ai_asset_name and name_to_indices.get(ai_asset_name):
+                matched_idx = name_to_indices[ai_asset_name].pop(0)
+
+            if matched_idx is None or matched_idx not in unresolved_indices:
+                continue
+
+            for col in AI_ANALYSIS_COLUMNS:
+                value = ai_row.get(col)
+                if col in ("risk_score", "anomaly_score"):
+                    try:
+                        value = int(float(value))
+                    except Exception:
+                        value = pd.NA
+                df.at[matched_idx, col] = value
+
+            df.at[matched_idx, "ai_analysis_complete"] = True
+            df.at[matched_idx, "ai_analysis_error"] = pd.NA
+            persist_ai_analysis_result(index_to_record[matched_idx], ai_row)
+
+            asset_label = str(
+                index_to_record[matched_idx].get("asset_name")
+                or index_to_record[matched_idx].get("asset_id")
+                or f"row {matched_idx + 1}"
+            )
+            completed_assets.append(asset_label)
+            unresolved_indices.remove(matched_idx)
+
+        for idx in unresolved_indices:
+            df.at[idx, "ai_analysis_error"] = "No valid AI analysis returned for this row in the current batch."
+
+        logger.info(
+            "Completed AI analysis batch %s. Success=%s, Failed=%s",
+            batch_number,
+            len(completed_assets),
+            len(unresolved_indices),
+        )
+
+    if analysis_pending_mask(df).any():
+        pending_left = int(analysis_pending_mask(df).sum())
+        logger.warning("AI analysis stopped with %s row(s) still pending (safety limit).", pending_left)
         return (
             df.to_json(date_format="iso", orient="split"),
             {
                 "state": "warning",
                 "message": (
-                    f"{build_gemini_pause_message(prefix='AI analysis paused before completing the active batch.')}"
-                    f" Completed {len(completed_assets)} pending row(s) using local fallback analysis."
+                    f"AI analysis stopped after {batch_number} batch(es) with {pending_left} row(s) still pending. "
+                    "Try again or check the terminal logs."
                 ),
             },
             None,
         )
-    except Exception as exc:
-        logger.exception("AI analysis batch failed")
-        for idx in batch_indices:
-            df.at[idx, "ai_analysis_error"] = str(exc)
-        remaining_pending = analysis_pending_mask(df)
-        remaining_count = int(remaining_pending.sum())
-        failed_count = int(analysis_error_mask(df).sum())
-        status_state = "running" if remaining_count else "warning"
-        if remaining_count:
-            status_message = (
-                f"AI analysis failed for a batch of {len(batch_indices)} row(s). Skipping those rows and continuing. "
-                f"{remaining_count} row(s) remaining. Check the terminal logs."
-            )
-        else:
-            status_message = (
-                f"AI analysis failed for the final batch of {len(batch_indices)} row(s). No more pending rows remain. "
-                f"{failed_count} row(s) failed in total. Check the terminal logs."
-            )
-        return (
-            df.to_json(date_format="iso", orient="split"),
-            {"state": status_state, "message": status_message},
-            # {"requested_at": datetime.now().isoformat(), "pending_count": remaining_count} if remaining_count else None,
-            None
-        )
-    assets = (batch_result or {}).get("assets", []) if isinstance(batch_result, dict) else []
 
-    index_to_record = {idx: record for idx, record in zip(batch_indices, batch_records)}
-    unresolved_indices = set(batch_indices)
-    id_to_indices = {}
-    name_to_indices = {}
-    for idx, record in index_to_record.items():
-        asset_id = str(record.get("asset_id") or "").strip()
-        asset_name = str(record.get("asset_name") or "").strip()
-        if asset_id:
-            id_to_indices.setdefault(asset_id, []).append(idx)
-        if asset_name:
-            name_to_indices.setdefault(asset_name, []).append(idx)
-
-    completed_assets = []
-    for ai_row in assets:
-        if not isinstance(ai_row, dict):
-            continue
-
-        matched_idx = None
-        ai_asset_id = str(ai_row.get("asset_id") or "").strip()
-        ai_asset_name = str(ai_row.get("asset_name") or "").strip()
-
-        if ai_asset_id and id_to_indices.get(ai_asset_id):
-            matched_idx = id_to_indices[ai_asset_id].pop(0)
-        elif ai_asset_name and name_to_indices.get(ai_asset_name):
-            matched_idx = name_to_indices[ai_asset_name].pop(0)
-
-        if matched_idx is None or matched_idx not in unresolved_indices:
-            continue
-
-        for col in AI_ANALYSIS_COLUMNS:
-            value = ai_row.get(col)
-            if col in ("risk_score", "anomaly_score"):
-                try:
-                    value = int(float(value))
-                except Exception:
-                    value = pd.NA
-            df.at[matched_idx, col] = value
-
-        df.at[matched_idx, "ai_analysis_complete"] = True
-        df.at[matched_idx, "ai_analysis_error"] = pd.NA
-        persist_ai_analysis_result(index_to_record[matched_idx], ai_row)
-
-        asset_label = str(
-            index_to_record[matched_idx].get("asset_name")
-            or index_to_record[matched_idx].get("asset_id")
-            or f"row {matched_idx + 1}"
-        )
-        completed_assets.append(asset_label)
-        unresolved_indices.remove(matched_idx)
-
-    for idx in unresolved_indices:
-        df.at[idx, "ai_analysis_error"] = "No valid AI analysis returned for this row in the current batch."
-
-    logger.info(
-        "Completed AI analysis batch. Success=%s, Failed=%s",
-        len(completed_assets),
-        len(unresolved_indices),
-    )
-
-    remaining_count = int(analysis_pending_mask(df).sum())
     failed_count = int(analysis_error_mask(df).sum())
-    if remaining_count:
+    if failed_count:
         status = {
-            "state": "running",
+            "state": "warning",
             "message": (
-                f"AI analysis processed batch of {len(batch_indices)} row(s): "
-                f"{len(completed_assets)} completed, {len(unresolved_indices)} failed. "
-                f"{remaining_count} row(s) remaining."
-                + (f" {failed_count} row(s) failed and were skipped." if failed_count else "")
+                f"AI analysis completed for all remaining rows. {failed_count} row(s) failed and were skipped. "
+                "Check the terminal logs."
             ),
         }
-        # next_request = {"requested_at": datetime.now().isoformat(), "pending_count": remaining_count}
-        next_request = None
     else:
-        if failed_count:
-            status = {
-                "state": "warning",
-                "message": f"AI analysis completed for all remaining rows. {failed_count} row(s) failed and were skipped. Check the terminal logs.",
-            }
-        else:
-            status = {"state": "complete", "message": "AI analysis completed for all assets."}
-        next_request = None
+        status = {"state": "complete", "message": "AI analysis completed for all assets."}
 
-    return df.to_json(date_format="iso", orient="split"), status, next_request
+    return df.to_json(date_format="iso", orient="split"), status, None
 
 
 @callback(
@@ -767,7 +838,7 @@ def render_analysis_status(status):
 
     color_map = {
         "pending": (COLORS["text_muted"], COLORS["card"]),
-        "running": (COLORS["primary"], COLORS["primary_light"]),
+        "running": (COLORS["primary_dark"], COLORS["primary_light"]),
         "complete": (COLORS["low"], COLORS["low_bg"]),
         "warning": (COLORS["medium"], COLORS["medium_bg"]),
         "error": (COLORS["high"], COLORS["high_bg"]),
@@ -777,12 +848,15 @@ def render_analysis_status(status):
     return html.Div(
         message,
         style={
-            "padding": "12px 14px",
-            "borderRadius": "12px",
+            "padding": "14px 16px",
+            "borderRadius": "4px",
             "background": background,
-            "border": f"1px solid {COLORS['border']}",
+            "borderLeft": f"4px solid {text_color}",
+            "borderTop": f"1px solid {COLORS['border']}",
+            "borderRight": f"1px solid {COLORS['border']}",
+            "borderBottom": f"1px solid {COLORS['border']}",
             "color": text_color,
-            "fontSize": "13px",
+            "fontSize": "15px",
             "fontWeight": "600",
         },
     )
@@ -820,7 +894,7 @@ def update_sla_panel(json_data):
     if not analysis_is_complete(df):
         return html.Div(
             "SLA tracking will appear after AI analysis completes for all assets.",
-            style={"fontSize": "13px", "color": COLORS["text_muted"]},
+            style={"fontSize": "15px", "color": COLORS["text_muted"], "lineHeight": "1.5"},
         )
     today = pd.Timestamp.now().normalize()
 
@@ -855,25 +929,35 @@ def update_sla_panel(json_data):
             "flex": "1",
             "minWidth": "160px",
             "border": f"1px solid {COLORS['border']}",
-            "borderRadius": "14px",
-            "padding": "14px",
+            "borderRadius": "4px",
+            "padding": "16px",
             "background": bg,
+            "boxShadow": "0 1px 4px rgba(27,27,27,0.04)",
         }, children=[
-            html.Div(label, style={"fontSize": "12px", "fontWeight": "700", "color": COLORS["text_muted"]}),
-            html.Div(str(value), style={"fontSize": "24px", "fontWeight": "900", "color": color, "marginTop": "6px"}),
+            html.Div(
+                label,
+                style={
+                    "fontSize": "13px",
+                    "fontWeight": "700",
+                    "color": COLORS["text_muted"],
+                    "textTransform": "uppercase",
+                    "letterSpacing": "0.05em",
+                },
+            ),
+            html.Div(str(value), style={"fontSize": "28px", "fontWeight": "700", "color": color, "marginTop": "8px", "lineHeight": "1.1"}),
         ])
 
     breached_list = html.Div(
         ("; ".join(top_lines)) if top_lines else "No SLA breaches detected.",
         style={
-            "marginTop": "10px",
-            "fontSize": "13px",
+            "marginTop": "12px",
+            "fontSize": "15px",
             "color": COLORS["text"],
-            "background": COLORS["high_bg"] if top_lines else COLORS["primary_light"],
+            "background": COLORS["high_bg"] if top_lines else COLORS["primary_lighter"],
             "border": f"1px solid {COLORS['border']}",
-            "borderRadius": "14px",
-            "padding": "12px 14px",
-            "lineHeight": "1.5",
+            "borderRadius": "4px",
+            "padding": "14px 16px",
+            "lineHeight": "1.55",
         },
     )
 
@@ -901,7 +985,8 @@ def update_table(json_data, search, risk_f, sort, date_from, date_to):
     df = assign_asset_sections(df)
     complete_mask = analysis_completion_mask(df)
     failed_mask = analysis_error_mask(df)
-    pending_count = int((~complete_mask).sum())
+    pending_analysis_mask = analysis_pending_mask(df)
+    pending_count = int(pending_analysis_mask.sum())
     failed_count = int(failed_mask.sum())
 
     sections = []
@@ -909,7 +994,8 @@ def update_table(json_data, search, risk_f, sort, date_from, date_to):
         if config["section"] == "pending":
             section_df = df[(df["asset_section"] == "pending")].copy()
         else:
-            section_df = df[(df["asset_section"] == config["section"]) & complete_mask].copy()
+            # Show in risk tables as soon as analysis is not "waiting" (complete from cache, or error).
+            section_df = df[(df["asset_section"] == config["section"]) & (~pending_analysis_mask)].copy()
         sections.append(build_asset_section(config, section_df))
 
     children = []
@@ -919,32 +1005,38 @@ def update_table(json_data, search, risk_f, sort, date_from, date_to):
                 f"AI analysis is pending for {pending_count} row(s). Pending rows stay in Pending Analysis until they are successfully analyzed.",
                 style={
                     "padding": "14px 16px",
-                    "borderRadius": "12px",
-                    "background": COLORS["primary_light"],
-                    "border": f"1px solid {COLORS['border']}",
-                    "color": COLORS["primary"],
-                    "fontSize": "13px",
-                    "fontWeight": "600",
+                    "borderRadius": "4px",
+                    "background": COLORS["primary_lighter"],
+                    "borderLeft": f"4px solid {COLORS['primary']}",
+                    "borderTop": f"1px solid {COLORS['border']}",
+                    "borderRight": f"1px solid {COLORS['border']}",
+                    "borderBottom": f"1px solid {COLORS['border']}",
+                    "color": COLORS["primary_dark"],
+                    "fontSize": "15px",
+                    "fontWeight": "700",
                 },
             )
         )
     if failed_count:
         children.append(
             html.Div(
-                f"{failed_count} row(s) currently have AI analysis errors and remain in Pending Analysis until retried successfully. Check the terminal output for the full error.",
+                f"{failed_count} row(s) have AI analysis errors (listed in the risk tables below). Retry analysis when ready. Check the terminal output for the full error.",
                 style={
                     "padding": "14px 16px",
-                    "borderRadius": "12px",
+                    "borderRadius": "4px",
                     "background": COLORS["medium_bg"],
-                    "border": f"1px solid {COLORS['border']}",
+                    "borderLeft": f"4px solid {COLORS['medium']}",
+                    "borderTop": f"1px solid {COLORS['border']}",
+                    "borderRight": f"1px solid {COLORS['border']}",
+                    "borderBottom": f"1px solid {COLORS['border']}",
                     "color": COLORS["medium"],
-                    "fontSize": "13px",
-                    "fontWeight": "600",
+                    "fontSize": "15px",
+                    "fontWeight": "700",
                 },
             )
         )
-    children.append(html.Div(style={"display": "grid", "gap": "20px"}, children=sections))
-    return html.Div(style={"display": "grid", "gap": "16px"}, children=children)
+    children.append(html.Div(style={"display": "grid", "gap": "24px"}, children=sections))
+    return html.Div(style={"display": "grid", "gap": "20px"}, children=children)
 
 
 # Detail panel
@@ -1036,21 +1128,21 @@ def show_detail(selected_asset, backdrop_click, close_click, json_data):
     scan_date_text = scan_date_value.strftime("%Y-%m-%d") if not pd.isna(scan_date_value) else "—"
 
     risk_styles = {
-        "High": {"bg": "#FCE8E8", "border": "rgba(211, 47, 47, 0.2)", "text": COLORS["high"], "badgeBg": COLORS["high"], "badgeText": "white"},
-        "Medium": {"bg": "#FFF4E5", "border": "rgba(237, 108, 2, 0.2)", "text": COLORS["medium"], "badgeBg": COLORS["medium"], "badgeText": "white"},
-        "Low": {"bg": "#EDF7ED", "border": "rgba(46, 125, 50, 0.2)", "text": COLORS["low"], "badgeBg": COLORS["low"], "badgeText": "white"},
+        "High": {"bg": COLORS["high_bg"], "border": COLORS["high"], "text": COLORS["high"], "badgeBg": COLORS["high"], "badgeText": "white"},
+        "Medium": {"bg": COLORS["medium_bg"], "border": COLORS["medium"], "text": COLORS["medium"], "badgeBg": COLORS["medium"], "badgeText": "white"},
+        "Low": {"bg": COLORS["low_bg"], "border": COLORS["low"], "text": COLORS["low"], "badgeBg": COLORS["low"], "badgeText": "white"},
     }
     risk_style = risk_styles.get(risk_level_value or "Low", risk_styles["Low"])
     risk_score_text = "—" if risk_value is None else f"{int(risk_value)}/100"
     risk_level_text = "Risk Pending" if not risk_level_value else f"{risk_level_value} Risk"
 
     children = [
-        html.Div(style={"background": risk_style["bg"], "border": f"1px solid {risk_style['border']}", "borderRadius": "16px", "padding": "20px", "marginBottom": "20px", "display": "flex", "justifyContent": "space-between", "alignItems": "center", "gap": "12px"}, children=[
+        html.Div(style={"background": risk_style["bg"], "borderLeft": f"4px solid {risk_style['border']}", "borderTop": f"1px solid {COLORS['border']}", "borderRight": f"1px solid {COLORS['border']}", "borderBottom": f"1px solid {COLORS['border']}", "borderRadius": "4px", "padding": "20px", "marginBottom": "20px", "display": "flex", "justifyContent": "space-between", "alignItems": "center", "gap": "12px"}, children=[
             html.Div(children=[
-                html.Span("Risk Score", style={"display": "block", "fontSize": "12px", "fontWeight": "600", "color": COLORS["text_muted"]}),
-                html.Span(risk_score_text, style={"fontSize": "28px", "fontWeight": "800", "color": risk_style["text"]}),
+                html.Span("Risk Score", style={"display": "block", "fontSize": "13px", "fontWeight": "700", "color": COLORS["text_muted"], "textTransform": "uppercase", "letterSpacing": "0.05em"}),
+                html.Span(risk_score_text, style={"fontSize": "32px", "fontWeight": "700", "color": risk_style["text"], "lineHeight": "1.1"}),
             ]),
-            html.Span(risk_level_text, style={"padding": "8px 16px", "borderRadius": "999px", "fontSize": "12px", "fontWeight": "700", "background": risk_style["badgeBg"], "color": risk_style["badgeText"]}),
+            html.Span(risk_level_text, style={"padding": "8px 14px", "borderRadius": "4px", "fontSize": "13px", "fontWeight": "700", "background": risk_style["badgeBg"], "color": risk_style["badgeText"]}),
         ]),
         section("Vulnerability (Tenable.io)", {
             "Name": row.get("vuln_name", "—"),
@@ -1175,13 +1267,13 @@ def chat_respond(n, user_msg, current_msgs, history, json_data):
 
     if not analysis_is_complete(df):
         user_bubble = html.Div(user_msg, style={
-            "background": COLORS["primary"], "color": "white", "padding": "10px 14px",
-            "borderRadius": "12px 12px 4px 12px", "fontSize": "13px", "alignSelf": "flex-end", "maxWidth": "85%"
+            "background": COLORS["primary"], "color": "white", "padding": "12px 14px",
+            "borderRadius": "4px", "fontSize": "15px", "alignSelf": "flex-end", "maxWidth": "85%"
         })
         bot_bubble = html.Div("AI dashboard analysis is still running. Please try again after it finishes.", style={
-            "background": COLORS["primary_light"], "padding": "10px 14px",
-            "borderRadius": "12px 12px 12px 4px", "fontSize": "13px",
-            "color": COLORS["text"], "maxWidth": "85%"
+            "background": COLORS["primary_light"], "padding": "12px 14px",
+            "borderRadius": "4px", "fontSize": "15px",
+            "color": COLORS["text"], "maxWidth": "85%", "border": f"1px solid {COLORS['border']}",
         })
         return current_msgs + [user_bubble, bot_bubble], "", history
 
@@ -1207,13 +1299,13 @@ def chat_respond(n, user_msg, current_msgs, history, json_data):
     response = client.generate_security_answer(question=user_msg.strip(), context_text=context_text, history=history)
 
     user_bubble = html.Div(user_msg, style={
-        "background": COLORS["primary"], "color": "white", "padding": "10px 14px",
-        "borderRadius": "12px 12px 4px 12px", "fontSize": "13px", "alignSelf": "flex-end", "maxWidth": "85%"
+        "background": COLORS["primary"], "color": "white", "padding": "12px 14px",
+        "borderRadius": "4px", "fontSize": "15px", "alignSelf": "flex-end", "maxWidth": "85%"
     })
     bot_bubble = html.Div(response, style={
-        "background": COLORS["primary_light"], "padding": "10px 14px",
-        "borderRadius": "12px 12px 12px 4px", "fontSize": "13px",
-        "color": COLORS["text"], "maxWidth": "85%"
+        "background": COLORS["primary_light"], "padding": "12px 14px",
+        "borderRadius": "4px", "fontSize": "15px",
+        "color": COLORS["text"], "maxWidth": "85%", "border": f"1px solid {COLORS['border']}",
     })
 
     new_history = (history + [{"role": "user", "text": user_msg.strip()}, {"role": "assistant", "text": response}])[-20:]

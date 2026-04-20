@@ -150,6 +150,28 @@ def compute_asset_fingerprint(row: dict | pd.Series) -> str:
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
+def coerce_ai_analysis_complete_series(series: pd.Series) -> pd.Series:
+    """
+    Normalize ai_analysis_complete after JSON round-trips via Dash Stores.
+    Plain .astype(bool) mis-treats string \"false\" as True (non-empty string).
+    """
+
+    def to_bool(v):
+        if isinstance(v, str):
+            return v.strip().lower() in ("true", "1", "yes")
+        if pd.isna(v):
+            return False
+        if isinstance(v, bool):
+            return v
+        # int 0/1 from JSON, numpy scalars
+        try:
+            return bool(int(v))
+        except (TypeError, ValueError):
+            return bool(v)
+
+    return series.map(to_bool).astype(bool)
+
+
 def ensure_ai_analysis_columns(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     for column in AI_ANALYSIS_COLUMNS:
@@ -166,7 +188,7 @@ def ensure_ai_analysis_columns(df: pd.DataFrame) -> pd.DataFrame:
     if "ai_analysis_complete" not in df.columns:
         df["ai_analysis_complete"] = False
     else:
-        df["ai_analysis_complete"] = df["ai_analysis_complete"].fillna(False).astype(bool)
+        df["ai_analysis_complete"] = coerce_ai_analysis_complete_series(df["ai_analysis_complete"])
     if "ai_analysis_error" not in df.columns:
         df["ai_analysis_error"] = pd.Series([pd.NA] * len(df), dtype="object")
     else:

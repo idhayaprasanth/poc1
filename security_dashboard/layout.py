@@ -3,79 +3,124 @@
 from dash import dcc, html
 
 
-def create_layout(df_base):
+def create_layout(df_base, analysis_status_initial=None):
     from security_dashboard.dashboard import COLORS, card_style, close_svg
 
+    if analysis_status_initial is None:
+        analysis_status_initial = {"state": "pending", "message": ""}
+
     return html.Div(
+        className="dash-uswds",
         style={
             "background": COLORS["bg"],
             "minHeight": "100vh",
-            "fontFamily": "'Public Sans', -apple-system, sans-serif",
+            "fontFamily": '"Source Sans 3", "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         },
         children=[
             dcc.Store(id="merged-data-store", data=df_base.to_json(date_format="iso", orient="split")),
             dcc.Store(id="analysis-request-store", data=None),
-            dcc.Store(id="analysis-status-store", data={"state": "pending", "message": ""}),
+            dcc.Store(id="analysis-status-store", data=analysis_status_initial),
             dcc.Store(id="selected-asset-store", data=None),
             dcc.Store(id="chat-history-store", data=[]),
-            dcc.Interval(id="analysis-bootstrap", interval=100, n_intervals=0, max_intervals=1),
             html.Header(
                 style={
                     "background": COLORS["card"],
+                    "borderTop": f"4px solid {COLORS['primary']}",
                     "borderBottom": f"1px solid {COLORS['border']}",
-                    "padding": "16px 32px",
-                    "display": "flex",
-                    "alignItems": "center",
+                    "boxShadow": "0 2px 8px rgba(27, 27, 27, 0.06)",
                 },
                 children=[
                     html.Div(
-                        style={"display": "flex", "alignItems": "center", "gap": "12px"},
+                        style={
+                            "maxWidth": "87.5rem",
+                            "margin": "0 auto",
+                            "padding": "20px 24px",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "space-between",
+                            "flexWrap": "wrap",
+                            "gap": "16px",
+                        },
                         children=[
-                            html.Div(
-                                "🛡️",
+                    html.Div(
+                        style={"display": "flex", "alignItems": "center", "gap": "20px", "flex": "1", "minWidth": "280px"},
+                        children=[
+                            html.Img(
+                                src=(
+                                    "https://th.bing.com/th/id/OIP.Dl6ZSeYEI2zcqRpiPU04OwAAAA"
+                                    "?w=400&h=170&c=7&o=7&dpr=1.5&pid=1.7&rm=3"
+                                ),
+                                alt="FUTREND Technology",
                                 style={
-                                    "fontSize": "22px",
-                                    "width": "40px",
-                                    "height": "40px",
-                                    "borderRadius": "10px",
-                                    "background": COLORS["primary"],
-                                    "color": "white",
-                                    "display": "flex",
-                                    "alignItems": "center",
-                                    "justifyContent": "center",
+                                    "height": "56px",
+                                    "width": "auto",
+                                    "maxWidth": "min(100%, 420px)",
+                                    "objectFit": "contain",
+                                    "objectPosition": "left center",
+                                    "display": "block",
                                 },
                             ),
                             html.Div(
                                 [
+                                    html.P(
+                                        "Federal design system · light theme",
+                                        style={
+                                            "fontSize": "11px",
+                                            "fontWeight": "700",
+                                            "textTransform": "uppercase",
+                                            "letterSpacing": "0.08em",
+                                            "color": COLORS["primary"],
+                                            "margin": "0 0 6px 0",
+                                        },
+                                    ),
                                     html.H1(
                                         "Unified Security Risk Dashboard",
                                         style={
-                                            "fontSize": "18px",
+                                            "fontSize": "22px",
                                             "fontWeight": "700",
+                                            "lineHeight": "1.25",
                                             "margin": 0,
                                             "color": COLORS["text"],
                                         },
                                     ),
                                     html.P(
-                                        "AI-driven threat analysis and prioritization",
+                                        "AI-driven threat analysis and prioritization across Tenable, Defender, Splunk, and BigFix",
                                         style={
-                                            "fontSize": "12px",
+                                            "fontSize": "15px",
                                             "color": COLORS["text_muted"],
-                                            "margin": 0,
+                                            "margin": "8px 0 0 0",
+                                            "maxWidth": "36rem",
+                                            "lineHeight": "1.45",
                                         },
                                     ),
                                 ]
                             ),
                         ],
                     ),
+                    html.Span(
+                        "USWDS-aligned",
+                        style={
+                            "fontSize": "12px",
+                            "fontWeight": "700",
+                            "color": COLORS["text_muted"],
+                            "border": f"1px solid {COLORS['border']}",
+                            "padding": "6px 12px",
+                            "borderRadius": "4px",
+                            "background": COLORS["bg"],
+                            "whiteSpace": "nowrap",
+                        },
+                    ),
+                        ],
+                    ),
                 ],
             ),
             html.Main(
-                style={"maxWidth": "1440px", "margin": "0 auto", "padding": "24px 32px"},
+                className="dash-uswds-main",
+                style={"maxWidth": "87.5rem", "margin": "0 auto", "padding": "24px 24px 48px"},
                 children=[
                     html.Div(
                         id="kpi-cards",
-                        style={"display": "flex", "gap": "16px", "marginBottom": "24px", "flexWrap": "wrap"},
+                        style={"display": "flex", "gap": "20px", "marginBottom": "28px", "flexWrap": "wrap"},
                     ),
                     html.Div(id="analysis-status-banner", style={"marginBottom": "16px"}),
                     html.Div(
@@ -86,26 +131,37 @@ def create_layout(df_base):
                                     "display": "flex",
                                     "alignItems": "center",
                                     "justifyContent": "space-between",
-                                    "marginBottom": "16px",
+                                    "marginBottom": "20px",
+                                    "flexWrap": "wrap",
+                                    "gap": "12px",
                                 },
                                 children=[
                                     html.H2(
                                         "Asset Risk Inventory",
-                                        style={"fontSize": "16px", "fontWeight": "700", "margin": 0},
+                                        style={
+                                            "fontSize": "20px",
+                                            "fontWeight": "700",
+                                            "margin": 0,
+                                            "color": COLORS["text"],
+                                            "lineHeight": "1.3",
+                                        },
                                     ),
                                     html.Div(
                                         style={"display": "flex", "gap": "8px"},
                                         children=[
                                             html.Button(
-                                                "📥 Export CSV",
+                                                "Export CSV",
                                                 id="export-btn",
                                                 style={
                                                     "background": COLORS["card"],
-                                                    "border": f"1px solid {COLORS['border']}",
-                                                    "borderRadius": "8px",
-                                                    "padding": "8px 16px",
+                                                    "color": COLORS["primary"],
+                                                    "border": f"2px solid {COLORS['primary']}",
+                                                    "borderRadius": "4px",
+                                                    "padding": "10px 20px",
                                                     "cursor": "pointer",
-                                                    "fontSize": "13px",
+                                                    "fontSize": "15px",
+                                                    "fontWeight": "700",
+                                                    "fontFamily": "inherit",
                                                 },
                                             ),
                                         ],
@@ -124,13 +180,15 @@ def create_layout(df_base):
                                         id="search-input",
                                         type="text",
                                         placeholder="Search by hostname or ID...",
+                                        className="dash-uswds",
                                         style={
-                                            "width": "240px",
-                                            "height": "36px",
+                                            "width": "260px",
+                                            "height": "40px",
                                             "border": f"1px solid {COLORS['border']}",
-                                            "borderRadius": "8px",
+                                            "borderRadius": "4px",
                                             "padding": "0 12px",
-                                            "fontSize": "13px",
+                                            "fontSize": "15px",
+                                            "fontFamily": "inherit",
                                         },
                                     ),
                                     dcc.Dropdown(
@@ -143,7 +201,7 @@ def create_layout(df_base):
                                         ],
                                         value="All",
                                         clearable=False,
-                                        style={"width": "160px", "fontSize": "13px"},
+                                        style={"width": "170px", "fontSize": "15px"},
                                     ),
                                     dcc.Dropdown(
                                         id="sort-order",
@@ -154,7 +212,7 @@ def create_layout(df_base):
                                         ],
                                         value="default",
                                         clearable=False,
-                                        style={"width": "180px", "fontSize": "13px"},
+                                        style={"width": "200px", "fontSize": "15px"},
                                     ),
                                     dcc.DatePickerRange(
                                         id="date-range",
@@ -162,11 +220,11 @@ def create_layout(df_base):
                                         end_date_placeholder_text="To",
                                         display_format="YYYY-MM-DD",
                                         style={
-                                            "height": "36px",
+                                            "height": "40px",
                                             "border": f"1px solid {COLORS['border']}",
-                                            "borderRadius": "8px",
+                                            "borderRadius": "4px",
                                             "padding": "0 8px",
-                                            "fontSize": "13px",
+                                            "fontSize": "15px",
                                         },
                                     ),
                                 ],
@@ -187,11 +245,11 @@ def create_layout(df_base):
                                 children=[
                                     html.H2(
                                         "SLA / Aging Tracker",
-                                        style={"fontSize": "14px", "fontWeight": "700", "margin": 0},
+                                        style={"fontSize": "17px", "fontWeight": "700", "margin": 0, "color": COLORS["text"]},
                                     ),
                                     html.Span(
-                                        "High: 3 days, Medium: 7 days",
-                                        style={"fontSize": "12px", "color": COLORS["text_muted"]},
+                                        "Targets: High 3 days · Medium 7 days",
+                                        style={"fontSize": "13px", "color": COLORS["text_muted"], "fontWeight": "600"},
                                     ),
                                 ],
                             ),
@@ -225,8 +283,8 @@ def create_layout(df_base):
                                     "maxWidth": "480px",
                                     "height": "100%",
                                     "background": COLORS["card"],
-                                    "borderLeft": f"1px solid {COLORS['border']}",
-                                    "boxShadow": "-10px 0 40px rgba(0,0,0,0.12)",
+                                    "borderLeft": f"4px solid {COLORS['primary']}",
+                                    "boxShadow": "-8px 0 32px rgba(27,27,27,0.12)",
                                     "zIndex": 50,
                                     "overflowY": "auto",
                                     "transition": "transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)",
@@ -329,20 +387,21 @@ def create_layout(df_base):
                                                                         style={"width": "150px", "fontSize": "12px"},
                                                                     ),
                                                                     html.Button(
-                                                                        "Update",
+                                                                        "Save status",
                                                                         id="issue-status-save",
                                                                         n_clicks=0,
                                                                         style={
-                                                                            "background": COLORS["card"],
-                                                                            "border": f"1px solid {COLORS['border']}",
-                                                                            "borderRadius": "8px",
-                                                                            "padding": "6px 12px",
+                                                                            "background": COLORS["primary"],
+                                                                            "border": "none",
+                                                                            "borderRadius": "4px",
+                                                                            "padding": "10px 12px",
                                                                             "cursor": "pointer",
-                                                                            "fontSize": "12px",
-                                                                            "fontWeight": "600",
-                                                                            "color": COLORS["text_muted"],
-                                                                            "marginTop": "6px",
+                                                                            "fontSize": "15px",
+                                                                            "fontWeight": "700",
+                                                                            "color": "#ffffff",
+                                                                            "marginTop": "8px",
                                                                             "width": "150px",
+                                                                            "fontFamily": "inherit",
                                                                         },
                                                                     ),
                                                                 ],
@@ -377,23 +436,25 @@ def create_layout(df_base):
             html.Div(
                 id="chat-fab",
                 n_clicks=0,
-                children="🤖",
+                children="💬",
+                title="Open AI assistant",
                 style={
                     "position": "fixed",
-                    "bottom": "44px",
-                    "right": "34px",
+                    "bottom": "40px",
+                    "right": "28px",
                     "width": "56px",
                     "height": "56px",
-                    "borderRadius": "50%",
+                    "borderRadius": "4px",
                     "background": COLORS["primary"],
                     "color": "white",
                     "display": "flex",
                     "alignItems": "center",
                     "justifyContent": "center",
-                    "fontSize": "24px",
+                    "fontSize": "22px",
                     "cursor": "pointer",
-                    "boxShadow": "0 4px 16px rgba(0,0,0,0.2)",
+                    "boxShadow": "0 4px 12px rgba(0, 94, 162, 0.35)",
                     "zIndex": 1001,
+                    "border": f"2px solid {COLORS['primary_dark']}",
                 },
             ),
             html.Div(
@@ -406,11 +467,11 @@ def create_layout(df_base):
                             "bottom": "90px",
                             "right": "24px",
                             "width": "380px",
-                            "height": "480px",
+                            "height": "500px",
                             "background": COLORS["card"],
-                            "borderRadius": "16px",
+                            "borderRadius": "4px",
                             "border": f"1px solid {COLORS['border']}",
-                            "boxShadow": "0 8px 32px rgba(0,0,0,0.15)",
+                            "boxShadow": "0 8px 24px rgba(27,27,27,0.12)",
                             "zIndex": 1002,
                             "display": "flex",
                             "flexDirection": "column",
@@ -419,17 +480,18 @@ def create_layout(df_base):
                         children=[
                             html.Div(
                                 style={
-                                    "background": COLORS["primary"],
+                                    "background": COLORS["primary_dark"],
                                     "color": "white",
-                                    "padding": "16px",
+                                    "padding": "14px 16px",
                                     "display": "flex",
                                     "alignItems": "center",
                                     "justifyContent": "space-between",
+                                    "borderBottom": f"1px solid rgba(255,255,255,0.2)",
                                 },
                                 children=[
                                     html.Span(
-                                        "🤖 AI Security Assistant",
-                                        style={"fontWeight": "600", "fontSize": "14px"},
+                                        "AI Security Assistant",
+                                        style={"fontWeight": "700", "fontSize": "16px", "letterSpacing": "0.02em"},
                                     ),
                                     html.Button(
                                         "✕",
@@ -460,11 +522,12 @@ def create_layout(df_base):
                                         "Hello! I'm your AI Security Assistant. Ask me about high-risk assets, remediation steps, or threat status.",
                                         style={
                                             "background": COLORS["primary_light"],
-                                            "padding": "10px 14px",
-                                            "borderRadius": "12px 12px 12px 4px",
-                                            "fontSize": "13px",
+                                            "padding": "12px 14px",
+                                            "borderRadius": "4px",
+                                            "fontSize": "15px",
                                             "color": COLORS["text"],
                                             "maxWidth": "85%",
+                                            "border": f"1px solid {COLORS['border']}",
                                         },
                                     )
                                 ],
@@ -483,11 +546,12 @@ def create_layout(df_base):
                                         placeholder="Ask about security risks...",
                                         style={
                                             "flex": "1",
-                                            "height": "36px",
+                                            "height": "40px",
                                             "border": f"1px solid {COLORS['border']}",
-                                            "borderRadius": "8px",
+                                            "borderRadius": "4px",
                                             "padding": "0 12px",
-                                            "fontSize": "13px",
+                                            "fontSize": "15px",
+                                            "fontFamily": "inherit",
                                         },
                                         debounce=False,
                                     ),
@@ -499,11 +563,12 @@ def create_layout(df_base):
                                             "background": COLORS["primary"],
                                             "color": "white",
                                             "border": "none",
-                                            "borderRadius": "8px",
-                                            "padding": "0 16px",
+                                            "borderRadius": "4px",
+                                            "padding": "0 18px",
                                             "cursor": "pointer",
-                                            "fontSize": "13px",
-                                            "fontWeight": "600",
+                                            "fontSize": "15px",
+                                            "fontWeight": "700",
+                                            "fontFamily": "inherit",
                                         },
                                     ),
                                 ],

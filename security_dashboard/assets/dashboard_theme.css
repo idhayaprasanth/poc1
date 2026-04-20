@@ -1,0 +1,79 @@
+/**
+ * USWDS 3–aligned dashboard theme (white / light).
+ * Tokens mirror https://designsystem.digital.gov/design-tokens/ (base, primary, semantic).
+ */
+:root {
+  --uswds-base-lightest: #f0f0f0;
+  --uswds-base-lighter: #dfe1e2;
+  --uswds-base-light: #a9aeb1;
+  --uswds-base: #71767a;
+  --uswds-base-dark: #565c65;
+  --uswds-base-darker: #3d4551;
+  --uswds-base-darkest: #1b1b1b;
+  --uswds-primary: #005ea2;
+  --uswds-primary-dark: #1a4480;
+  --uswds-primary-light: #d9e8f6;
+  --uswds-primary-lighter: #e7f6f8;
+  --uswds-focus: #2491ff;
+  --uswds-error-high: #b50909;
+  --uswds-error-bg: #f4e3db;
+  --uswds-warn: #e17141;
+  --uswds-warn-bg: #faf3d1;
+  --uswds-success: #008817;
+  --uswds-success-bg: #ecf3ec;
+  --uswds-card-shadow: 0 2px 8px rgba(27, 27, 27, 0.06);
+  --uswds-radius-sm: 4px;
+  --uswds-radius-md: 8px;
+}
+
+.dash-uswds {
+  font-family: "Source Sans 3", "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--uswds-base-darkest);
+  -webkit-font-smoothing: antialiased;
+}
+
+.dash-uswds-main {
+  max-width: 87.5rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+/* Dash / Plotly dropdowns & date picker */
+.dash-uswds .Select-control,
+.dash-uswds .DateInput_input,
+.dash-uswds .DateRangePickerInput {
+  border-radius: var(--uswds-radius-sm) !important;
+  border-color: var(--uswds-base-lighter) !important;
+  font-family: inherit !important;
+}
+
+.dash-uswds .Select-control:hover,
+.dash-uswds .DateInput_input:hover {
+  border-color: var(--uswds-base-light) !important;
+}
+
+/* Native inputs in layout */
+.dash-uswds input[type="text"],
+.dash-uswds input[type="search"] {
+  font-family: inherit;
+  border-radius: var(--uswds-radius-sm);
+  border: 1px solid var(--uswds-base-lighter);
+  color: var(--uswds-base-darkest);
+}
+
+.dash-uswds input[type="text"]:focus,
+.dash-uswds input[type="search"]:focus {
+  outline: 2px solid var(--uswds-focus);
+  outline-offset: 2px;
+}
+
+/* DataTable scroll region */
+.dash-uswds .dash-table-container {
+  font-family: inherit;
+}
+
+.dash-uswds .dash-spreadsheet-menu {
+  font-family: inherit;
+}
