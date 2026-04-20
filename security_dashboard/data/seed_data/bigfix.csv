@@ -1,0 +1,2 @@
+Asset ID,Fixlet ID,Severity,CVSS,CVE,Fixlet Name,Status,First Seen,Last Seen,Action
+asset-001,200001,High,8.1,CVE-2023-9999,Windows Patch Missing KB5030001,open,2026-04-18,2026-04-20,Deploy Fixlet baseline for KB5030001 and verify compliance.

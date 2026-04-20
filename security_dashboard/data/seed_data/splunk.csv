@@ -1,0 +1,2 @@
+Asset ID,Event ID,Severity,Risk Score,CVE,Rule Name,Status,First Seen,Last Seen,Recommendation
+asset-001,300001,Medium,6.5,CVE-2022-1111,Suspicious PowerShell Execution,open,2026-04-20,2026-04-20,Investigate parent process and block malicious script hash in EDR.

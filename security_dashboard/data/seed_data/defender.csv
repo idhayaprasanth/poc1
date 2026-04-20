@@ -1,0 +1,2 @@
+Asset ID,Alert ID,Severity,CVSS,CVE,Title,Status,First Seen,Last Seen,Remediation
+asset-001,400001,High,7.4,CVE-2021-2222,Defender Malware Alert - Trojan Activity,open,2026-04-20,2026-04-20,Isolate device run full scan and remediate detected artifacts.

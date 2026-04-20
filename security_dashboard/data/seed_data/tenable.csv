@@ -1,0 +1,2 @@
+Asset ID,Plugin ID,Severity,CVSS,CVE,Name,State,First Seen,Last Seen,Solution
+asset-001,100001,Critical,9.8,CVE-2024-0001,OpenSSH RCE Exposure,open,2026-04-19,2026-04-20,Upgrade OpenSSH package to fixed version and restart service.
