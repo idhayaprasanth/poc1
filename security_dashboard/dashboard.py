@@ -223,14 +223,38 @@ def prepare_filtered_assets(df, search, risk_f, sort, date_from, date_to):
 def assign_asset_sections(df):
     df = df.copy()
     complete_mask = analysis_completion_mask(df)
-    asset_bucket = df.get("asset_bucket", pd.Series(index=df.index, dtype="object")).fillna("")
+    asset_bucket = (
+        df.get("asset_bucket", pd.Series(index=df.index, dtype="object"))
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
+    risk_level = (
+        df.get("risk_level", pd.Series(index=df.index, dtype="object"))
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .str.lower()
+    )
     bucket_map = {
-        "High Risk": "high",
-        "Medium Risk": "medium",
-        "Low Risk": "low",
-        "All Good": "all_good",
+        "high risk": "high",
+        "high": "high",
+        "medium risk": "medium",
+        "medium": "medium",
+        "low risk": "low",
+        "low": "low",
+        "all good": "all_good",
+        "healthy": "all_good",
     }
-    df["asset_section"] = asset_bucket.map(bucket_map)
+    risk_map = {
+        "high": "high",
+        "medium": "medium",
+        "low": "low",
+    }
+    mapped_from_bucket = asset_bucket.map(bucket_map)
+    mapped_from_risk = risk_level.map(risk_map)
+    df["asset_section"] = mapped_from_bucket.fillna(mapped_from_risk)
     df.loc[~complete_mask, "asset_section"] = "pending"
 
     return df
