@@ -257,6 +257,16 @@ def assign_asset_sections(df):
     df["asset_section"] = mapped_from_bucket.fillna(mapped_from_risk)
     df.loc[~complete_mask, "asset_section"] = "pending"
 
+    # Debug visibility issues: analyzed rows that did not map to a visible section.
+    unmapped_complete = complete_mask & df["asset_section"].isna()
+    if bool(unmapped_complete.any()):
+        sample = df.loc[unmapped_complete, ["asset_id", "asset_name", "asset_bucket", "risk_level"]].head(5)
+        logger.warning(
+            "Found %s analyzed row(s) with no asset_section mapping. Sample: %s",
+            int(unmapped_complete.sum()),
+            sample.to_dict("records"),
+        )
+
     return df
 
 

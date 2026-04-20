@@ -33,6 +33,9 @@ _QUOTA_EXHAUSTED_COOLDOWN_SECONDS = max(
 _RATE_LIMIT_STATE_FILE = (
     Path(__file__).resolve().parents[1] / "data" / "gemini_rate_limit_state.json"
 )
+_GEMINI_DEBUG_LOG_FILE = (
+    Path(__file__).resolve().parents[1] / "data" / "gemini_api_debug.jsonl"
+)
 
 _STATE_CACHE = None
 _JSON_RE = re.compile(r"(\{.*\}|\[.*\])", re.DOTALL)
@@ -237,6 +240,17 @@ class GeminiBaseClient:
         except Exception:
             return ""
 
+    def _write_debug_log(self, event: dict):
+        """Append structured Gemini request/response debug logs with timestamp."""
+        try:
+            _GEMINI_DEBUG_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+            payload = dict(event or {})
+            payload["logged_at"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
+            with _GEMINI_DEBUG_LOG_FILE.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload, ensure_ascii=True) + "\n")
+        except Exception as exc:
+            logger.warning("Gemini debug log write failed: %s", exc)
+
     def _raise_rate_limit(self, error: urllib.error.HTTPError):
         body = self._read_http_error_body(error)
         reason = body or str(error)
@@ -266,20 +280,53 @@ class GeminiBaseClient:
 
         try:
             text = self._try_generate(api_version, model_name, payload)
+            self._write_debug_log(
+                {
+                    "event": "attempt_success",
+                    "api_version": api_version,
+                    "model_name": model_name,
+                    "response_preview": text[:1200],
+                }
+            )
             _clear_gemini_pause()
             return text, True
         except urllib.error.HTTPError as exc:
             if exc.code == 429:
                 self._raise_rate_limit(exc)
             body = self._read_http_error_body(exc)
+            self._write_debug_log(
+                {
+                    "event": "attempt_http_error",
+                    "api_version": api_version,
+                    "model_name": model_name,
+                    "http_code": exc.code,
+                    "error_body_preview": (body or str(exc))[:1200],
+                }
+            )
             return body or f"Gemini request failed with HTTP {exc.code}.", False
         except urllib.error.URLError as exc:
+            self._write_debug_log(
+                {
+                    "event": "attempt_url_error",
+                    "api_version": api_version,
+                    "model_name": model_name,
+                    "error_reason": str(exc.reason),
+                }
+            )
             return f"Gemini request failed: {exc.reason}", False
         except Exception as exc:
             logger.exception(
                 "Unexpected Gemini request failure for %s/%s",
                 api_version,
                 model_name,
+            )
+            self._write_debug_log(
+                {
+                    "event": "attempt_exception",
+                    "api_version": api_version,
+                    "model_name": model_name,
+                    "error": str(exc),
+                }
             )
             return str(exc), False
 
@@ -317,6 +364,12 @@ class GeminiBaseClient:
             try:
                 return ast.literal_eval(repaired)
             except Exception as exc:
+                self._write_debug_log(
+                    {
+                        "event": "json_parse_failed",
+                        "cleaned_preview": cleaned[:1200],
+                    }
+                )
                 logger.warning(
                     "Gemini returned malformed JSON payload: %s",
                     cleaned[:300].replace("\n", "\\n"),
