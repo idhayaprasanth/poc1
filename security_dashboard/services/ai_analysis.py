@@ -257,6 +257,43 @@ class GeminiAnalysisMixin:
                 result[field] = None
         return result
 
+    @staticmethod
+    def _normalize_dashboard_row(result: dict, source_record: dict, source: str) -> dict:
+        normalized = {
+            "asset_name": str(result.get("asset_name") or source_record.get("asset_name") or "").strip(),
+            "asset_id": str(result.get("asset_id") or source_record.get("asset_id") or "").strip(),
+            "threat_status": str(result.get("threat_status") or "Unknown"),
+            "severity_validation": str(result.get("severity_validation") or "Needs Review"),
+            "priority": str(result.get("priority") or "Monitor"),
+            "asset_bucket": str(result.get("asset_bucket") or "Low Risk"),
+            "ai_reason": str(result.get("ai_reason") or ""),
+            "remediation": str(result.get("remediation") or ""),
+            "tenable_remediation": str(result.get("tenable_remediation") or ""),
+            "defender_remediation": str(result.get("defender_remediation") or ""),
+            "splunk_remediation": str(result.get("splunk_remediation") or ""),
+            "bigfix_remediation": str(result.get("bigfix_remediation") or ""),
+            "ai_analysis_source": source,
+            "anomaly_score": result.get("anomaly_score"),
+            "risk_score": result.get("risk_score"),
+            "risk_level": str(result.get("risk_level") or "Unknown"),
+        }
+        return normalized
+
+    @staticmethod
+    def _match_source_record(candidates: list[dict], result_row: dict) -> dict | None:
+        result_asset_id = str(result_row.get("asset_id") or "").strip()
+        result_asset_name = str(result_row.get("asset_name") or "").strip().lower()
+
+        if result_asset_id:
+            for candidate in candidates:
+                if str(candidate.get("asset_id") or "").strip() == result_asset_id:
+                    return candidate
+        if result_asset_name:
+            for candidate in candidates:
+                if str(candidate.get("asset_name") or "").strip().lower() == result_asset_name:
+                    return candidate
+        return None
+
     # Single asset analysis
     def generate_asset_analysis(self, *, asset_record: dict) -> dict:
         if not asset_record:
@@ -326,53 +363,61 @@ class GeminiAnalysisMixin:
         return result
 
     # Dashboard analysis
-    def generate_dashboard_analysis(self, *, asset_records: list[dict]) -> dict:
+    def generate_dashboard_analysis(self, *, asset_records: list[dict], batch_size: int = 3) -> dict:
         if not asset_records:
             return {"assets": [], "insights": {}}
+
+        try:
+            batch_size = int(batch_size)
+        except Exception:
+            batch_size = 3
+        batch_size = max(1, batch_size)
 
         all_results: list[dict] = []
         pending_records: list[dict] = []
 
+        cache = load_ai_analysis_cache()
+
+        def cached_result_for_record(record: dict) -> dict | None:
+            cached = cache.get(compute_asset_fingerprint(record))
+            if not isinstance(cached, dict):
+                return None
+            return {column: cached.get(column) for column in AI_ANALYSIS_COLUMNS}
+
         for record in asset_records:
-            cached = self._cached_result_for_record(record)
+            cached = cached_result_for_record(record)
             if cached:
                 cached_result = self._normalize_scores(cached.copy())
-                all_results.append({
-                    "asset_name": str(cached_result.get("asset_name") or record.get("asset_name") or ""),
-                    "asset_id": str(cached_result.get("asset_id") or record.get("asset_id") or ""),
-                    "threat_status": str(cached_result.get("threat_status") or "Unknown"),
-                    "severity_validation": str(cached_result.get("severity_validation") or "Needs Review"),
-                    "priority": str(cached_result.get("priority") or "Monitor"),
-                    "asset_bucket": str(cached_result.get("asset_bucket") or "Low Risk"),
-                    "ai_reason": str(cached_result.get("ai_reason") or ""),
-                    "remediation": str(cached_result.get("remediation") or ""),
-                    "tenable_remediation": str(cached_result.get("tenable_remediation") or ""),
-                    "defender_remediation": str(cached_result.get("defender_remediation") or ""),
-                    "splunk_remediation": str(cached_result.get("splunk_remediation") or ""),
-                    "bigfix_remediation": str(cached_result.get("bigfix_remediation") or ""),
-                    "ai_analysis_source": str(cached_result.get("ai_analysis_source") or "cache"),
-                    "anomaly_score": cached_result.get("anomaly_score"),
-                    "risk_score": cached_result.get("risk_score"),
-                    "risk_level": str(cached_result.get("risk_level") or "Unknown"),
-                })
+                all_results.append(
+                    self._normalize_dashboard_row(
+                        cached_result,
+                        record,
+                        str(cached_result.get("ai_analysis_source") or "cache"),
+                    )
+                )
             else:
                 pending_records.append(record)
 
         compact_records = [self._compact_asset_record(r) for r in pending_records]
 
         # Chunking (prevents truncation)
-        for i in range(0, len(compact_records), 3):
-            chunk = compact_records[i:i+3]
-            chunk_source_records = pending_records[i:i+3]
+        for i in range(0, len(compact_records), batch_size):
+            chunk = compact_records[i:i + batch_size]
+            chunk_source_records = pending_records[i:i + batch_size]
 
             prompt = f"Analyze these assets:\n{json.dumps(chunk)}"
 
-            data = self._generate_and_parse(BATCH_SYSTEM_PROMPT, prompt, tokens=1200)
+            try:
+                data = self._generate_and_parse(BATCH_SYSTEM_PROMPT, prompt, tokens=1200)
+            except GeminiRateLimitError:
+                raise
+            except Exception:
+                data = None
 
             if isinstance(data, dict):
                 items = data.get("assets") or [data]
             else:
-                continue
+                items = []
 
             chunk_unmatched = list(chunk_source_records)
 
@@ -386,61 +431,24 @@ class GeminiAnalysisMixin:
                 if not result.get("asset_name") and not result.get("asset_id"):
                     continue
 
-                normalized = {
-                    "asset_name": str(result.get("asset_name") or ""),
-                    "asset_id": str(result.get("asset_id") or ""),
-                    "threat_status": str(result.get("threat_status") or "Unknown"),
-                    "severity_validation": str(result.get("severity_validation") or "Needs Review"),
-                    "priority": str(result.get("priority") or "Monitor"),
-                    "asset_bucket": str(result.get("asset_bucket") or "Low Risk"),
-                    "ai_reason": str(result.get("ai_reason") or ""),
-                    "remediation": str(result.get("remediation") or ""),
-                    "tenable_remediation": str(result.get("tenable_remediation") or ""),
-                    "defender_remediation": str(result.get("defender_remediation") or ""),
-                    "splunk_remediation": str(result.get("splunk_remediation") or ""),
-                    "bigfix_remediation": str(result.get("bigfix_remediation") or ""),
-                    "ai_analysis_source": "gemini",
-                    "anomaly_score": result.get("anomaly_score"),
-                    "risk_score": result.get("risk_score"),
-                    "risk_level": str(result.get("risk_level") or "Unknown"),
-                }
-                all_results.append(normalized)
-
-                # Persist by matching the chunk source record to avoid duplicate Gemini calls.
-                source_record = next(
-                    (
-                        candidate for candidate in chunk_unmatched
-                        if str(candidate.get("asset_id") or "").strip() == normalized["asset_id"].strip()
-                        or str(candidate.get("asset_name") or "").strip().lower() == normalized["asset_name"].strip().lower()
-                    ),
-                    None,
-                )
+                # Accept Gemini output only when it matches one of the current chunk rows.
+                source_record = self._match_source_record(chunk_unmatched, result)
                 if source_record:
+                    normalized = self._normalize_dashboard_row(result, source_record, "gemini")
+                    all_results.append(normalized)
                     persist_ai_analysis_result(source_record, normalized)
                     chunk_unmatched = [c for c in chunk_unmatched if c is not source_record]
 
             # If Gemini returned fewer rows than requested, complete remaining rows now
             # so one partial batch response does not leave rows stuck.
             for source_record in chunk_unmatched:
-                fallback_row = self.generate_asset_analysis(asset_record=source_record)
-                normalized_fallback = {
-                    "asset_name": str(fallback_row.get("asset_name") or source_record.get("asset_name") or ""),
-                    "asset_id": str(fallback_row.get("asset_id") or source_record.get("asset_id") or ""),
-                    "threat_status": str(fallback_row.get("threat_status") or "Unknown"),
-                    "severity_validation": str(fallback_row.get("severity_validation") or "Needs Review"),
-                    "priority": str(fallback_row.get("priority") or "Monitor"),
-                    "asset_bucket": str(fallback_row.get("asset_bucket") or "Low Risk"),
-                    "ai_reason": str(fallback_row.get("ai_reason") or ""),
-                    "remediation": str(fallback_row.get("remediation") or ""),
-                    "tenable_remediation": str(fallback_row.get("tenable_remediation") or ""),
-                    "defender_remediation": str(fallback_row.get("defender_remediation") or ""),
-                    "splunk_remediation": str(fallback_row.get("splunk_remediation") or ""),
-                    "bigfix_remediation": str(fallback_row.get("bigfix_remediation") or ""),
-                    "ai_analysis_source": str(fallback_row.get("ai_analysis_source") or "gemini"),
-                    "anomaly_score": fallback_row.get("anomaly_score"),
-                    "risk_score": fallback_row.get("risk_score"),
-                    "risk_level": str(fallback_row.get("risk_level") or "Unknown"),
-                }
+                fallback_row = generate_local_asset_analysis(asset_record=source_record)
+                normalized_fallback = self._normalize_dashboard_row(
+                    fallback_row,
+                    source_record,
+                    str(fallback_row.get("ai_analysis_source") or "local_fallback"),
+                )
+                persist_ai_analysis_result(source_record, normalized_fallback)
                 all_results.append(normalized_fallback)
 
         if not all_results:

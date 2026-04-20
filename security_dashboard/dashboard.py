@@ -625,7 +625,10 @@ def run_dashboard_analysis(analysis_request, json_data):
         ", ".join(batch_assets),
     )
     try:
-        batch_result = client.generate_dashboard_analysis(asset_records=batch_records)
+        batch_result = client.generate_dashboard_analysis(
+            asset_records=batch_records,
+            batch_size=AI_ANALYSIS_BATCH_SIZE,
+        )
     except GeminiRateLimitError as exc:
         logger.warning("AI analysis paused for batch due to Gemini quota limits: %s", exc)
         pending_after_pause = analysis_pending_mask(df)
