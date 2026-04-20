@@ -26,3 +26,13 @@ def load_env_file(path: str | Path = ".env") -> None:
 
         os.environ.setdefault(key, value)
 
+
+def get_ai_analysis_batch_size(default: int = 3) -> int:
+    """Read AI analysis batch size from env and clamp it to safe bounds (3-5)."""
+    raw_value = str(os.getenv("AI_ANALYSIS_BATCH_SIZE", "")).strip()
+    try:
+        value = int(raw_value) if raw_value else int(default)
+    except Exception:
+        value = int(default)
+    return max(3, min(5, value))
+

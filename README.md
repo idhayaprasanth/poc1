@@ -84,6 +84,7 @@ flowchart TD
 - `GEMINI_API_KEY`: Enables Gemini calls.
 - `GEMINI_MODEL`: `auto` recommended.
 - `GEMINI_API_VERSION`: Defaults to `v1beta`.
+- `AI_ANALYSIS_BATCH_SIZE`: Rows analyzed per Gemini cycle, clamped to `3`-`5` (default `3`).
 
 ## Notes
 
