@@ -662,17 +662,18 @@ def run_dashboard_analysis(analysis_request, json_data):
         return (
             df.to_json(date_format="iso", orient="split"),
             {"state": status_state, "message": status_message},
-            {"requested_at": datetime.now().isoformat(), "pending_count": remaining_count} if remaining_count else None,
+            None,
         )
     assets = (batch_result or {}).get("assets", []) if isinstance(batch_result, dict) else []
 
     index_to_record = {idx: record for idx, record in zip(batch_indices, batch_records)}
     unresolved_indices = set(batch_indices)
+    unresolved_in_order = list(batch_indices)
     id_to_indices = {}
     name_to_indices = {}
     for idx, record in index_to_record.items():
         asset_id = str(record.get("asset_id") or "").strip()
-        asset_name = str(record.get("asset_name") or "").strip()
+        asset_name = str(record.get("asset_name") or "").strip().lower()
         if asset_id:
             id_to_indices.setdefault(asset_id, []).append(idx)
         if asset_name:
@@ -685,12 +686,14 @@ def run_dashboard_analysis(analysis_request, json_data):
 
         matched_idx = None
         ai_asset_id = str(ai_row.get("asset_id") or "").strip()
-        ai_asset_name = str(ai_row.get("asset_name") or "").strip()
+        ai_asset_name = str(ai_row.get("asset_name") or "").strip().lower()
 
         if ai_asset_id and id_to_indices.get(ai_asset_id):
             matched_idx = id_to_indices[ai_asset_id].pop(0)
         elif ai_asset_name and name_to_indices.get(ai_asset_name):
             matched_idx = name_to_indices[ai_asset_name].pop(0)
+        elif unresolved_in_order:
+            matched_idx = unresolved_in_order[0]
 
         if matched_idx is None or matched_idx not in unresolved_indices:
             continue
@@ -715,6 +718,7 @@ def run_dashboard_analysis(analysis_request, json_data):
         )
         completed_assets.append(asset_label)
         unresolved_indices.remove(matched_idx)
+        unresolved_in_order = [idx for idx in unresolved_in_order if idx in unresolved_indices]
 
     for idx in unresolved_indices:
         df.at[idx, "ai_analysis_error"] = "No valid AI analysis returned for this row in the current batch."
@@ -737,7 +741,9 @@ def run_dashboard_analysis(analysis_request, json_data):
                 + (f" {failed_count} row(s) failed and were skipped." if failed_count else "")
             ),
         }
-        next_request = {"requested_at": datetime.now().isoformat(), "pending_count": remaining_count}
+        # Clear the current request; queue_dashboard_analysis will enqueue the next batch
+        # from the updated merged-data-store if pending rows still exist.
+        next_request = None
     else:
         if failed_count:
             status = {

@@ -24,6 +24,12 @@ BASE_SYSTEM_PROMPT = (
     "Scores must be integers 0-100."
 )
 
+BATCH_SYSTEM_PROMPT = (
+    BASE_SYSTEM_PROMPT
+    + " For multi-asset input, return a JSON object with key 'assets' as an array."
+    + " Return one analysis object per provided input asset."
+)
+
 # Centralized field mapping
 FIELD_MAP = {
     "asset_name": ["asset_name", "name", "hostname", "host_name"],
@@ -357,15 +363,18 @@ class GeminiAnalysisMixin:
         # Chunking (prevents truncation)
         for i in range(0, len(compact_records), 3):
             chunk = compact_records[i:i+3]
+            chunk_source_records = pending_records[i:i+3]
 
             prompt = f"Analyze these assets:\n{json.dumps(chunk)}"
 
-            data = self._generate_and_parse(BASE_SYSTEM_PROMPT, prompt, tokens=1200)
+            data = self._generate_and_parse(BATCH_SYSTEM_PROMPT, prompt, tokens=1200)
 
             if isinstance(data, dict):
                 items = data.get("assets") or [data]
             else:
                 continue
+
+            chunk_unmatched = list(chunk_source_records)
 
             for row in items:
                 if not isinstance(row, dict):
@@ -400,14 +409,39 @@ class GeminiAnalysisMixin:
                 # Persist by matching the chunk source record to avoid duplicate Gemini calls.
                 source_record = next(
                     (
-                        candidate for candidate in pending_records
-                        if str(candidate.get("asset_id") or "") == normalized["asset_id"]
-                        or str(candidate.get("asset_name") or "") == normalized["asset_name"]
+                        candidate for candidate in chunk_unmatched
+                        if str(candidate.get("asset_id") or "").strip() == normalized["asset_id"].strip()
+                        or str(candidate.get("asset_name") or "").strip().lower() == normalized["asset_name"].strip().lower()
                     ),
                     None,
                 )
                 if source_record:
                     persist_ai_analysis_result(source_record, normalized)
+                    chunk_unmatched = [c for c in chunk_unmatched if c is not source_record]
+
+            # If Gemini returned fewer rows than requested, complete remaining rows now
+            # so one partial batch response does not leave rows stuck.
+            for source_record in chunk_unmatched:
+                fallback_row = self.generate_asset_analysis(asset_record=source_record)
+                normalized_fallback = {
+                    "asset_name": str(fallback_row.get("asset_name") or source_record.get("asset_name") or ""),
+                    "asset_id": str(fallback_row.get("asset_id") or source_record.get("asset_id") or ""),
+                    "threat_status": str(fallback_row.get("threat_status") or "Unknown"),
+                    "severity_validation": str(fallback_row.get("severity_validation") or "Needs Review"),
+                    "priority": str(fallback_row.get("priority") or "Monitor"),
+                    "asset_bucket": str(fallback_row.get("asset_bucket") or "Low Risk"),
+                    "ai_reason": str(fallback_row.get("ai_reason") or ""),
+                    "remediation": str(fallback_row.get("remediation") or ""),
+                    "tenable_remediation": str(fallback_row.get("tenable_remediation") or ""),
+                    "defender_remediation": str(fallback_row.get("defender_remediation") or ""),
+                    "splunk_remediation": str(fallback_row.get("splunk_remediation") or ""),
+                    "bigfix_remediation": str(fallback_row.get("bigfix_remediation") or ""),
+                    "ai_analysis_source": str(fallback_row.get("ai_analysis_source") or "gemini"),
+                    "anomaly_score": fallback_row.get("anomaly_score"),
+                    "risk_score": fallback_row.get("risk_score"),
+                    "risk_level": str(fallback_row.get("risk_level") or "Unknown"),
+                }
+                all_results.append(normalized_fallback)
 
         if not all_results:
             raise ValueError("No valid asset analysis returned.")
