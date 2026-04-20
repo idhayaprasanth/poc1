@@ -662,7 +662,8 @@ def run_dashboard_analysis(analysis_request, json_data):
         return (
             df.to_json(date_format="iso", orient="split"),
             {"state": status_state, "message": status_message},
-            {"requested_at": datetime.now().isoformat(), "pending_count": remaining_count} if remaining_count else None,
+            # {"requested_at": datetime.now().isoformat(), "pending_count": remaining_count} if remaining_count else None,
+            None
         )
     assets = (batch_result or {}).get("assets", []) if isinstance(batch_result, dict) else []
 
@@ -737,7 +738,8 @@ def run_dashboard_analysis(analysis_request, json_data):
                 + (f" {failed_count} row(s) failed and were skipped." if failed_count else "")
             ),
         }
-        next_request = {"requested_at": datetime.now().isoformat(), "pending_count": remaining_count}
+        # next_request = {"requested_at": datetime.now().isoformat(), "pending_count": remaining_count}
+        next_request = None
     else:
         if failed_count:
             status = {

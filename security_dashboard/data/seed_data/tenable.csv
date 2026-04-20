@@ -1,2 +1,16 @@
 Asset ID,Plugin ID,Severity,CVSS,CVE,Name,State,First Seen,Last Seen,Solution
 asset-001,100001,Critical,9.8,CVE-2024-0001,OpenSSH RCE Exposure,open,2026-04-19,2026-04-20,Upgrade OpenSSH package to fixed version and restart service.
+asset-002,100002,High,8.4,CVE-2023-2222,Apache HTTP Server Path Traversal,open,2026-04-17,2026-04-20,Update Apache HTTP Server to a patched version and validate configurations.
+asset-003,100003,Medium,6.3,CVE-2022-3333,Outdated PHP Version Detected,open,2026-04-16,2026-04-19,Upgrade PHP to the latest supported version and test application compatibility.
+asset-004,100004,Low,3.8,CVE-2021-4444,ICMP Timestamp Request Response Enabled,open,2026-04-15,2026-04-19,Disable ICMP timestamp responses on affected hosts to reduce information leakage.
+asset-005,100005,Critical,9.6,CVE-2024-5555,Database Service Remote Code Execution Vulnerability,open,2026-04-18,2026-04-20,Apply vendor patch immediately and restrict database access to trusted sources.
+asset-006,100006,High,8.2,CVE-2023-7781,Nginx Buffer Overflow Vulnerability,open,2026-04-18,2026-04-20,Upgrade Nginx to latest stable version and restart service.
+asset-007,100007,Medium,6.5,CVE-2022-1900,MySQL Weak Authentication Configuration,open,2026-04-16,2026-04-20,Enforce strong password policy and restrict remote access.
+asset-008,100008,Critical,9.9,CVE-2024-1122,Windows Kernel Privilege Escalation Flaw,open,2026-04-19,2026-04-20,Apply Microsoft security patch and reboot affected systems.
+asset-009,100009,Low,3.6,CVE-2021-6677,SSL/TLS Weak Cipher Suites Enabled,open,2026-04-15,2026-04-19,Disable weak cipher suites and enforce TLS 1.2 or higher.
+asset-010,100010,High,8.0,CVE-2023-9090,Tomcat Directory Listing Enabled,open,2026-04-17,2026-04-20,Disable directory listing and update Apache Tomcat version.
+asset-011,100011,Medium,6.1,CVE-2022-5566,Outdated Python Package Dependency,open,2026-04-16,2026-04-20,Upgrade vulnerable Python libraries to secure versions.
+asset-012,100012,Critical,9.7,CVE-2024-3344,Redis Unauthorized Access Vulnerability,open,2026-04-18,2026-04-20,Enable authentication and restrict Redis access to internal network.
+asset-013,100013,High,7.9,CVE-2023-4451,Windows SMB Remote Execution Risk,open,2026-04-19,2026-04-20,Apply SMB security updates and disable SMBv1 protocol.
+asset-014,100014,Low,4.0,CVE-2020-9911,Insecure Default SNMP Community String,open,2026-04-14,2026-04-19,Change default SNMP community strings and restrict SNMP access.
+asset-015,100015,Medium,6.7,CVE-2022-8888,Docker Container Escape Vulnerability,open,2026-04-20,2026-04-20,Upgrade Docker engine and enforce container isolation policies.

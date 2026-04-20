@@ -1,2 +1,16 @@
 Asset ID,Event ID,Severity,Risk Score,CVE,Rule Name,Status,First Seen,Last Seen,Recommendation
 asset-001,300001,Medium,6.5,CVE-2022-1111,Suspicious PowerShell Execution,open,2026-04-20,2026-04-20,Investigate parent process and block malicious script hash in EDR.
+asset-002,300002,High,8.2,CVE-2023-4455,Unauthorized Privilege Escalation Attempt,open,2026-04-18,2026-04-20,Investigate user activity and enforce least privilege policies.
+asset-003,300003,Low,3.9,CVE-2021-9090,Multiple Failed Login Attempts Detected,open,2026-04-17,2026-04-19,Review authentication logs and consider account lockout policies.
+asset-004,300004,Critical,9.5,CVE-2024-7788,Potential Ransomware Execution Behavior,open,2026-04-19,2026-04-20,Isolate system and initiate incident response procedures immediately.
+asset-005,300005,Medium,6.1,CVE-2022-6677,Suspicious Network Beaconing Activity,open,2026-04-16,2026-04-20,Analyze outbound traffic and block malicious IP addresses.
+asset-006,300006,High,8.4,CVE-2023-8122,Abnormal Admin Login Detected,open,2026-04-18,2026-04-20,Verify admin activity reset credentials and enforce MFA.
+asset-007,300007,Medium,6.3,CVE-2022-5531,Suspicious File Creation in System Directory,open,2026-04-17,2026-04-20,Inspect file origin and quarantine suspicious binaries.
+asset-008,300008,Critical,9.7,CVE-2024-1120,Detected Malware Lateral Movement Behavior,open,2026-04-19,2026-04-20,Isolate affected hosts and perform full network threat hunt.
+asset-009,300009,Low,4.1,CVE-2021-7781,Unusual Service Startup Detected,open,2026-04-15,2026-04-19,Review service configuration and disable unauthorized services.
+asset-010,300010,High,8.0,CVE-2023-3399,Credential Dumping Tool Execution Detected,open,2026-04-20,2026-04-20,Isolate endpoint reset passwords and investigate privilege escalation path.
+asset-011,300011,Medium,6.0,CVE-2022-8891,Suspicious DNS Tunneling Activity Detected,open,2026-04-16,2026-04-20,Block DNS queries to suspicious domains and inspect network logs.
+asset-012,300012,Critical,9.2,CVE-2024-2210,Remote Exploit Attempt on Authentication Service,open,2026-04-18,2026-04-20,Patch authentication service and enforce strict access controls.
+asset-013,300013,High,7.9,CVE-2023-6612,Malicious Scheduled Task Creation Detected,open,2026-04-19,2026-04-20,Remove scheduled task and audit persistence mechanisms.
+asset-014,300014,Low,3.7,CVE-2020-4450,Outdated Library Loaded in Application,open,2026-04-14,2026-04-19,Update application dependencies to patched versions.
+asset-015,300015,Medium,6.4,CVE-2022-7744,Suspicious API Request Pattern Detected,open,2026-04-20,2026-04-20,Analyze API logs and implement rate limiting and WAF rules.

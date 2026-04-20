@@ -1,2 +1,16 @@
 Asset ID,Fixlet ID,Severity,CVSS,CVE,Fixlet Name,Status,First Seen,Last Seen,Action
 asset-001,200001,High,8.1,CVE-2023-9999,Windows Patch Missing KB5030001,open,2026-04-18,2026-04-20,Deploy Fixlet baseline for KB5030001 and verify compliance.
+asset-002,200002,Medium,6.5,CVE-2022-4567,Update OpenSSL Library to 1.1.1t,open,2026-04-15,2026-04-20,Apply OpenSSL patch and restart affected services.
+asset-003,200003,Critical,9.8,CVE-2024-1122,Apache Log4j Remote Code Execution Fix,open,2026-04-10,2026-04-20,Deploy emergency Log4j mitigation and confirm via scan.
+asset-004,200004,Low,3.7,CVE-2021-7788,Outdated Chrome Browser Version Detected,open,2026-04-12,2026-04-19,Upgrade Chrome to latest stable version across endpoints.
+asset-005,200005,High,7.9,CVE-2023-3344,Linux Kernel Privilege Escalation Patch Missing,open,2026-04-17,2026-04-20,Update kernel packages and reboot system to apply changes.
+asset-006,200006,High,8.4,CVE-2023-8451,Microsoft Exchange Security Update Missing,open,2026-04-11,2026-04-20,Apply Exchange cumulative update and restart services.
+asset-007,200007,Medium,6.2,CVE-2022-3901,Outdated Python Runtime Vulnerability Patch,open,2026-04-14,2026-04-20,Upgrade Python to latest secure version.
+asset-008,200008,Critical,9.6,CVE-2024-2209,VMware ESXi Authentication Bypass Fix,open,2026-04-09,2026-04-20,Install ESXi security patch and reboot host.
+asset-009,200009,Low,3.9,CVE-2021-6677,Deprecated Firefox Extension Security Issue,open,2026-04-13,2026-04-19,Remove or update vulnerable browser extensions.
+asset-010,200010,High,7.8,CVE-2023-5532,Windows Defender Signature Update Required,open,2026-04-16,2026-04-20,Update Defender definitions and run full scan.
+asset-011,200011,Medium,6.7,CVE-2022-4810,MySQL Server Patch for Privilege Escalation,open,2026-04-12,2026-04-20,Upgrade MySQL to patched secure release.
+asset-012,200012,Critical,9.1,CVE-2024-3301,Apache Tomcat Remote Execution Vulnerability Fix,open,2026-04-08,2026-04-20,Deploy Tomcat security patch immediately.
+asset-013,200013,High,8.0,CVE-2023-7712,Red Hat OpenSSH Security Patch Missing,open,2026-04-15,2026-04-20,Update OpenSSH package and restart SSH service.
+asset-014,200014,Low,4.1,CVE-2021-8890,Outdated Java Runtime Environment Detected,open,2026-04-10,2026-04-19,Upgrade JRE to latest supported version.
+asset-015,200015,Medium,6.0,CVE-2022-3055,Docker Engine Vulnerability Patch Required,open,2026-04-17,2026-04-20,Update Docker engine and restart containers.

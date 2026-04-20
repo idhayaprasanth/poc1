@@ -1,2 +1,16 @@
 Asset ID,Alert ID,Severity,CVSS,CVE,Title,Status,First Seen,Last Seen,Remediation
 asset-001,400001,High,7.4,CVE-2021-2222,Defender Malware Alert - Trojan Activity,open,2026-04-20,2026-04-20,Isolate device run full scan and remediate detected artifacts.
+asset-002,400002,Medium,5.9,CVE-2022-3456,Suspicious PowerShell Activity Detected,open,2026-04-18,2026-04-20,Investigate script execution logs and block malicious commands.
+asset-003,400003,Critical,9.1,CVE-2023-7788,Ransomware Behavior Detected - File Encryption Pattern,open,2026-04-19,2026-04-20,Isolate host disconnect from network and initiate incident response procedures.
+asset-004,400004,Low,3.2,CVE-2020-1111,Potentially Unwanted Application Detected,open,2026-04-17,2026-04-19,Remove unwanted software and review application whitelist policies.
+asset-005,400005,High,8.0,CVE-2024-5566,Unauthorized Credential Dumping Attempt,open,2026-04-20,2026-04-20,Reset affected credentials enable MFA and investigate lateral movement.
+asset-006,400006,High,7.8,CVE-2023-9123,Suspicious Login Attempts from Unknown IP,open,2026-04-18,2026-04-20,Block IP address enforce MFA and review authentication logs.
+asset-007,400007,Medium,6.1,CVE-2022-6671,Abnormal DNS Query Activity Detected,open,2026-04-16,2026-04-20,Investigate DNS logs and block malicious domains.
+asset-008,400008,Critical,9.5,CVE-2024-1199,Active Exploit Attempt on Web Server Detected,open,2026-04-19,2026-04-20,Isolate server apply patch and review web application firewall rules.
+asset-009,400009,Low,3.8,CVE-2021-4455,Outdated Browser Extension Flagged,open,2026-04-15,2026-04-19,Remove or update extension and enforce extension policy.
+asset-010,400010,High,8.2,CVE-2023-3349,Privilege Escalation Attempt Detected on Linux Host,open,2026-04-20,2026-04-20,Patch kernel audit sudo logs and restrict privileged access.
+asset-011,400011,Medium,5.7,CVE-2022-7781,Unusual File Transfer Activity Detected,open,2026-04-17,2026-04-20,Inspect file transfer logs and block unauthorized endpoints.
+asset-012,400012,Critical,9.0,CVE-2024-2201,Remote Code Execution Attempt on API Endpoint,open,2026-04-18,2026-04-20,Patch API service enforce input validation and isolate affected service.
+asset-013,400013,High,7.6,CVE-2023-6654,Malicious Email Attachment Detected,open,2026-04-19,2026-04-20,Quarantine email scan endpoint and update email security filters.
+asset-014,400014,Low,4.0,CVE-2020-9988,Deprecated Service Running on Endpoint,open,2026-04-14,2026-04-19,Disable service and upgrade to supported version.
+asset-015,400015,Medium,6.3,CVE-2022-9033,Unusual Authentication Failure Spike Detected,open,2026-04-20,2026-04-20,Investigate login attempts and enforce account lockout policy.

@@ -198,29 +198,66 @@ def persist_ai_analysis_result(row: dict | pd.Series, analysis_result: dict) -> 
     save_ai_analysis_cache(cache)
 
 
+def _resolve_cached_source(cached: dict) -> str:
+    """
+    Determine the ai_analysis_source for a raw cache entry.
+
+    Handles three cases:
+      1. ai_analysis_source is explicitly set to a non-empty string.
+      2. ai_analysis_source is None/missing but ai_reason contains the
+         local-fallback marker phrase (backward compatibility).
+      3. Neither — treat as unknown so it gets re-analyzed rather than
+         silently served as a valid Gemini result.
+    """
+    source = str(cached.get("ai_analysis_source") or "").strip().lower()
+    if source:
+        return source
+    ai_reason = str(cached.get("ai_reason") or "").strip().lower()
+    if "local fallback" in ai_reason:
+        return "local_fallback"
+    # A cache entry with no source and no fallback marker is treated as
+    # unknown rather than valid, so it will be re-analyzed by Gemini.
+    return "unknown"
+
+
 def apply_cached_ai_analysis(df: pd.DataFrame) -> pd.DataFrame:
     df = ensure_ai_analysis_columns(df)
     cache = load_ai_analysis_cache()
     if not cache:
         return df
 
+    gemini_key_available = bool((os.getenv("GEMINI_API_KEY") or "").strip())
+
     for idx, row in df.iterrows():
         cached = cache.get(compute_asset_fingerprint(row))
         if not cached:
+            # No cache entry at all — leave ai_analysis_complete=False so it
+            # gets queued for Gemini analysis.
             continue
+
         for column in AI_ANALYSIS_COLUMNS:
             df.at[idx, column] = cached.get(column, pd.NA)
-        cached_source = str(cached.get("ai_analysis_source") or "").strip().lower()
-        if not cached_source:
-            # Backward compatibility: infer fallback source from legacy ai_reason text.
-            ai_reason = str(cached.get("ai_reason") or "").strip().lower()
-            if "local fallback assessment used" in ai_reason:
-                cached_source = "local_fallback"
-                df.at[idx, "ai_analysis_source"] = "local_fallback"
-        gemini_key_available = bool((os.getenv("GEMINI_API_KEY") or "").strip())
-        should_retry_with_gemini = cached_source == "local_fallback" and gemini_key_available
-        df.at[idx, "ai_analysis_complete"] = not should_retry_with_gemini
+
+        cached_source = _resolve_cached_source(cached)
+
+        # Write the resolved source back to the DataFrame so downstream
+        # code sees a consistent value even for legacy cache entries.
+        if cached_source:
+            df.at[idx, "ai_analysis_source"] = cached_source
+
+        # Decide whether this cached result is good enough to serve as-is.
+        # local_fallback and unknown both need a Gemini retry when possible.
+        needs_gemini_retry = cached_source in ("local_fallback", "unknown") and gemini_key_available
+
+        df.at[idx, "ai_analysis_complete"] = not needs_gemini_retry
         df.at[idx, "ai_analysis_error"] = pd.NA
+
+        print(
+            f"[cache] {row.get('asset_id')} source={cached_source!r} "
+            f"needs_retry={needs_gemini_retry} "
+            f"complete={not needs_gemini_retry}"
+        )
+
     return df
 
 
