@@ -100,6 +100,14 @@ def patch_color(status):
 
 ASSET_TABLE_CONFIGS = [
     {
+        "id": "asset-table-pending",
+        "title": "Pending Analysis",
+        "section": "pending",
+        "accent": COLORS["primary"],
+        "background": COLORS["primary_light"],
+        "empty": "No pending assets match the current filters.",
+    },
+    {
         "id": "asset-table-high",
         "title": "High Risk Assets",
         "section": "high",
@@ -207,7 +215,9 @@ def prepare_filtered_assets(df, search, risk_f, sort, date_from, date_to):
             asset_id_series = df.get("asset_id", pd.Series(index=df.index, dtype=str)).fillna("").astype(str)
             df = df[asset_name_series.str.lower().str.contains(q) | asset_id_series.str.lower().str.contains(q)]
     if risk_f and risk_f != "All":
-        df = df[df["risk_level"] == risk_f]
+        complete_mask = analysis_completion_mask(df)
+        risk_matches = df.get("risk_level", pd.Series(index=df.index, dtype="object")).eq(risk_f)
+        df = df[(~complete_mask) | risk_matches]
     if date_from:
         df = df[df["scan_date"] >= date_from]
     if date_to:
@@ -253,7 +263,8 @@ def build_asset_table(table_id, df):
     }
 
     existing_cols = [c for c in cols_display if c in df.columns]
-    table_data = df[existing_cols].fillna("-").to_dict("records")
+    table_frame = df[existing_cols].astype("object")
+    table_data = table_frame.where(pd.notna(table_frame), "-").to_dict("records")
 
     return dash_table.DataTable(
         id=table_id,
@@ -387,22 +398,25 @@ def update_issue_status(issue_status_save, issue_status_value, selected_asset, j
 
 @callback(
     Output("selected-asset-store", "data"),
+    Input("asset-table-pending", "selected_rows"),
     Input("asset-table-high", "selected_rows"),
     Input("asset-table-medium", "selected_rows"),
     Input("asset-table-low", "selected_rows"),
     Input("asset-table-all-good", "selected_rows"),
+    State("asset-table-pending", "data"),
     State("asset-table-high", "data"),
     State("asset-table-medium", "data"),
     State("asset-table-low", "data"),
     State("asset-table-all-good", "data"),
     prevent_initial_call=True,
 )
-def sync_selected_asset(high_rows, medium_rows, low_rows, all_good_rows, high_data, medium_data, low_data, all_good_data):
+def sync_selected_asset(pending_rows, high_rows, medium_rows, low_rows, all_good_rows, pending_data, high_data, medium_data, low_data, all_good_data):
     triggered_table = ctx.triggered_id
     if triggered_table not in TABLE_ID_MAP:
         return None
 
     selections = {
+        "asset-table-pending": (pending_rows, pending_data),
         "asset-table-high": (high_rows, high_data),
         "asset-table-medium": (medium_rows, medium_data),
         "asset-table-low": (low_rows, low_data),
@@ -781,14 +795,17 @@ def update_table(json_data, search, risk_f, sort, date_from, date_to):
 
     sections = []
     for config in ASSET_TABLE_CONFIGS:
-        section_df = df[(df["asset_section"] == config["section"]) & complete_mask].copy()
+        if config["section"] == "pending":
+            section_df = df[(df["asset_section"] == "pending") & ~failed_mask].copy()
+        else:
+            section_df = df[(df["asset_section"] == config["section"]) & complete_mask].copy()
         sections.append(build_asset_section(config, section_df))
 
     children = []
     if pending_count:
         children.append(
             html.Div(
-                f"AI analysis is still running for {pending_count} row(s). Completed rows appear below immediately.",
+                f"AI analysis is still running for {pending_count} row(s). Pending rows are listed below under Pending Analysis and will move automatically when complete.",
                 style={
                     "padding": "14px 16px",
                     "borderRadius": "12px",
@@ -979,6 +996,7 @@ def show_detail(selected_asset, backdrop_click, close_click, json_data):
 
 
 @callback(
+    Output("asset-table-pending", "selected_rows"),
     Output("asset-table-high", "selected_rows"),
     Output("asset-table-medium", "selected_rows"),
     Output("asset-table-low", "selected_rows"),
@@ -989,7 +1007,7 @@ def show_detail(selected_asset, backdrop_click, close_click, json_data):
     prevent_initial_call=True,
 )
 def clear_detail_selection(backdrop_clicks, close_clicks):
-    return [], [], [], [], None
+    return [], [], [], [], [], None
 
 
 # Export CSV

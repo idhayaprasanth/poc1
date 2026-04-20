@@ -261,8 +261,8 @@ def build_merged_dataset() -> pd.DataFrame:
     df = df.merge(splunk_data, on="asset_name", how="outer")
     df = df.merge(bigfix_data, on="asset_name", how="outer")
 
-    if "anomaly_score" in df.columns:
-        df["source_anomaly_score"] = pd.to_numeric(df["anomaly_score"], errors="coerce")
+    if "source_anomaly_score" in df.columns:
+        df["source_anomaly_score"] = pd.to_numeric(df["source_anomaly_score"], errors="coerce").astype("Float64")
     else:
         df["source_anomaly_score"] = pd.Series([pd.NA] * len(df), dtype="Float64")
 
