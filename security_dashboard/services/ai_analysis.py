@@ -13,20 +13,45 @@ from security_dashboard.services.gemini_base import (
     _is_truncated_json,
 )
 
-# Compact system prompt (token optimized)
+# Prompt tuned for deterministic JSON and stable scoring behavior.
 BASE_SYSTEM_PROMPT = (
-    "Return ONLY valid JSON. No extra text. "
-    "Use only given data. "
-    "Fields: asset_name, asset_id, threat_status, severity_validation, priority, "
+    "You are a cybersecurity risk analysis engine. "
+    "Return ONLY valid JSON (no markdown, no code fences, no commentary). "
+    "Return exactly one JSON object with keys: "
+    "asset_name, asset_id, threat_status, severity_validation, priority, "
     "asset_bucket, risk_level, risk_score, anomaly_score, ai_reason, remediation, "
     "tenable_remediation, defender_remediation, splunk_remediation, bigfix_remediation. "
-    "Scores must be integers 0-100."
+    "Rules: "
+    "risk_score and anomaly_score must be integers 0-100. "
+    "risk_level must be one of High, Medium, Low and must match risk_score bands: "
+    "High=75-100, Medium=45-74, Low=0-44. "
+    "priority must be one of Immediate, Planned, Monitor. "
+    "asset_bucket must be one of High Risk, Medium Risk, Low Risk. "
+    "Use only provided input data; do not invent facts. "
+    "If data is missing, keep conservative scoring and note uncertainty in ai_reason. "
+    "Remediation fields must be concise and actionable."
 )
 
 BATCH_SYSTEM_PROMPT = (
-    BASE_SYSTEM_PROMPT
-    + " For multi-asset input, return a JSON object with key 'assets' as an array."
-    + " Return one analysis object per provided input asset."
+    "You are a cybersecurity risk analysis engine. "
+    "Return ONLY valid JSON (no markdown, no code fences, no commentary). "
+    "Return exactly this shape: {\"assets\": [...]}. "
+    "For each input asset, return one output object in the same order as input. "
+    "The assets array length MUST equal input length. "
+    "Each asset object must include keys: "
+    "asset_name, asset_id, threat_status, severity_validation, priority, "
+    "asset_bucket, risk_level, risk_score, anomaly_score, ai_reason, remediation, "
+    "tenable_remediation, defender_remediation, splunk_remediation, bigfix_remediation. "
+    "Rules: "
+    "risk_score and anomaly_score must be integers 0-100. "
+    "risk_level must be one of High, Medium, Low and must match risk_score bands: "
+    "High=75-100, Medium=45-74, Low=0-44. "
+    "priority must be one of Immediate, Planned, Monitor. "
+    "asset_bucket must be one of High Risk, Medium Risk, Low Risk. "
+    "Use only provided input data; do not invent facts. "
+    "If data is missing, still return a complete object with conservative scoring "
+    "and note uncertainty in ai_reason. "
+    "Never omit an asset."
 )
 
 # Centralized field mapping
@@ -60,7 +85,7 @@ def _get_cached_source(cached: dict) -> str:
         return source
     ai_reason_text = str(cached.get("ai_reason") or "").strip().lower()
     if "local fallback" in ai_reason_text:
-        return "unknown"
+        return "local_fallback"
     return "unknown"
 
 
@@ -159,6 +184,27 @@ class GeminiAnalysisMixin:
                 result[field] = None
         return result
 
+    def _normalize_dashboard_row(self, result: dict, record: dict, source: str = "gemini") -> dict:
+        """Normalize dashboard analysis payload to the canonical cache/output shape."""
+        normalized = self._normalize_scores(result.copy() if isinstance(result, dict) else {})
+        normalized.update({
+            "asset_name": str(normalized.get("asset_name") or record.get("asset_name") or "").strip(),
+            "asset_id": str(normalized.get("asset_id") or record.get("asset_id") or "").strip(),
+            "threat_status": str(normalized.get("threat_status") or "Unknown"),
+            "severity_validation": str(normalized.get("severity_validation") or "Needs Review"),
+            "priority": str(normalized.get("priority") or "Monitor"),
+            "asset_bucket": str(normalized.get("asset_bucket") or "Low Risk"),
+            "risk_level": str(normalized.get("risk_level") or "Unknown"),
+            "ai_reason": str(normalized.get("ai_reason") or ""),
+            "remediation": str(normalized.get("remediation") or ""),
+            "tenable_remediation": str(normalized.get("tenable_remediation") or ""),
+            "defender_remediation": str(normalized.get("defender_remediation") or ""),
+            "splunk_remediation": str(normalized.get("splunk_remediation") or ""),
+            "bigfix_remediation": str(normalized.get("bigfix_remediation") or ""),
+            "ai_analysis_source": str(source or "gemini"),
+        })
+        return normalized
+
     def _normalize_cached_result(self, cached: dict, record: dict) -> dict:
         """Apply defaults to a cached result dict."""
         result = self._normalize_scores(cached.copy())
@@ -241,17 +287,8 @@ class GeminiAnalysisMixin:
         if not asset_records:
             return {"assets": [], "insights": {}}
 
-        try:
-            batch_size = int(batch_size)
-        except Exception:
-            batch_size = 3
-        batch_size = max(1, batch_size)
-
         all_results: list[dict] = []
         pending_records: list[dict] = []
-
-        gemini_available = self.enabled() and not get_gemini_pause_status().get("active")
-
         gemini_available = self.enabled() and not get_gemini_pause_status().get("active")
 
         cache = load_ai_analysis_cache()
@@ -318,7 +355,7 @@ class GeminiAnalysisMixin:
             prompt = f"Analyze these assets:\n{json.dumps(chunk_records)}"
 
             try:
-                data = self._generate_and_parse(BASE_SYSTEM_PROMPT, prompt, tokens=1200)
+                data = self._generate_and_parse(BATCH_SYSTEM_PROMPT, prompt, tokens=1200)
             except GeminiRateLimitError:
                 raise
             except ValueError as e:
@@ -354,26 +391,6 @@ class GeminiAnalysisMixin:
                 if not asset_id and not asset_name:
                     print(f"[dashboard] skipping row with no asset_id or asset_name: {row}")
                     continue
-
-                normalized = {
-                    "asset_name": str(result.get("asset_name") or ""),
-                    "asset_id": str(result.get("asset_id") or ""),
-                    "threat_status": str(result.get("threat_status") or "Unknown"),
-                    "severity_validation": str(result.get("severity_validation") or "Needs Review"),
-                    "priority": str(result.get("priority") or "Monitor"),
-                    "asset_bucket": str(result.get("asset_bucket") or "Low Risk"),
-                    "ai_reason": str(result.get("ai_reason") or ""),
-                    "remediation": str(result.get("remediation") or ""),
-                    "tenable_remediation": str(result.get("tenable_remediation") or ""),
-                    "defender_remediation": str(result.get("defender_remediation") or ""),
-                    "splunk_remediation": str(result.get("splunk_remediation") or ""),
-                    "bigfix_remediation": str(result.get("bigfix_remediation") or ""),
-                    "ai_analysis_source": "gemini",
-                    "anomaly_score": result.get("anomaly_score"),
-                    "risk_score": result.get("risk_score"),
-                    "risk_level": str(result.get("risk_level") or "Unknown"),
-                }
-                all_results.append(normalized)
 
                 # Match back to source record for persistence
                 source_record = next(
