@@ -48,7 +48,7 @@ def create_layout(df_base, analysis_status_initial=None):
                             html.Img(
                                 src=(
                                     "https://th.bing.com/th/id/OIP.Dl6ZSeYEI2zcqRpiPU04OwAAAA"
-                                    "?w=400&h=170&c=7&o=7&dpr=1.5&pid=1.7&rm=3"
+                                    "?w=600&h=200&c=7&o=7&dpr=1.5&pid=1.7&rm=3"
                                 ),
                                 alt="FUTREND Technology",
                                 style={
@@ -97,19 +97,7 @@ def create_layout(df_base, analysis_status_initial=None):
                             ),
                         ],
                     ),
-                    html.Span(
-                        "USWDS-aligned",
-                        style={
-                            "fontSize": "12px",
-                            "fontWeight": "700",
-                            "color": COLORS["text_muted"],
-                            "border": f"1px solid {COLORS['border']}",
-                            "padding": "6px 12px",
-                            "borderRadius": "4px",
-                            "background": COLORS["bg"],
-                            "whiteSpace": "nowrap",
-                        },
-                    ),
+                   
                         ],
                     ),
                 ],
@@ -339,7 +327,7 @@ def create_layout(df_base, analysis_status_initial=None):
                                                                         id="detail-asset-name",
                                                                         children="",
                                                                         style={
-                                                                            "fontSize": "17px",
+                                                                            "fontSize": "18px",
                                                                             "fontWeight": "800",
                                                                             "margin": 0,
                                                                             "color": COLORS["text"],
@@ -349,7 +337,7 @@ def create_layout(df_base, analysis_status_initial=None):
                                                                         id="detail-asset-id",
                                                                         children="",
                                                                         style={
-                                                                            "fontSize": "11px",
+                                                                            "fontSize": "16px",
                                                                             "fontFamily": "monospace",
                                                                             "color": COLORS["text_muted"],
                                                                             "display": "block",
@@ -369,7 +357,7 @@ def create_layout(df_base, analysis_status_initial=None):
                                                                     html.Span(
                                                                         "Issue Status",
                                                                         style={
-                                                                            "fontSize": "11px",
+                                                                            "fontSize": "16px",
                                                                             "color": COLORS["text_muted"],
                                                                             "fontWeight": "600",
                                                                         },
@@ -411,7 +399,7 @@ def create_layout(df_base, analysis_status_initial=None):
                                                     html.Span(
                                                         id="detail-scan-date",
                                                         children="",
-                                                        style={"fontSize": "11px", "color": COLORS["text_muted"]},
+                                                        style={"fontSize": "15px", "color": COLORS["text_muted"]},
                                                     ),
                                                 ],
                                             ),

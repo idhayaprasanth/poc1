@@ -1099,7 +1099,7 @@ def show_detail(selected_asset, backdrop_click, close_click, json_data):
     }
 
     def field_row(label, value, highlight=False):
-        font_size = "10px" if label == "Score" else "11px"
+        font_size = "14px" if label == "Score" else "15px"
         return html.Div(style={"display": "flex", "gap": "8px", "alignItems": "flex-start"}, children=[
             html.Span(f"{label}:", style={"fontSize": font_size, "color": COLORS["text_muted"], "minWidth": "80px", "fontWeight": "600"}),
             html.Span(str(value), style={"fontSize": font_size, "color": COLORS["high"] if highlight else COLORS["text"], "fontWeight": "600" if highlight else "500", "lineHeight": "1.4"}),
@@ -1111,7 +1111,7 @@ def show_detail(selected_asset, backdrop_click, close_click, json_data):
         return html.Div(style={"marginBottom": "20px"}, children=[
             html.Div(style={"display": "flex", "alignItems": "center", "gap": "8px", "marginBottom": "10px"}, children=[
                 icon_element,
-                html.Span(title, style={"fontSize": "13px", "fontWeight": "700", "color": COLORS["text"]}),
+                html.Span(title, style={"fontSize": "14px", "fontWeight": "700", "color": COLORS["text"]}),
             ]),
             html.Div(style={"marginLeft": "24px", "display": "flex", "flexDirection": "column", "gap": "6px"}, children=[
                 field_row(k, v, highlight=(k == "Severity" or k in ["Alert", "Status"] or (k == "Score" and isinstance(v, (int, float)) and v > 70))) for k, v in fields.items()
