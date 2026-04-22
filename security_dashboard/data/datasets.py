@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 from pathlib import Path
 
@@ -248,8 +247,6 @@ def apply_cached_ai_analysis(df: pd.DataFrame) -> pd.DataFrame:
     if not cache:
         return df
 
-    gemini_key_available = bool((os.getenv("GEMINI_API_KEY") or "").strip())
-
     for idx, row in df.iterrows():
         cached = cache.get(compute_asset_fingerprint(row))
         if not cached:
@@ -267,17 +264,14 @@ def apply_cached_ai_analysis(df: pd.DataFrame) -> pd.DataFrame:
         if cached_source:
             df.at[idx, "ai_analysis_source"] = cached_source
 
-        # Decide whether this cached result is good enough to serve as-is.
-        # local_fallback and unknown both need a Gemini retry when possible.
-        needs_gemini_retry = cached_source in ("local_fallback", "unknown") and gemini_key_available
-
-        df.at[idx, "ai_analysis_complete"] = not needs_gemini_retry
+        # Cached results are reused as-is; AI reruns only happen for new fingerprints.
+        df.at[idx, "ai_analysis_complete"] = True
         df.at[idx, "ai_analysis_error"] = pd.NA
 
         print(
             f"[cache] {row.get('asset_id')} source={cached_source!r} "
-            f"needs_retry={needs_gemini_retry} "
-            f"complete={not needs_gemini_retry}"
+            "needs_retry=False "
+            "complete=True"
         )
 
     return df

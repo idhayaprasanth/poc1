@@ -49,148 +49,6 @@ FIELD_MAP = {
 }
 
 
-def generate_local_asset_analysis(*, asset_record: dict) -> dict:
-    """Deterministic local fallback when Gemini is unavailable or paused."""
-    asset_record = asset_record or {}
-
-    vuln_severity = str(asset_record.get("vuln_severity") or "").strip().lower()
-    patch_status = str(asset_record.get("patch_status") or "").strip().lower()
-    patch_severity = str(asset_record.get("patch_severity") or "").strip().lower()
-    issue_status = str(asset_record.get("issue_status") or "Open").strip().lower()
-    threat_alert = str(asset_record.get("threat_alert") or "").strip()
-    threat_impact = str(asset_record.get("threat_impact") or "").strip()
-    anomaly_event = str(asset_record.get("anomaly_event") or "").strip()
-    anomaly_explanation = str(asset_record.get("anomaly_explanation") or "").strip()
-    threat_blob = f"{threat_alert} {threat_impact}".lower()
-    anomaly_blob = f"{anomaly_event} {anomaly_explanation}".lower()
-
-    severity_score = {
-        "critical": 92,
-        "high": 78,
-        "medium": 55,
-        "low": 28,
-    }.get(vuln_severity, 20)
-
-    patch_score = {
-        "critical": 18,
-        "high": 12,
-        "medium": 7,
-        "low": 3,
-    }.get(patch_severity, 0)
-    if patch_status == "missing":
-        patch_score += 10
-    elif patch_status == "pending":
-        patch_score += 5
-
-    threat_score = 0
-    if threat_alert:
-        threat_score = 40
-    if any(term in threat_blob for term in ("emotet", "trojan", "ransomware", "malware", "c2", "command-and-control")):
-        threat_score = max(threat_score, 48)
-
-    try:
-        source_anomaly_score = int(float(asset_record.get("source_anomaly_score") or 0))
-    except Exception:
-        source_anomaly_score = 0
-    source_anomaly_score = max(0, min(source_anomaly_score, 100))
-
-    anomaly_bonus = 0
-    if any(term in anomaly_blob for term in ("known command-and-control", "data exfiltration", "unusual outbound", "dns queries")):
-        anomaly_bonus = 10
-    anomaly_score = max(source_anomaly_score, min(100, source_anomaly_score + anomaly_bonus))
-
-    issue_bonus = 6 if issue_status in {"open", "in progress"} else 0
-    risk_score = min(
-        100,
-        int(round(severity_score * 0.45 + anomaly_score * 0.25 + threat_score * 0.20 + patch_score + issue_bonus)),
-    )
-
-    if risk_score >= 75:
-        risk_level = "High"
-        asset_bucket = "High Risk"
-        priority = "Immediate"
-    elif risk_score >= 45:
-        risk_level = "Medium"
-        asset_bucket = "Medium Risk"
-        priority = "Planned"
-    elif risk_score <= 15 and not threat_alert and patch_status not in {"missing", "pending"}:
-        risk_level = "Low"
-        asset_bucket = "All Good"
-        priority = "Monitor"
-    else:
-        risk_level = "Low"
-        asset_bucket = "Low Risk"
-        priority = "Monitor"
-
-    if threat_alert:
-        threat_status = "True Positive" if threat_score >= 40 or anomaly_score >= 70 else "Needs Investigation"
-    else:
-        threat_status = "No Active Threat Observed"
-
-    if vuln_severity in {"critical", "high"} and risk_level == "High":
-        severity_validation = "Severity aligns with observed exposure"
-    elif vuln_severity in {"critical", "high", "medium"}:
-        severity_validation = "Severity partially supported by current signals"
-    else:
-        severity_validation = "Severity appears limited based on current signals"
-
-    reasons = []
-    if vuln_severity:
-        reasons.append(f"{vuln_severity.title()} vulnerability exposure")
-    if threat_alert:
-        reasons.append(f"active alert: {threat_alert}")
-    if source_anomaly_score:
-        reasons.append(f"anomaly score {source_anomaly_score}/100")
-    if patch_status in {"missing", "pending"}:
-        reasons.append(f"patch status is {patch_status}")
-    if not reasons:
-        reasons.append("limited risk indicators in the current merged dataset")
-    ai_reason = (
-        "Local fallback assessment used because Gemini was unavailable. "
-        + "; ".join(reasons[:4])
-        + "."
-    )
-
-    remediation_parts = []
-    for key in ("vuln_fix", "threat_fix", "patch_recommendation"):
-        value = str(asset_record.get(key) or "").strip()
-        if value and value not in remediation_parts:
-            remediation_parts.append(value)
-    if not remediation_parts:
-        remediation_parts.append("Review the host, validate exposure, and apply standard hardening controls.")
-    remediation = " ".join(remediation_parts[:3])
-
-    return {
-        "asset_name": str(asset_record.get("asset_name") or "").strip(),
-        "asset_id": str(asset_record.get("asset_id") or "").strip(),
-        "threat_status": threat_status,
-        "severity_validation": severity_validation,
-        "priority": priority,
-        "asset_bucket": asset_bucket,
-        "risk_level": risk_level,
-        "risk_score": risk_score,
-        "anomaly_score": anomaly_score,
-        "ai_reason": ai_reason,
-        "remediation": remediation,
-        "tenable_remediation": str(asset_record.get("vuln_fix") or remediation).strip(),
-        "defender_remediation": str(asset_record.get("threat_fix") or remediation).strip(),
-        "splunk_remediation": "Investigate suspicious log activity and validate whether containment is needed.",
-        "bigfix_remediation": str(asset_record.get("patch_recommendation") or remediation).strip(),
-        "ai_analysis_source": "local_fallback",
-    }
-
-
-def _fallback_for_records(records: list[dict]) -> list[dict]:
-    """Generate local fallback results for a list of records."""
-    results = []
-    for record in records:
-        fallback = generate_local_asset_analysis(asset_record=record)
-        fallback["ai_analysis_source"] = "local_fallback"
-        persist_ai_analysis_result(record, fallback)
-        results.append(fallback)
-    return results
-
-
 def _get_cached_source(cached: dict) -> str:
     """
     Resolve the ai_analysis_source from a cached result dict.
@@ -202,7 +60,7 @@ def _get_cached_source(cached: dict) -> str:
         return source
     ai_reason_text = str(cached.get("ai_reason") or "").strip().lower()
     if "local fallback" in ai_reason_text:
-        return "local_fallback"
+        return "unknown"
     return "unknown"
 
 
@@ -334,7 +192,7 @@ class GeminiAnalysisMixin:
         cached_source = _get_cached_source(cached or {})
 
         can_retry_cached_fallback = (
-            cached_source in ("local_fallback", "unknown")
+            cached_source == "unknown"
             and self.enabled()
             and not get_gemini_pause_status().get("active")
         )
@@ -348,18 +206,10 @@ class GeminiAnalysisMixin:
         try:
             data = self._generate_and_parse(BASE_SYSTEM_PROMPT, prompt)
         except (ValueError, GeminiRateLimitError) as e:
-            print(f"[gemini] generate_asset_analysis fallback triggered: {e}")
-            fallback = generate_local_asset_analysis(asset_record=asset_record)
-            fallback["ai_analysis_source"] = "local_fallback"
-            persist_ai_analysis_result(asset_record, fallback)
-            return fallback
+            raise ValueError(f"Gemini analysis failed for asset {asset_record.get('asset_id')}: {e}") from e
 
         if not isinstance(data, dict):
-            print(f"[gemini] generate_asset_analysis: unexpected type {type(data)}, using fallback")
-            fallback = generate_local_asset_analysis(asset_record=asset_record)
-            fallback["ai_analysis_source"] = "local_fallback"
-            persist_ai_analysis_result(asset_record, fallback)
-            return fallback
+            raise ValueError(f"Gemini returned invalid payload type: {type(data)}")
 
         result = self._extract_fields(data)
         result = self._normalize_scores(result)
@@ -434,7 +284,7 @@ class GeminiAnalysisMixin:
             cached = self._cached_result_for_record(record)
             if cached:
                 cached_source = _get_cached_source(cached)
-                if cached_source in ("local_fallback", "unknown") and gemini_available:
+                if cached_source == "unknown" and gemini_available:
                     # Defensive: flag said complete but source is stale — re-queue.
                     print(
                         f"[dashboard] re-queuing {record.get('asset_id')} "
@@ -470,17 +320,13 @@ class GeminiAnalysisMixin:
             try:
                 data = self._generate_and_parse(BASE_SYSTEM_PROMPT, prompt, tokens=1200)
             except GeminiRateLimitError:
-                print(f"[dashboard] rate limit on chunk {chunk_index + 1}, falling back")
-                all_results.extend(_fallback_for_records(source_records))
-                continue
+                raise
             except ValueError as e:
-                print(f"[dashboard] parse failure on chunk {chunk_index + 1}: {e}, falling back")
-                all_results.extend(_fallback_for_records(source_records))
-                continue
+                raise ValueError(f"Gemini parse failure on chunk {chunk_index + 1}: {e}") from e
             except Exception as e:
-                print(f"[dashboard] unexpected error on chunk {chunk_index + 1}: {type(e).__name__}: {e}, falling back")
-                all_results.extend(_fallback_for_records(source_records))
-                continue
+                raise RuntimeError(
+                    f"Gemini unexpected error on chunk {chunk_index + 1}: {type(e).__name__}: {e}"
+                ) from e
 
             print(f"[dashboard] chunk {chunk_index + 1} returned data (type={type(data).__name__})")
 
@@ -490,9 +336,7 @@ class GeminiAnalysisMixin:
             elif isinstance(data, dict):
                 items = data.get("assets", [data])
             else:
-                print(f"[dashboard] unexpected Gemini format for chunk {chunk_index + 1}: {data!r}, falling back")
-                all_results.extend(_fallback_for_records(source_records))
-                continue
+                raise ValueError(f"Unexpected Gemini response format on chunk {chunk_index + 1}: {type(data)}")
 
             # Map Gemini items back to source records
             processed_ids: set[str] = set()
@@ -563,8 +407,9 @@ class GeminiAnalysisMixin:
                 not in processed_ids
             ]
             if unmatched:
-                print(f"[dashboard] {len(unmatched)} record(s) not returned by Gemini in chunk {chunk_index + 1}, falling back")
-                all_results.extend(_fallback_for_records(unmatched))
+                raise ValueError(
+                    f"Gemini omitted {len(unmatched)} record(s) in chunk {chunk_index + 1}; no fallback is allowed."
+                )
 
         if not all_results:
             raise ValueError("No valid asset analysis returned.")

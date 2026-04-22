@@ -20,7 +20,6 @@ from security_dashboard.data.datasets import (
     persist_ai_analysis_result,
 )
 from security_dashboard.layout import create_layout
-from security_dashboard.services.ai_analysis import generate_local_asset_analysis
 from security_dashboard.services.gemini_flash import GeminiFlashClient, GeminiRateLimitError, get_gemini_pause_status
 
 load_env_file()
@@ -133,14 +132,6 @@ def patch_color(status):
 
 ASSET_TABLE_CONFIGS = [
     {
-        "id": "asset-table-pending",
-        "title": "Pending Analysis",
-        "section": "pending",
-        "accent": COLORS["primary"],
-        "background": COLORS["primary_lighter"],
-        "empty": "No pending assets match the current filters.",
-    },
-    {
         "id": "asset-table-high",
         "title": "High Risk Assets",
         "section": "high",
@@ -163,14 +154,6 @@ ASSET_TABLE_CONFIGS = [
         "accent": COLORS["low"],
         "background": COLORS["low_bg"],
         "empty": "No low risk assets match the current filters.",
-    },
-    {
-        "id": "asset-table-all-good",
-        "title": "All Good Assets",
-        "section": "all_good",
-        "accent": COLORS["primary"],
-        "background": COLORS["primary_lighter"],
-        "empty": "No fully healthy assets match the current filters.",
     },
 ]
 
@@ -213,30 +196,6 @@ def build_gemini_pause_message(*, prefix: str = "AI analysis is paused.") -> str
     if remaining_seconds > 0:
         return f"{prefix} {scope_text} Retry after about {remaining_seconds} second(s), or refresh later."
     return f"{prefix} {scope_text} Refresh later or update the Gemini project quota."
-
-
-def apply_local_analysis_fallback(df, pending_mask):
-    df = ensure_ai_analysis_columns(df.copy())
-    completed_assets = []
-
-    for idx in df.index[pending_mask]:
-        record = df.loc[idx].to_dict()
-        ai_row = generate_local_asset_analysis(asset_record=record)
-        ai_row["ai_analysis_source"] = "local_fallback"
-        for col in AI_ANALYSIS_COLUMNS:
-            value = ai_row.get(col)
-            if col in ("risk_score", "anomaly_score"):
-                try:
-                    value = int(float(value))
-                except Exception:
-                    value = pd.NA
-            df.at[idx, col] = value
-        df.at[idx, "ai_analysis_complete"] = True
-        df.at[idx, "ai_analysis_error"] = pd.NA
-        persist_ai_analysis_result(record, ai_row)
-        completed_assets.append(str(record.get("asset_name") or record.get("asset_id") or f"row {idx + 1}"))
-
-    return df, completed_assets
 
 
 def prepare_filtered_assets(df, search, risk_f, sort, date_from, date_to):
@@ -289,8 +248,6 @@ def assign_asset_sections(df):
         "medium": "medium",
         "low risk": "low",
         "low": "low",
-        "all good": "all_good",
-        "healthy": "all_good",
     }
     risk_map = {
         "high": "high",
@@ -312,8 +269,8 @@ def assign_asset_sections(df):
     df.loc[not_waiting, "asset_section"] = (
         df.loc[not_waiting, "asset_section"].fillna(fallback_from_score.loc[not_waiting])
     )
-    # Only rows that still need a first successful AI run stay in Pending Analysis.
-    df.loc[pending_analysis_mask, "asset_section"] = "pending"
+    # Rows waiting for AI remain unmapped and are not shown in risk tables yet.
+    df.loc[pending_analysis_mask, "asset_section"] = pd.NA
 
     # Debug visibility issues: analyzed rows that did not map to a visible section.
     unmapped_complete = complete_mask & df["asset_section"].isna()
@@ -529,29 +486,23 @@ def update_issue_status(issue_status_save, issue_status_value, selected_asset, j
 
 @callback(
     Output("selected-asset-store", "data"),
-    Input("asset-table-pending", "selected_rows"),
     Input("asset-table-high", "selected_rows"),
     Input("asset-table-medium", "selected_rows"),
     Input("asset-table-low", "selected_rows"),
-    Input("asset-table-all-good", "selected_rows"),
-    State("asset-table-pending", "data"),
     State("asset-table-high", "data"),
     State("asset-table-medium", "data"),
     State("asset-table-low", "data"),
-    State("asset-table-all-good", "data"),
     prevent_initial_call=True,
 )
-def sync_selected_asset(pending_rows, high_rows, medium_rows, low_rows, all_good_rows, pending_data, high_data, medium_data, low_data, all_good_data):
+def sync_selected_asset(high_rows, medium_rows, low_rows, high_data, medium_data, low_data):
     triggered_table = ctx.triggered_id
     if triggered_table not in TABLE_ID_MAP:
         return None
 
     selections = {
-        "asset-table-pending": (pending_rows, pending_data),
         "asset-table-high": (high_rows, high_data),
         "asset-table-medium": (medium_rows, medium_data),
         "asset-table-low": (low_rows, low_data),
-        "asset-table-all-good": (all_good_rows, all_good_data),
     }
 
     selected_rows, table_data = selections.get(triggered_table, (None, None))
@@ -593,10 +544,7 @@ def queue_dashboard_analysis(json_data, current_request):
             {"requested_at": datetime.now().isoformat(), "pending_count": int(pending.sum())},
             {
                 "state": "warning",
-                "message": (
-                    f"{build_gemini_pause_message(prefix=f'AI analysis paused with {int(pending.sum())} row(s) still pending.')}"
-                    " Completing pending rows using local fallback analysis."
-                ),
+                "message": build_gemini_pause_message(prefix=f"AI analysis paused with {int(pending.sum())} row(s) still pending."),
             },
         )
     if not pending.any():
@@ -642,29 +590,22 @@ def run_dashboard_analysis(analysis_request, json_data):
 
     client = GeminiFlashClient()
     if not client.enabled():
-        df, completed_assets = apply_local_analysis_fallback(df, pending)
         return (
-            df.to_json(date_format="iso", orient="split"),
+            no_update,
             {
-                "state": "warning",
-                "message": (
-                    f"Gemini is not configured. Completed {len(completed_assets)} row(s) using local fallback analysis."
-                ),
+                "state": "error",
+                "message": "Gemini is not configured. AI analysis is required before assets can be displayed.",
             },
             None,
         )
 
     pause = get_gemini_pause_status()
     if pause.get("active"):
-        df, completed_assets = apply_local_analysis_fallback(df, pending)
         return (
-            df.to_json(date_format="iso", orient="split"),
+            no_update,
             {
                 "state": "warning",
-                "message": (
-                    f"{build_gemini_pause_message(prefix='Gemini is paused.')}"
-                    f" Completed {len(completed_assets)} pending row(s) using local fallback analysis."
-                ),
+                "message": build_gemini_pause_message(prefix="Gemini is paused."),
             },
             None,
         )
@@ -698,16 +639,11 @@ def run_dashboard_analysis(analysis_request, json_data):
             batch_result = client.generate_dashboard_analysis(asset_records=batch_records)
         except GeminiRateLimitError as exc:
             logger.warning("AI analysis paused for batch due to Gemini quota limits: %s", exc)
-            pending_after_pause = analysis_pending_mask(df)
-            df, completed_assets = apply_local_analysis_fallback(df, pending_after_pause)
             return (
-                df.to_json(date_format="iso", orient="split"),
+                no_update,
                 {
                     "state": "warning",
-                    "message": (
-                        f"{build_gemini_pause_message(prefix='AI analysis paused before completing the active batch.')}"
-                        f" Completed {len(completed_assets)} pending row(s) using local fallback analysis."
-                    ),
+                    "message": build_gemini_pause_message(prefix="AI analysis paused before completing the active batch."),
                 },
                 None,
             )
@@ -982,39 +918,27 @@ def update_table(json_data, search, risk_f, sort, date_from, date_to):
     df = ensure_ai_analysis_columns(pd.read_json(io.StringIO(json_data), orient="split"))
     df = prepare_filtered_assets(df, search, risk_f, sort, date_from, date_to)
     df = assign_asset_sections(df)
-    complete_mask = analysis_completion_mask(df)
     failed_mask = analysis_error_mask(df)
     pending_analysis_mask = analysis_pending_mask(df)
     pending_count = int(pending_analysis_mask.sum())
     failed_count = int(failed_mask.sum())
 
-    sections = []
-    for config in ASSET_TABLE_CONFIGS:
-        if config["section"] == "pending":
-            section_df = df[(df["asset_section"] == "pending")].copy()
-        else:
-            # Show in risk tables as soon as analysis is not "waiting" (complete from cache, or error).
-            section_df = df[(df["asset_section"] == config["section"]) & (~pending_analysis_mask)].copy()
-        sections.append(build_asset_section(config, section_df))
-
     children = []
     if pending_count:
-        children.append(
-            html.Div(
-                f"AI analysis is pending for {pending_count} row(s). Pending rows stay in Pending Analysis until they are successfully analyzed.",
-                style={
-                    "padding": "14px 16px",
-                    "borderRadius": "4px",
-                    "background": COLORS["primary_lighter"],
-                    "borderLeft": f"4px solid {COLORS['primary']}",
-                    "borderTop": f"1px solid {COLORS['border']}",
-                    "borderRight": f"1px solid {COLORS['border']}",
-                    "borderBottom": f"1px solid {COLORS['border']}",
-                    "color": COLORS["primary_dark"],
-                    "fontSize": "15px",
-                    "fontWeight": "700",
-                },
-            )
+        return html.Div(
+            "AI analysis running...",
+            style={
+                "padding": "14px 16px",
+                "borderRadius": "4px",
+                "background": COLORS["primary_lighter"],
+                "borderLeft": f"4px solid {COLORS['primary']}",
+                "borderTop": f"1px solid {COLORS['border']}",
+                "borderRight": f"1px solid {COLORS['border']}",
+                "borderBottom": f"1px solid {COLORS['border']}",
+                "color": COLORS["primary_dark"],
+                "fontSize": "15px",
+                "fontWeight": "700",
+            },
         )
     if failed_count:
         children.append(
@@ -1034,6 +958,10 @@ def update_table(json_data, search, risk_f, sort, date_from, date_to):
                 },
             )
         )
+    sections = []
+    for config in ASSET_TABLE_CONFIGS:
+        section_df = df[(df["asset_section"] == config["section"]) & (~pending_analysis_mask)].copy()
+        sections.append(build_asset_section(config, section_df))
     children.append(html.Div(style={"display": "grid", "gap": "24px"}, children=sections))
     return html.Div(style={"display": "grid", "gap": "20px"}, children=children)
 
@@ -1199,18 +1127,16 @@ def show_detail(selected_asset, backdrop_click, close_click, json_data):
 
 
 @callback(
-    Output("asset-table-pending", "selected_rows"),
     Output("asset-table-high", "selected_rows"),
     Output("asset-table-medium", "selected_rows"),
     Output("asset-table-low", "selected_rows"),
-    Output("asset-table-all-good", "selected_rows"),
     Output("selected-asset-store", "data", allow_duplicate=True),
     Input("detail-backdrop", "n_clicks"),
     Input("detail-close-btn", "n_clicks"),
     prevent_initial_call=True,
 )
 def clear_detail_selection(backdrop_clicks, close_clicks):
-    return [], [], [], [], [], None
+    return [], [], [], None
 
 
 # Export CSV
