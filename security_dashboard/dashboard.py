@@ -669,134 +669,26 @@ def run_dashboard_analysis(analysis_request, json_data):
             None,
         )
 
-    # Process every pending row in this callback. Dash cannot reliably chain multiple
-    # analysis cycles via Stores alone; looping here matches user expectation (all rows).
-    batch_number = 0
-    max_batches = max(64, len(df) // max(AI_ANALYSIS_BATCH_SIZE, 1) + 10)
-
-    while analysis_pending_mask(df).any():
-        pending = analysis_pending_mask(df)
-        batch_number += 1
-        if batch_number > max_batches:
-            logger.error("AI analysis stopped after %s batch(es); possible loop guard.", max_batches)
-            break
-
-        batch_indices = list(df.index[pending][:AI_ANALYSIS_BATCH_SIZE])
-        batch_records = [df.loc[idx].to_dict() for idx in batch_indices]
-        batch_assets = [
-            str(record.get("asset_name") or record.get("asset_id") or f"row {idx + 1}")
-            for idx, record in zip(batch_indices, batch_records)
-        ]
-        logger.info(
-            "Starting AI analysis batch %s for %s row(s): %s",
-            batch_number,
-            len(batch_indices),
-            ", ".join(batch_assets),
+    batch_indices = list(df.index[pending][:AI_ANALYSIS_BATCH_SIZE])
+    batch_records = [df.loc[idx].to_dict() for idx in batch_indices]
+    batch_assets = [
+        str(record.get("asset_name") or record.get("asset_id") or f"row {idx + 1}")
+        for idx, record in zip(batch_indices, batch_records)
+    ]
+    logger.info(
+        "Starting AI analysis batch for %s row(s): %s",
+        len(batch_indices),
+        ", ".join(batch_assets),
+    )
+    try:
+        batch_result = client.generate_dashboard_analysis(
+            asset_records=batch_records,
+            batch_size=AI_ANALYSIS_BATCH_SIZE,
         )
-
-        try:
-            batch_result = client.generate_dashboard_analysis(asset_records=batch_records)
-        except GeminiRateLimitError as exc:
-            logger.warning("AI analysis paused for batch due to Gemini quota limits: %s", exc)
-            pending_after_pause = analysis_pending_mask(df)
-            df, completed_assets = apply_local_analysis_fallback(df, pending_after_pause)
-            return (
-                df.to_json(date_format="iso", orient="split"),
-                {
-                    "state": "warning",
-                    "message": (
-                        f"{build_gemini_pause_message(prefix='AI analysis paused before completing the active batch.')}"
-                        f" Completed {len(completed_assets)} pending row(s) using local fallback analysis."
-                    ),
-                },
-                None,
-            )
-        except Exception as exc:
-            logger.exception("AI analysis batch failed")
-            for idx in batch_indices:
-                df.at[idx, "ai_analysis_error"] = str(exc)
-            remaining_pending = analysis_pending_mask(df)
-            remaining_count = int(remaining_pending.sum())
-            if not remaining_count:
-                failed_count = int(analysis_error_mask(df).sum())
-                return (
-                    df.to_json(date_format="iso", orient="split"),
-                    {
-                        "state": "warning",
-                        "message": (
-                            f"AI analysis failed for the final batch of {len(batch_indices)} row(s). "
-                            f"No more pending rows remain. {failed_count} row(s) failed in total. Check the terminal logs."
-                        ),
-                    },
-                    None,
-                )
-            continue
-
-        assets = (batch_result or {}).get("assets", []) if isinstance(batch_result, dict) else []
-
-        index_to_record = {idx: record for idx, record in zip(batch_indices, batch_records)}
-        unresolved_indices = set(batch_indices)
-        id_to_indices = {}
-        name_to_indices = {}
-        for idx, record in index_to_record.items():
-            asset_id = str(record.get("asset_id") or "").strip()
-            asset_name = str(record.get("asset_name") or "").strip()
-            if asset_id:
-                id_to_indices.setdefault(asset_id, []).append(idx)
-            if asset_name:
-                name_to_indices.setdefault(asset_name, []).append(idx)
-
-        completed_assets = []
-        for ai_row in assets:
-            if not isinstance(ai_row, dict):
-                continue
-
-            matched_idx = None
-            ai_asset_id = str(ai_row.get("asset_id") or "").strip()
-            ai_asset_name = str(ai_row.get("asset_name") or "").strip()
-
-            if ai_asset_id and id_to_indices.get(ai_asset_id):
-                matched_idx = id_to_indices[ai_asset_id].pop(0)
-            elif ai_asset_name and name_to_indices.get(ai_asset_name):
-                matched_idx = name_to_indices[ai_asset_name].pop(0)
-
-            if matched_idx is None or matched_idx not in unresolved_indices:
-                continue
-
-            for col in AI_ANALYSIS_COLUMNS:
-                value = ai_row.get(col)
-                if col in ("risk_score", "anomaly_score"):
-                    try:
-                        value = int(float(value))
-                    except Exception:
-                        value = pd.NA
-                df.at[matched_idx, col] = value
-
-            df.at[matched_idx, "ai_analysis_complete"] = True
-            df.at[matched_idx, "ai_analysis_error"] = pd.NA
-            persist_ai_analysis_result(index_to_record[matched_idx], ai_row)
-
-            asset_label = str(
-                index_to_record[matched_idx].get("asset_name")
-                or index_to_record[matched_idx].get("asset_id")
-                or f"row {matched_idx + 1}"
-            )
-            completed_assets.append(asset_label)
-            unresolved_indices.remove(matched_idx)
-
-        for idx in unresolved_indices:
-            df.at[idx, "ai_analysis_error"] = "No valid AI analysis returned for this row in the current batch."
-
-        logger.info(
-            "Completed AI analysis batch %s. Success=%s, Failed=%s",
-            batch_number,
-            len(completed_assets),
-            len(unresolved_indices),
-        )
-
-    if analysis_pending_mask(df).any():
-        pending_left = int(analysis_pending_mask(df).sum())
-        logger.warning("AI analysis stopped with %s row(s) still pending (safety limit).", pending_left)
+    except GeminiRateLimitError as exc:
+        logger.warning("AI analysis paused for batch due to Gemini quota limits: %s", exc)
+        pending_after_pause = analysis_pending_mask(df)
+        df, completed_assets = apply_local_analysis_fallback(df, pending_after_pause)
         return (
             df.to_json(date_format="iso", orient="split"),
             {
@@ -808,7 +700,95 @@ def run_dashboard_analysis(analysis_request, json_data):
             },
             None,
         )
+    except Exception as exc:
+        logger.exception("AI analysis batch failed")
+        for idx in batch_indices:
+            df.at[idx, "ai_analysis_error"] = str(exc)
+        remaining_pending = analysis_pending_mask(df)
+        remaining_count = int(remaining_pending.sum())
+        failed_count = int(analysis_error_mask(df).sum())
+        status_state = "running" if remaining_count else "warning"
+        if remaining_count:
+            status_message = (
+                f"AI analysis failed for a batch of {len(batch_indices)} row(s). Skipping those rows and continuing. "
+                f"{remaining_count} row(s) remaining. Check the terminal logs."
+            )
+        else:
+            status_message = (
+                f"AI analysis failed for the final batch of {len(batch_indices)} row(s). No more pending rows remain. "
+                f"{failed_count} row(s) failed in total. Check the terminal logs."
+            )
+        return (
+            df.to_json(date_format="iso", orient="split"),
+            {"state": status_state, "message": status_message},
+            None,
+        )
+    assets = (batch_result or {}).get("assets", []) if isinstance(batch_result, dict) else []
 
+    index_to_record = {idx: record for idx, record in zip(batch_indices, batch_records)}
+    unresolved_indices = set(batch_indices)
+    unresolved_in_order = list(batch_indices)
+    id_to_indices = {}
+    name_to_indices = {}
+    for idx, record in index_to_record.items():
+        asset_id = str(record.get("asset_id") or "").strip()
+        asset_name = str(record.get("asset_name") or "").strip().lower()
+        if asset_id:
+            id_to_indices.setdefault(asset_id, []).append(idx)
+        if asset_name:
+            name_to_indices.setdefault(asset_name, []).append(idx)
+
+    completed_assets = []
+    for ai_row in assets:
+        if not isinstance(ai_row, dict):
+            continue
+
+        matched_idx = None
+        ai_asset_id = str(ai_row.get("asset_id") or "").strip()
+        ai_asset_name = str(ai_row.get("asset_name") or "").strip().lower()
+
+        if ai_asset_id and id_to_indices.get(ai_asset_id):
+            matched_idx = id_to_indices[ai_asset_id].pop(0)
+        elif ai_asset_name and name_to_indices.get(ai_asset_name):
+            matched_idx = name_to_indices[ai_asset_name].pop(0)
+        elif unresolved_in_order:
+            matched_idx = unresolved_in_order[0]
+
+        if matched_idx is None or matched_idx not in unresolved_indices:
+            continue
+
+        for col in AI_ANALYSIS_COLUMNS:
+            value = ai_row.get(col)
+            if col in ("risk_score", "anomaly_score"):
+                try:
+                    value = int(float(value))
+                except Exception:
+                    value = pd.NA
+            df.at[matched_idx, col] = value
+
+        df.at[matched_idx, "ai_analysis_complete"] = True
+        df.at[matched_idx, "ai_analysis_error"] = pd.NA
+        persist_ai_analysis_result(index_to_record[matched_idx], ai_row)
+
+        asset_label = str(
+            index_to_record[matched_idx].get("asset_name")
+            or index_to_record[matched_idx].get("asset_id")
+            or f"row {matched_idx + 1}"
+        )
+        completed_assets.append(asset_label)
+        unresolved_indices.remove(matched_idx)
+        unresolved_in_order = [idx for idx in unresolved_in_order if idx in unresolved_indices]
+
+    for idx in unresolved_indices:
+        df.at[idx, "ai_analysis_error"] = "No valid AI analysis returned for this row in the current batch."
+
+    logger.info(
+        "Completed AI analysis batch. Success=%s, Failed=%s",
+        len(completed_assets),
+        len(unresolved_indices),
+    )
+
+    remaining_count = int(analysis_pending_mask(df).sum())
     failed_count = int(analysis_error_mask(df).sum())
     if failed_count:
         status = {
@@ -818,6 +798,9 @@ def run_dashboard_analysis(analysis_request, json_data):
                 "Check the terminal logs."
             ),
         }
+        # Clear the current request; queue_dashboard_analysis will enqueue the next batch
+        # from the updated merged-data-store if pending rows still exist.
+        next_request = None
     else:
         status = {"state": "complete", "message": "AI analysis completed for all assets."}
 
