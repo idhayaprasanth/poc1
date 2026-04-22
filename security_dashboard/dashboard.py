@@ -808,7 +808,6 @@ def run_dashboard_analysis(analysis_request, json_data):
             },
             None,
         )
-
     failed_count = int(analysis_error_mask(df).sum())
     if failed_count:
         status = {

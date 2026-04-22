@@ -23,6 +23,12 @@ BASE_SYSTEM_PROMPT = (
     "Scores must be integers 0-100."
 )
 
+BATCH_SYSTEM_PROMPT = (
+    BASE_SYSTEM_PROMPT
+    + " For multi-asset input, return a JSON object with key 'assets' as an array."
+    + " Return one analysis object per provided input asset."
+)
+
 # Centralized field mapping
 FIELD_MAP = {
     "asset_name": ["asset_name", "name", "hostname", "host_name"],
@@ -385,10 +391,26 @@ class GeminiAnalysisMixin:
         if not asset_records:
             return {"assets": [], "insights": {}}
 
+        try:
+            batch_size = int(batch_size)
+        except Exception:
+            batch_size = 3
+        batch_size = max(1, batch_size)
+
         all_results: list[dict] = []
         pending_records: list[dict] = []
 
         gemini_available = self.enabled() and not get_gemini_pause_status().get("active")
+
+        gemini_available = self.enabled() and not get_gemini_pause_status().get("active")
+
+        cache = load_ai_analysis_cache()
+
+        def cached_result_for_record(record: dict) -> dict | None:
+            cached = cache.get(compute_asset_fingerprint(record))
+            if not isinstance(cached, dict):
+                return None
+            return {column: cached.get(column) for column in AI_ANALYSIS_COLUMNS}
 
         for record in asset_records:
             # Normalise ai_analysis_complete across pandas bool, Python bool,
@@ -525,6 +547,8 @@ class GeminiAnalysisMixin:
                 )
 
                 if source_record:
+                    normalized = self._normalize_dashboard_row(result, source_record, "gemini")
+                    all_results.append(normalized)
                     persist_ai_analysis_result(source_record, normalized)
                     processed_ids.add(
                         str(source_record.get("asset_id") or source_record.get("asset_name") or "").strip().lower()
