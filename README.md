@@ -1,92 +1,81 @@
-# Unified Security Risk Dashboard (Dash)
+# AI Security Monitoring Project
 
-A single-page cybersecurity dashboard built with Python + Dash. It merges multiple mock data sources (vuln/threat/logs/patch) into one asset inventory, computes a risk score, and provides analyst-friendly views (KPIs, table, detail panel, trend, daily change summary, SLA aging, AI insights, and an AI chat window).
+A unified cybersecurity monitoring dashboard built with Python and Dash. This project aggregates multiple security data sources (vulnerabilities, threats, logs, and patch status) into a centralized asset inventory. Risk scoring and remediation recommendations are generated using Gemini AI, and the results are presented through an analyst-friendly interface with actionable insights.
 
-## Quick Start
+## Features
 
-1. Install dependencies:
+* Unified asset inventory from multiple data sources
+* AI-driven risk scoring (powered by Gemini)
+* AI-generated remediation recommendations
+* KPI overview for quick situational awareness
+* Interactive data table with filtering
+* Asset detail panel for deeper analysis
+* SLA aging analysis
+* AI-generated security insights
+* Integrated AI chat assistant
 
-```bash
+## Installation
+
+### 1. Clone the repository
+
+```bash id="rajat5"
+git clone https://gitlab-gov.futrend-nlm.com/futrend-inc/ai-security-monitoring-project.git
+cd ai-security-monitoring-project
+```
+
+### 2. Install dependencies
+
+```bash id="c1buyt"
 pip install -r requirements.txt
 ```
 
-2. Configure Gemini (optional):
+## Configuration
 
-- Copy `.env.example` -> `.env`
-- Set `GEMINI_API_KEY="..."` (model can stay `auto`)
+Create a `.env` file in the root directory and add the following:
 
-3. Run:
+```env id="xhpbwe"
+GEMINI_API_KEY="your_api_key_here"
+GEMINI_MODEL="gemini-3.1-flash-lite-preview"
+GEMINI_API_VERSION="v1beta"
+AI_ANALYSIS_BATCH_SIZE=1
+```
 
-```bash
+### Environment Variables
+
+| Variable               | Description                               |
+| ---------------------- | ----------------------------------------- |
+| GEMINI_API_KEY         | API key used to enable Gemini AI features |
+| GEMINI_MODEL           | Model to use (auto is recommended)        |
+| GEMINI_API_VERSION     | API version (default: v1beta)             |
+| AI_ANALYSIS_BATCH_SIZE | Controls batch size for AI processing     |
+
+## Usage
+
+Run the application:
+
+```bash id="y3tkzm"
 python app.py
 ```
 
-Then open `http://127.0.0.1:8050`.
 
-## Project Structure
+## Dashboard Overview
 
-```
-.
-├─ app.py                      # Entry point (loads .env, runs Dash app)
-├─ .env                        # Local secrets (ignored by git)
-├─ requirements.txt            # Python dependencies
-├─ security_dashboard/
-│  ├─ app.py                   # Dash layout + callbacks (main app)
-│  ├─ config.py                # Minimal .env loader
-│  ├─ data/
-│  │  ├─ datasets.py           # Mock datasets + build_merged_dataset()
-│  │  └─ __init__.py
-│  ├─ services/
-│  │  ├─ gemini_flash.py       # Gemini client + security gating + fallback
-│  │  └─ __init__.py
-│  └─ __init__.py
-└─ .gitignore
-```
+The dashboard includes:
 
-## Data Flow (High Level)
+* KPIs: High-level risk metrics
+* Asset Table: Searchable and filterable inventory
+* Detail Panel: Drill-down view for individual assets
+* SLA Aging: Tracks remediation timelines
+* AI Insights: Automated analysis of security posture
+* AI Chat: Interactive assistant for querying data
 
-The app revolves around `merged-data-store` (JSON-serialized DataFrame). Most UI components react to it.
+## Contributing
 
-```mermaid
-flowchart TD
-  A[datasets.build_merged_dataset()] --> B[merged-data-store]
-  B --> C[KPIs]
-  B --> D[Trend Chart]
-  B --> E[Asset Table]
-  E --> F[Detail Panel]
-  B --> G[SLA / Aging Tracker]
-  B --> H[AI Insights]
-  B --> I[AI Chat Context]
-  J[Refresh Button] --> K[previous-merged-data-store]
-  B --> L[What Changed Today]
-  K --> L
-  I --> M[Gemini Client]
-  M --> N[Chat Response]
-```
+Contributions are welcome.
 
-## Key Screens / Components
+To contribute:
 
-- **KPI cards**: Counts of Total/High/Medium/Low risk.
-- **Asset table**: Sort/filter/search; select a row to open the detail panel.
-- **Detail panel**: Drill-down sections; Issue Status can be set to `Open / In Progress / Resolved`.
-- **Risk Trend**: Avg risk score per scan date.
-- **What Changed Today**: Compares the latest snapshot vs the previous snapshot.
-  - Click **Refresh** once to capture the previous snapshot.
-- **SLA / Aging Tracker**:
-  - Age is derived from `scan_date`
-  - SLA defaults: High=3 days, Medium=7 days
-  - Flags breached items where status is Open/In Progress.
-- **AI Insights**: Local heuristic insights (works even when Gemini quota is unavailable).
-- **AI Chat**: Uses Gemini when available; falls back locally when quota/model is unavailable.
-
-## Environment Variables
-
-- `GEMINI_API_KEY`: Enables Gemini calls.
-- `GEMINI_MODEL`: `auto` recommended.
-- `GEMINI_API_VERSION`: Defaults to `v1beta`.
-- `AI_ANALYSIS_BATCH_SIZE`: Rows analyzed per Gemini cycle, clamped to `3`-`5` (default `3`).
-
-## Notes
-
-- If Gemini returns `429` quota errors, the app automatically backs off and uses the built-in fallback so the dashboard stays usable.
-
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Submit a merge request
