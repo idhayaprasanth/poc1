@@ -1,11 +1,11 @@
 # AI Security Monitoring Project
 
-A unified cybersecurity monitoring dashboard built with Python and Dash. This project aggregates multiple security data sources (vulnerabilities, threats, logs, and patch status) into a centralized asset inventory. Risk scoring and remediation recommendations are generated using Gemini AI, and the results are presented through an analyst-friendly interface with actionable insights.
+A unified cybersecurity monitoring dashboard built with Python and Dash. This project aggregates multiple security data sources (vulnerabilities, threats, logs, and patch status) into a centralized asset inventory. Risk scoring and remediation recommendations are generated using an AWS SageMaker-hosted model, and the results are presented through an analyst-friendly interface with actionable insights.
 
 ## Features
 
 * Unified asset inventory from multiple data sources
-* AI-driven risk scoring (powered by Gemini)
+* AI-driven risk scoring (powered by AWS SageMaker)
 * AI-generated remediation recommendations
 * KPI overview for quick situational awareness
 * Interactive data table with filtering
@@ -34,20 +34,18 @@ pip install -r requirements.txt
 Create a `.env` file in the root directory and add the following:
 
 ```env id="xhpbwe"
-GEMINI_API_KEY="your_api_key_here"
-GEMINI_MODEL="gemini-3.1-flash-lite-preview"
-GEMINI_API_VERSION="v1beta"
+SAGEMAKER_ENDPOINT_NAME="your-sagemaker-endpoint-name"
+AWS_REGION="us-east-1"
 AI_ANALYSIS_BATCH_SIZE=1
 ```
 
 ### Environment Variables
 
-| Variable               | Description                               |
-| ---------------------- | ----------------------------------------- |
-| GEMINI_API_KEY         | API key used to enable Gemini AI features |
-| GEMINI_MODEL           | Model to use (auto is recommended)        |
-| GEMINI_API_VERSION     | API version (default: v1beta)             |
-| AI_ANALYSIS_BATCH_SIZE | Controls batch size for AI processing     |
+| Variable               | Description                                  |
+| ---------------------- | -------------------------------------------- |
+| SAGEMAKER_ENDPOINT_NAME| Deployed SageMaker endpoint name             |
+| AWS_REGION             | AWS region for SageMaker runtime (optional)  |
+| AI_ANALYSIS_BATCH_SIZE | Controls batch size for AI processing        |
 
 ## Usage
 

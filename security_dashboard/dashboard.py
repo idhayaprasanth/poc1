@@ -20,7 +20,7 @@ from security_dashboard.data.datasets import (
     persist_ai_analysis_result,
 )
 from security_dashboard.layout import create_layout
-from security_dashboard.services.gemini_flash import GeminiFlashClient, GeminiRateLimitError, get_gemini_pause_status
+from security_dashboard.services.sagemaker_client import SageMakerClient
 
 load_env_file()
 AI_ANALYSIS_BATCH_SIZE = get_ai_analysis_batch_size()
@@ -180,22 +180,6 @@ def analysis_error_mask(df):
 
 def analysis_pending_mask(df):
     return ~analysis_completion_mask(df) & ~analysis_error_mask(df)
-
-
-def build_gemini_pause_message(*, prefix: str = "AI analysis is paused.") -> str:
-    pause = get_gemini_pause_status()
-    scope = pause.get("quota_scope", "")
-    remaining_seconds = int(max(0.0, float(pause.get("remaining_seconds", 0.0) or 0.0)))
-    scope_text = {
-        "day": "The Gemini project appears to be out of free-tier daily quota.",
-        "billing": "The Gemini project appears to be blocked by quota or billing limits.",
-        "tokens": "The Gemini project hit the free-tier tokens-per-minute limit.",
-        "minute": "The Gemini project hit the free-tier requests-per-minute limit.",
-    }.get(scope, "The Gemini project is in a temporary quota cooldown.")
-
-    if remaining_seconds > 0:
-        return f"{prefix} {scope_text} Retry after about {remaining_seconds} second(s), or refresh later."
-    return f"{prefix} {scope_text} Refresh later or update the Gemini project quota."
 
 
 def prepare_filtered_assets(df, search, risk_f, sort, date_from, date_to):
@@ -432,12 +416,6 @@ def build_initial_analysis_status_payload():
     df = ensure_ai_analysis_columns(df_base.copy())
     pending_count = int(analysis_pending_mask(df).sum())
     failed_count = int(analysis_error_mask(df).sum())
-    pause = get_gemini_pause_status()
-    if pending_count and pause.get("active"):
-        return {
-            "state": "warning",
-            "message": build_gemini_pause_message(prefix=f"AI analysis is paused with {pending_count} row(s) still pending."),
-        }
     if pending_count:
         return {
             "state": "running",
@@ -534,19 +512,8 @@ def sync_selected_asset(high_rows, medium_rows, low_rows, high_data, medium_data
 )
 def queue_dashboard_analysis(json_data, current_request):
     df = ensure_ai_analysis_columns(pd.read_json(io.StringIO(json_data), orient="split"))
-    pause = get_gemini_pause_status()
     pending = analysis_pending_mask(df)
     failed_count = int(analysis_error_mask(df).sum())
-    if pending.any() and pause.get("active"):
-        if current_request:
-            return no_update, no_update
-        return (
-            {"requested_at": datetime.now().isoformat(), "pending_count": int(pending.sum())},
-            {
-                "state": "warning",
-                "message": build_gemini_pause_message(prefix=f"AI analysis paused with {int(pending.sum())} row(s) still pending."),
-            },
-        )
     if not pending.any():
         if failed_count:
             return no_update, {"state": "warning", "message": f"{failed_count} row(s) failed AI analysis and were skipped. Check the terminal logs."}
@@ -588,24 +555,13 @@ def run_dashboard_analysis(analysis_request, json_data):
             return no_update, {"state": "warning", "message": f"{failed_count} row(s) failed AI analysis and were skipped. Check the terminal logs."}, None
         return no_update, {"state": "complete", "message": "AI analysis is up to date."}, None
 
-    client = GeminiFlashClient()
+    client = SageMakerClient()
     if not client.enabled():
         return (
             no_update,
             {
                 "state": "error",
-                "message": "Gemini is not configured. AI analysis is required before assets can be displayed.",
-            },
-            None,
-        )
-
-    pause = get_gemini_pause_status()
-    if pause.get("active"):
-        return (
-            no_update,
-            {
-                "state": "warning",
-                "message": build_gemini_pause_message(prefix="Gemini is paused."),
+                "message": "SageMaker endpoint is not configured. Set SAGEMAKER_ENDPOINT_NAME.",
             },
             None,
         )
@@ -637,16 +593,6 @@ def run_dashboard_analysis(analysis_request, json_data):
 
         try:
             batch_result = client.generate_dashboard_analysis(asset_records=batch_records)
-        except GeminiRateLimitError as exc:
-            logger.warning("AI analysis paused for batch due to Gemini quota limits: %s", exc)
-            return (
-                no_update,
-                {
-                    "state": "warning",
-                    "message": build_gemini_pause_message(prefix="AI analysis paused before completing the active batch."),
-                },
-                None,
-            )
         except Exception as exc:
             logger.exception("AI analysis batch failed")
             for idx in batch_indices:
@@ -1220,7 +1166,7 @@ def chat_respond(n, user_msg, current_msgs, history, json_data):
         f"Top assets by risk_score:\n" + "\n".join(lines)
     )
 
-    client = GeminiFlashClient()
+    client = SageMakerClient()
     response = client.generate_security_answer(question=user_msg.strip(), context_text=context_text, history=history)
 
     user_bubble = html.Div(user_msg, style={

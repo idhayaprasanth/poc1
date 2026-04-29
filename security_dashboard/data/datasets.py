@@ -228,7 +228,7 @@ def _resolve_cached_source(cached: dict) -> str:
       2. ai_analysis_source is None/missing but ai_reason contains the
          local-fallback marker phrase (backward compatibility).
       3. Neither — treat as unknown so it gets re-analyzed rather than
-         silently served as a valid Gemini result.
+         silently served as a valid model result.
     """
     source = str(cached.get("ai_analysis_source") or "").strip().lower()
     if source:
@@ -237,7 +237,7 @@ def _resolve_cached_source(cached: dict) -> str:
     if "local fallback" in ai_reason:
         return "local_fallback"
     # A cache entry with no source and no fallback marker is treated as
-    # unknown rather than valid, so it will be re-analyzed by Gemini.
+    # unknown rather than valid, so it will be re-analyzed by the model.
     return "unknown"
 
 
@@ -251,7 +251,7 @@ def apply_cached_ai_analysis(df: pd.DataFrame) -> pd.DataFrame:
         cached = cache.get(compute_asset_fingerprint(row))
         if not cached:
             # No cache entry at all — leave ai_analysis_complete=False so it
-            # gets queued for Gemini analysis.
+            # gets queued for AI analysis.
             continue
 
         for column in AI_ANALYSIS_COLUMNS:

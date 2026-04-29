@@ -1,4 +1,4 @@
-from security_dashboard.services.gemini_flash import GeminiFlashClient, is_security_question
+from security_dashboard.services.sagemaker_client import SageMakerClient, is_security_question
 
-__all__ = ["GeminiFlashClient", "is_security_question"]
+__all__ = ["SageMakerClient", "is_security_question"]
 

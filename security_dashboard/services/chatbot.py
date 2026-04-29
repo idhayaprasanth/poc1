@@ -1,13 +1,4 @@
-"""Optimized Gemini-powered security chatbot helpers."""
-
-import time
-
-from security_dashboard.services.gemini_base import (
-    GeminiRateLimitError,
-    _TruncatedResponseError,
-    _should_skip_gemini,
-    get_gemini_pause_status,
-)
+"""SageMaker-powered security chatbot helpers."""
 
 # 🔹 Faster lookup (tuple + lowercase once)
 SECURITY_KEYWORDS = tuple(k.lower() for k in [
@@ -56,37 +47,10 @@ def _fallback_security_answer(question: str, context_text: str) -> str:
     if "patch" in q:
         return "Prioritize assets with missing patches, especially Critical/High severity."
 
-    return (
-        "Gemini unavailable. Provide a more specific security question.\n\n"
-        f"Context:\n{context_text}"
-    )
+    return f"AI response unavailable. Context:\n{context_text}"
 
 
-class GeminiChatbotMixin:
-    # 🔹 Unified Gemini call (removes duplicate loops)
-    def _ask_gemini(self, payload):
-        tried = []
-        first_error = ""
-
-        for api_version in self._preferred_versions():
-            for model_name in self._preferred_models():
-                tried.append(f"{api_version}:{model_name}")
-                try:
-                    text, ok = self._attempt(
-                        api_version=api_version,
-                        model_name=model_name,
-                        payload=payload,
-                    )
-                    if ok:
-                        return text
-                    if text:
-                        first_error = first_error or text
-                except GeminiRateLimitError:
-                    raise
-                except _TruncatedResponseError:
-                    continue
-
-        return first_error or None
+class SageMakerChatbotMixin:
 
     def generate_security_answer(
         self,
@@ -96,49 +60,29 @@ class GeminiChatbotMixin:
         history: list[dict] | None = None,
     ) -> str:
         if not self.enabled():
-            return "Gemini is not configured. Set GEMINI_API_KEY."
+            return "SageMaker endpoint is not configured. Set SAGEMAKER_ENDPOINT_NAME."
 
         if not is_security_question(question):
             return "Ask a cybersecurity-related question."
 
-        # 🔹 Rate limit handling
-        if _should_skip_gemini():
-            wait = float(get_gemini_pause_status().get("remaining_seconds", 0.0) or 0.0)
-            if wait > 2:
-                return _fallback_security_answer(question, context_text)
-            time.sleep(wait)
-
-        # 🔹 Trim history (reduce tokens)
-        contents = []
+        chat_history = []
         for item in (history or [])[-6:]:
-            role = "model" if item.get("role") in ("assistant", "model") else "user"
-            text = item.get("text")
+            role = item.get("role", "user")
+            text = item.get("text", "")
             if text:
-                contents.append({"role": role, "parts": [{"text": text}]})
-
-        # 🔹 Main prompt
-        contents.append({
-            "role": "user",
-            "parts": [{
-                "text": f"Context:\n{context_text}\n\nQuestion:\n{question}"
-            }],
-        })
-
-        payload = {
-            "system_instruction": {"parts": [{"text": SYSTEM_PROMPT}]},
-            "contents": contents,
-            "generationConfig": {
-                "temperature": 0.2,
-                "maxOutputTokens": 400,  # 🔹 reduced (was 512)
-                "responseMimeType": "text/plain",
-            },
-        }
+                chat_history.append(f"{role}: {text}")
+        history_text = "\n".join(chat_history)
+        prompt = (
+            f"Conversation history:\n{history_text}\n\n"
+            f"Context:\n{context_text}\n\n"
+            f"Question:\n{question}"
+        )
 
         try:
-            response = self._ask_gemini(payload)
+            response = self.generate_text(SYSTEM_PROMPT, prompt)
             if response:
-                return response
-        except GeminiRateLimitError:
+                return response.strip()
+        except Exception:
             return _fallback_security_answer(question, context_text)
 
         return "AI response unavailable. Please try again."
