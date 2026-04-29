@@ -2,6 +2,7 @@ import ast
 import json
 import os
 import re
+import time
 from typing import Any
 
 import boto3
@@ -42,12 +43,30 @@ class SageMakerBaseClient:
         }
 
         runtime = self._runtime_client()
-        response = runtime.invoke_endpoint(
-            EndpointName=self.endpoint_name,
-            ContentType="application/json",
-            Body=json.dumps(payload),
+        start = time.time()
+        print(
+            "[sagemaker] request start "
+            f"endpoint={self.endpoint_name} "
+            f"prompt_chars={len(prompt)} "
+            f"max_new_tokens={max_new_tokens}"
         )
-        return json.loads(response["Body"].read().decode())
+        try:
+            response = runtime.invoke_endpoint(
+                EndpointName=self.endpoint_name,
+                ContentType="application/json",
+                Body=json.dumps(payload),
+            )
+            decoded = json.loads(response["Body"].read().decode())
+            elapsed = time.time() - start
+            print(f"[sagemaker] request success endpoint={self.endpoint_name} elapsed={elapsed:.2f}s")
+            return decoded
+        except Exception as exc:
+            elapsed = time.time() - start
+            print(
+                "[sagemaker] request error "
+                f"endpoint={self.endpoint_name} elapsed={elapsed:.2f}s error={type(exc).__name__}: {exc}"
+            )
+            raise
 
     @staticmethod
     def _extract_generated_text(response) -> str:

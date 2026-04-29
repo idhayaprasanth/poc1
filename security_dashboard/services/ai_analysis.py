@@ -1,4 +1,5 @@
 import json
+import time
 
 from security_dashboard.data.datasets import (
     AI_ANALYSIS_COLUMNS,
@@ -142,10 +143,19 @@ class SageMakerAnalysisMixin:
 
         cached = self._cached_result_for_record(asset_record)
         if cached:
+            print(
+                "[sagemaker] cache hit "
+                f"asset_id={asset_record.get('asset_id')} source={_get_cached_source(cached)}"
+            )
             return self._normalize_cached_result(cached, asset_record)
 
         compact = self._compact_asset_record(asset_record)
         prompt = f"Analyze this asset:\n{json.dumps(compact, separators=(',', ':'))}"
+        started = time.time()
+        print(
+            "[sagemaker] analyze start "
+            f"asset_id={asset_record.get('asset_id')} asset_name={asset_record.get('asset_name')}"
+        )
 
         try:
             data = self._generate_and_parse(BASE_SYSTEM_PROMPT, prompt)
@@ -154,6 +164,10 @@ class SageMakerAnalysisMixin:
 
         if not isinstance(data, dict):
             raise ValueError(f"SageMaker returned invalid payload type: {type(data)}")
+        print(
+            "[sagemaker] response received for asset_id="
+            f"{data.get('asset_id') or asset_record.get('asset_id')}"
+        )
 
         result = self._extract_fields(data)
         result = self._normalize_scores(result)
@@ -169,6 +183,10 @@ class SageMakerAnalysisMixin:
         })
 
         persist_ai_analysis_result(asset_record, result)
+        print(
+            "[sagemaker] analyze success "
+            f"asset_id={result.get('asset_id')} elapsed={time.time() - started:.2f}s"
+        )
         return result
 
     def generate_dashboard_analysis(self, *, asset_records: list[dict]) -> dict:
@@ -177,6 +195,11 @@ class SageMakerAnalysisMixin:
 
         all_results: list[dict] = []
         for record in asset_records:
+            row_started = time.time()
+            print(
+                "[sagemaker] batch row start "
+                f"asset_id={record.get('asset_id')} asset_name={record.get('asset_name')}"
+            )
             raw_flag = record.get("ai_analysis_complete")
             if isinstance(raw_flag, str):
                 analysis_complete = raw_flag.strip().lower() == "true"
@@ -188,6 +211,10 @@ class SageMakerAnalysisMixin:
 
             cached = self._cached_result_for_record(record)
             if analysis_complete and cached:
+                print(
+                    "[sagemaker] batch row cache hit "
+                    f"asset_id={record.get('asset_id')} source={_get_cached_source(cached)}"
+                )
                 all_results.append(self._normalize_cached_result(cached, record))
                 continue
 
@@ -196,15 +223,27 @@ class SageMakerAnalysisMixin:
             try:
                 data = self._generate_and_parse(BASE_SYSTEM_PROMPT, prompt, tokens=1500)
             except Exception as e:
+                print(
+                    "[sagemaker] batch row error "
+                    f"asset_id={record.get('asset_id')} elapsed={time.time() - row_started:.2f}s error={e}"
+                )
                 raise ValueError(f"SageMaker parse failure for asset {record.get('asset_id')}: {e}") from e
 
             if not isinstance(data, dict):
                 raise ValueError(f"Unexpected SageMaker response format for asset {record.get('asset_id')}: {type(data)}")
+            print(
+                "[sagemaker] response received for asset_id="
+                f"{data.get('asset_id') or record.get('asset_id')}"
+            )
 
             result = self._extract_fields(data)
             normalized = self._normalize_dashboard_row(result, record, "sagemaker")
             all_results.append(normalized)
             persist_ai_analysis_result(record, normalized)
+            print(
+                "[sagemaker] batch row success "
+                f"asset_id={normalized.get('asset_id')} elapsed={time.time() - row_started:.2f}s"
+            )
 
         if not all_results:
             raise ValueError("No valid asset analysis returned.")

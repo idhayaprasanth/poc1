@@ -549,6 +549,7 @@ def run_dashboard_analysis(analysis_request, json_data):
 
     df = ensure_ai_analysis_columns(pd.read_json(io.StringIO(json_data), orient="split"))
     pending = analysis_pending_mask(df)
+    print(f"[dashboard] analysis run started pending_rows={int(pending.sum())}")
     if not pending.any():
         failed_count = int(analysis_error_mask(df).sum())
         if failed_count:
@@ -574,8 +575,13 @@ def run_dashboard_analysis(analysis_request, json_data):
     while analysis_pending_mask(df).any():
         pending = analysis_pending_mask(df)
         batch_number += 1
+        print(
+            "[dashboard] batch begin "
+            f"batch={batch_number} remaining_rows={int(pending.sum())} batch_size={AI_ANALYSIS_BATCH_SIZE}"
+        )
         if batch_number > max_batches:
             logger.error("AI analysis stopped after %s batch(es); possible loop guard.", max_batches)
+            print(f"[dashboard] safety stop triggered at batch={batch_number} max_batches={max_batches}")
             break
 
         batch_indices = list(df.index[pending][:AI_ANALYSIS_BATCH_SIZE])
@@ -590,15 +596,24 @@ def run_dashboard_analysis(analysis_request, json_data):
             len(batch_indices),
             ", ".join(batch_assets),
         )
+        print(
+            "[dashboard] sending batch "
+            f"batch={batch_number} rows={len(batch_indices)} assets={', '.join(batch_assets)}"
+        )
 
         try:
             batch_result = client.generate_dashboard_analysis(asset_records=batch_records)
         except Exception as exc:
             logger.exception("AI analysis batch failed")
+            print(f"[dashboard] batch error batch={batch_number} error={type(exc).__name__}: {exc}")
             for idx in batch_indices:
                 df.at[idx, "ai_analysis_error"] = str(exc)
             remaining_pending = analysis_pending_mask(df)
             remaining_count = int(remaining_pending.sum())
+            print(
+                "[dashboard] batch error status "
+                f"batch={batch_number} remaining_rows={remaining_count}"
+            )
             if not remaining_count:
                 failed_count = int(analysis_error_mask(df).sum())
                 return (
@@ -668,6 +683,11 @@ def run_dashboard_analysis(analysis_request, json_data):
 
         for idx in unresolved_indices:
             df.at[idx, "ai_analysis_error"] = "No valid AI analysis returned for this row in the current batch."
+            unresolved_record = index_to_record.get(idx, {})
+            print(
+                "[dashboard] unresolved row "
+                f"batch={batch_number} asset_id={unresolved_record.get('asset_id')} asset_name={unresolved_record.get('asset_name')}"
+            )
 
         logger.info(
             "Completed AI analysis batch %s. Success=%s, Failed=%s",
@@ -675,10 +695,17 @@ def run_dashboard_analysis(analysis_request, json_data):
             len(completed_assets),
             len(unresolved_indices),
         )
+        remaining_after_batch = int(analysis_pending_mask(df).sum())
+        print(
+            "[dashboard] batch complete "
+            f"batch={batch_number} success={len(completed_assets)} failed={len(unresolved_indices)} "
+            f"remaining_rows={remaining_after_batch}"
+        )
 
     if analysis_pending_mask(df).any():
         pending_left = int(analysis_pending_mask(df).sum())
         logger.warning("AI analysis stopped with %s row(s) still pending (safety limit).", pending_left)
+        print(f"[dashboard] analysis stopped with pending_rows={pending_left}")
         return (
             df.to_json(date_format="iso", orient="split"),
             {
@@ -692,6 +719,7 @@ def run_dashboard_analysis(analysis_request, json_data):
         )
     failed_count = int(analysis_error_mask(df).sum())
     if failed_count:
+        print(f"[dashboard] analysis completed with failures failed_rows={failed_count}")
         status = {
             "state": "warning",
             "message": (
@@ -700,6 +728,7 @@ def run_dashboard_analysis(analysis_request, json_data):
             ),
         }
     else:
+        print("[dashboard] analysis completed successfully with no failed rows")
         status = {"state": "complete", "message": "AI analysis completed for all assets."}
 
     return df.to_json(date_format="iso", orient="split"), status, None
