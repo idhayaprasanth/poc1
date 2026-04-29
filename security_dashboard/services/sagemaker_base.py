@@ -3,12 +3,14 @@ import json
 import os
 import re
 import time
+from pathlib import Path
 from typing import Any
 
 import boto3
 
 
 _JSON_RE = re.compile(r"(\{.*\}|\[.*\])", re.DOTALL)
+_SAGEMAKER_DEBUG_LOG_FILE = Path(__file__).resolve().parents[1] / "data" / "sagemaker_api_debug.jsonl"
 
 
 def _env(name: str, default: str) -> str:
@@ -28,6 +30,16 @@ class SageMakerBaseClient:
         if self.region_name:
             kwargs["region_name"] = self.region_name
         return boto3.client("sagemaker-runtime", **kwargs)
+
+    def _write_debug_log(self, event: dict):
+        try:
+            _SAGEMAKER_DEBUG_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+            payload = dict(event or {})
+            payload["logged_at"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
+            with _SAGEMAKER_DEBUG_LOG_FILE.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload, ensure_ascii=True) + "\n")
+        except Exception as exc:
+            print(f"[sagemaker] debug log write failed: {type(exc).__name__}: {exc}")
 
     def _invoke_endpoint(self, prompt: str, *, max_new_tokens: int = 1500, temperature: float = 0.2):
         if not self.enabled():
@@ -56,12 +68,33 @@ class SageMakerBaseClient:
                 ContentType="application/json",
                 Body=json.dumps(payload),
             )
-            decoded = json.loads(response["Body"].read().decode())
+            raw_body = response["Body"].read().decode()
+            decoded = json.loads(raw_body)
             elapsed = time.time() - start
+            self._write_debug_log(
+                {
+                    "event": "invoke_success",
+                    "endpoint": self.endpoint_name,
+                    "elapsed_seconds": round(elapsed, 3),
+                    "request_payload": payload,
+                    "raw_response_body": raw_body,
+                    "decoded_response": decoded,
+                }
+            )
             print(f"[sagemaker] request success endpoint={self.endpoint_name} elapsed={elapsed:.2f}s")
             return decoded
         except Exception as exc:
             elapsed = time.time() - start
+            self._write_debug_log(
+                {
+                    "event": "invoke_error",
+                    "endpoint": self.endpoint_name,
+                    "elapsed_seconds": round(elapsed, 3),
+                    "request_payload": payload,
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                }
+            )
             print(
                 "[sagemaker] request error "
                 f"endpoint={self.endpoint_name} elapsed={elapsed:.2f}s error={type(exc).__name__}: {exc}"
@@ -100,6 +133,16 @@ class SageMakerBaseClient:
             try:
                 return ast.literal_eval(cleaned)
             except Exception as exc:
+                self._write_debug_log(
+                    {
+                        "event": "parse_error",
+                        "endpoint": self.endpoint_name,
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                        "raw_text": text,
+                        "cleaned_text": cleaned,
+                    }
+                )
                 raise ValueError(f"SageMaker failed to return valid JSON: {exc}") from exc
 
     def generate_text(self, system_instruction: str, user_prompt: str) -> str:

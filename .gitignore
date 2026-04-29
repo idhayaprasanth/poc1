@@ -3,5 +3,6 @@
 *.pyc
 **/__pycache__/
 security_dashboard/data/ai_analysis_cache.json
+security_dashboard/data/sagemaker_api_debug.jsonl
 # Ignore the .env file which may contain sensitive information like API keys.
 .env
