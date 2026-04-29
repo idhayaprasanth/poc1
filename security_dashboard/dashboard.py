@@ -513,8 +513,24 @@ def sync_selected_asset(high_rows, medium_rows, low_rows, high_data, medium_data
 def queue_dashboard_analysis(json_data, current_request):
     df = ensure_ai_analysis_columns(pd.read_json(io.StringIO(json_data), orient="split"))
     pending = analysis_pending_mask(df)
-    failed_count = int(analysis_error_mask(df).sum())
+    failed_mask = analysis_error_mask(df)
+    failed_count = int(failed_mask.sum())
+    error_text = df.get("ai_analysis_error", pd.Series(index=df.index, dtype="object")).fillna("").astype(str)
+    retry_eligible_mask = failed_mask & ~error_text.str.contains("retry2000_failed", case=False, na=False)
     if not pending.any():
+        if retry_eligible_mask.any():
+            if current_request:
+                return no_update, no_update
+            retry_count = int(retry_eligible_mask.sum())
+            return (
+                {
+                    "requested_at": datetime.now().isoformat(),
+                    "pending_count": retry_count,
+                    "batch_number": 0,
+                    "phase": "retry2000",
+                },
+                {"state": "running", "message": f"Retrying {retry_count} failed row(s) with tokens=2000."},
+            )
         if failed_count:
             return no_update, {"state": "warning", "message": f"{failed_count} row(s) failed AI analysis and were skipped. Check the terminal logs."}
         return no_update, {"state": "complete", "message": "AI analysis is up to date."}
@@ -549,12 +565,27 @@ def run_dashboard_analysis(analysis_request, json_data):
 
     df = ensure_ai_analysis_columns(pd.read_json(io.StringIO(json_data), orient="split"))
     pending = analysis_pending_mask(df)
-    print(f"[dashboard] analysis run started pending_rows={int(pending.sum())}")
+    failed_mask = analysis_error_mask(df)
+    error_text = df.get("ai_analysis_error", pd.Series(index=df.index, dtype="object")).fillna("").astype(str)
+    retry_eligible_mask = failed_mask & ~error_text.str.contains("retry2000_failed", case=False, na=False)
+    retry_mode = False
+    token_budget = 1500
+
+    print(
+        "[dashboard] analysis run started "
+        f"pending_rows={int(pending.sum())} failed_rows={int(failed_mask.sum())}"
+    )
     if not pending.any():
-        failed_count = int(analysis_error_mask(df).sum())
-        if failed_count:
-            return no_update, {"state": "warning", "message": f"{failed_count} row(s) failed AI analysis and were skipped. Check the terminal logs."}, None
-        return no_update, {"state": "complete", "message": "AI analysis is up to date."}, None
+        if retry_eligible_mask.any():
+            retry_mode = True
+            token_budget = 2000
+            pending = retry_eligible_mask
+            print(f"[dashboard] retry pass started rows={int(pending.sum())} tokens={token_budget}")
+        else:
+            failed_count = int(failed_mask.sum())
+            if failed_count:
+                return no_update, {"state": "warning", "message": f"{failed_count} row(s) failed AI analysis and were skipped. Check the terminal logs."}, None
+            return no_update, {"state": "complete", "message": "AI analysis is up to date."}, None
 
     client = SageMakerClient()
     if not client.enabled():
@@ -572,7 +603,8 @@ def run_dashboard_analysis(analysis_request, json_data):
     pending = analysis_pending_mask(df)
     print(
         "[dashboard] batch begin "
-        f"batch={batch_number} remaining_rows={int(pending.sum())} batch_size={AI_ANALYSIS_BATCH_SIZE}"
+        f"batch={batch_number} remaining_rows={int(pending.sum())} batch_size={AI_ANALYSIS_BATCH_SIZE} "
+        f"mode={'retry2000' if retry_mode else 'standard'} tokens={token_budget}"
     )
     batch_indices = list(df.index[pending][:AI_ANALYSIS_BATCH_SIZE])
     batch_records = [df.loc[idx].to_dict() for idx in batch_indices]
@@ -592,13 +624,16 @@ def run_dashboard_analysis(analysis_request, json_data):
     )
 
     try:
-        batch_result = client.generate_dashboard_analysis(asset_records=batch_records)
+        batch_result = client.generate_dashboard_analysis(asset_records=batch_records, tokens=token_budget)
     except Exception as exc:
         logger.exception("AI analysis batch failed")
         print(f"[dashboard] batch error batch={batch_number} error={type(exc).__name__}: {exc}")
         for idx in batch_indices:
-            df.at[idx, "ai_analysis_error"] = str(exc)
-        remaining_count = int(analysis_pending_mask(df).sum())
+            if retry_mode:
+                df.at[idx, "ai_analysis_error"] = f"retry2000_failed: {exc}"
+            else:
+                df.at[idx, "ai_analysis_error"] = str(exc)
+        remaining_count = int((analysis_error_mask(df) & ~df["ai_analysis_error"].fillna("").astype(str).str.contains("retry2000_failed", case=False, na=False)).sum()) if retry_mode else int(analysis_pending_mask(df).sum())
         print(
             "[dashboard] batch error status "
             f"batch={batch_number} remaining_rows={remaining_count}"
@@ -617,13 +652,13 @@ def run_dashboard_analysis(analysis_request, json_data):
             {
                 "state": "running" if remaining_count else "warning",
                 "message": (
-                    f"Batch {batch_number} failed for {len(batch_indices)} row(s). "
+                    f"{'Retry' if retry_mode else 'Batch'} {batch_number} failed for {len(batch_indices)} row(s). "
                     f"{remaining_count} row(s) remaining."
                     if remaining_count
                     else f"AI analysis ended with failures. {int(analysis_error_mask(df).sum())} row(s) failed."
                 ),
             },
-            next_request,
+            None,
         )
 
     assets = (batch_result or {}).get("assets", []) if isinstance(batch_result, dict) else []
@@ -679,7 +714,10 @@ def run_dashboard_analysis(analysis_request, json_data):
         unresolved_indices.remove(matched_idx)
 
     for idx in unresolved_indices:
-        df.at[idx, "ai_analysis_error"] = "No valid AI analysis returned for this row in the current batch."
+        if retry_mode:
+            df.at[idx, "ai_analysis_error"] = "retry2000_failed: No valid AI analysis returned during retry pass."
+        else:
+            df.at[idx, "ai_analysis_error"] = "No valid AI analysis returned for this row in the current batch."
         unresolved_record = index_to_record.get(idx, {})
         print(
             "[dashboard] unresolved row "
@@ -692,7 +730,14 @@ def run_dashboard_analysis(analysis_request, json_data):
         len(completed_assets),
         len(unresolved_indices),
     )
-    remaining_after_batch = int(analysis_pending_mask(df).sum())
+    pending_after_batch = int(analysis_pending_mask(df).sum())
+    retry_after_batch = int(
+        (
+            analysis_error_mask(df)
+            & ~df["ai_analysis_error"].fillna("").astype(str).str.contains("retry2000_failed", case=False, na=False)
+        ).sum()
+    )
+    remaining_after_batch = retry_after_batch if retry_mode else pending_after_batch
     print(
         "[dashboard] batch complete "
         f"batch={batch_number} success={len(completed_assets)} failed={len(unresolved_indices)} "
@@ -703,8 +748,8 @@ def run_dashboard_analysis(analysis_request, json_data):
         status = {
             "state": "running",
             "message": (
-                f"Batch {batch_number} complete. Processed {len(batch_indices)} row(s); "
-                f"{remaining_after_batch} row(s) remaining."
+                f"{'Retry pass' if retry_mode else 'Batch'} {batch_number} complete. "
+                f"Processed {len(batch_indices)} row(s); {remaining_after_batch} row(s) remaining."
             ),
         }
         next_request = {
@@ -712,7 +757,22 @@ def run_dashboard_analysis(analysis_request, json_data):
             "pending_count": remaining_after_batch,
             "batch_number": batch_number,
         }
-        return df.to_json(date_format="iso", orient="split"), status, next_request
+        return df.to_json(date_format="iso", orient="split"), status, None
+
+    # Standard pass finished; run one final retry pass for failed rows with higher token budget.
+    if not retry_mode and retry_after_batch:
+        print(f"[dashboard] starting retry queue for failed_rows={retry_after_batch} tokens=2000")
+        status = {
+            "state": "running",
+            "message": f"Starting retry pass for {retry_after_batch} failed row(s) with higher token budget.",
+        }
+        next_request = {
+            "requested_at": datetime.now().isoformat(),
+            "pending_count": retry_after_batch,
+            "batch_number": batch_number,
+            "phase": "retry2000",
+        }
+        return df.to_json(date_format="iso", orient="split"), status, None
 
     failed_count = int(analysis_error_mask(df).sum())
     if failed_count:
@@ -897,20 +957,22 @@ def update_table(json_data, search, risk_f, sort, date_from, date_to):
 
     children = []
     if pending_count:
-        return html.Div(
-            "AI analysis running...",
-            style={
-                "padding": "14px 16px",
-                "borderRadius": "4px",
-                "background": COLORS["primary_lighter"],
-                "borderLeft": f"4px solid {COLORS['primary']}",
-                "borderTop": f"1px solid {COLORS['border']}",
-                "borderRight": f"1px solid {COLORS['border']}",
-                "borderBottom": f"1px solid {COLORS['border']}",
-                "color": COLORS["primary_dark"],
-                "fontSize": "15px",
-                "fontWeight": "700",
-            },
+        children.append(
+            html.Div(
+                f"AI analysis running... {pending_count} row(s) still processing.",
+                style={
+                    "padding": "14px 16px",
+                    "borderRadius": "4px",
+                    "background": COLORS["primary_lighter"],
+                    "borderLeft": f"4px solid {COLORS['primary']}",
+                    "borderTop": f"1px solid {COLORS['border']}",
+                    "borderRight": f"1px solid {COLORS['border']}",
+                    "borderBottom": f"1px solid {COLORS['border']}",
+                    "color": COLORS["primary_dark"],
+                    "fontSize": "15px",
+                    "fontWeight": "700",
+                },
+            )
         )
     if failed_count:
         children.append(

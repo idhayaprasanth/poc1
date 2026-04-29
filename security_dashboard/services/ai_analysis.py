@@ -189,11 +189,12 @@ class SageMakerAnalysisMixin:
         )
         return result
 
-    def generate_dashboard_analysis(self, *, asset_records: list[dict]) -> dict:
+    def generate_dashboard_analysis(self, *, asset_records: list[dict], tokens: int = 1500) -> dict:
         if not asset_records:
             return {"assets": [], "insights": {}}
 
         all_results: list[dict] = []
+        failed_assets: list[dict] = []
         for record in asset_records:
             row_started = time.time()
             print(
@@ -221,16 +222,30 @@ class SageMakerAnalysisMixin:
             compact = self._compact_asset_record(record)
             prompt = f"Analyze this asset:\n{json.dumps(compact, separators=(',', ':'))}"
             try:
-                data = self._generate_and_parse(BASE_SYSTEM_PROMPT, prompt, tokens=1500)
+                data = self._generate_and_parse(BASE_SYSTEM_PROMPT, prompt, tokens=tokens)
             except Exception as e:
                 print(
                     "[sagemaker] batch row error "
                     f"asset_id={record.get('asset_id')} elapsed={time.time() - row_started:.2f}s error={e}"
                 )
-                raise ValueError(f"SageMaker parse failure for asset {record.get('asset_id')}: {e}") from e
+                failed_assets.append(
+                    {
+                        "asset_id": str(record.get("asset_id") or "").strip(),
+                        "asset_name": str(record.get("asset_name") or "").strip(),
+                        "error": str(e),
+                    }
+                )
+                continue
 
             if not isinstance(data, dict):
-                raise ValueError(f"Unexpected SageMaker response format for asset {record.get('asset_id')}: {type(data)}")
+                failed_assets.append(
+                    {
+                        "asset_id": str(record.get("asset_id") or "").strip(),
+                        "asset_name": str(record.get("asset_name") or "").strip(),
+                        "error": f"Unexpected response format: {type(data)}",
+                    }
+                )
+                continue
             print(
                 "[sagemaker] response received for asset_id="
                 f"{data.get('asset_id') or record.get('asset_id')}"
@@ -245,7 +260,7 @@ class SageMakerAnalysisMixin:
                 f"asset_id={normalized.get('asset_id')} elapsed={time.time() - row_started:.2f}s"
             )
 
-        if not all_results:
-            raise ValueError("No valid asset analysis returned.")
+        if not all_results and failed_assets:
+            print(f"[sagemaker] batch completed with only failures count={len(failed_assets)}")
 
-        return {"assets": all_results, "insights": {}}
+        return {"assets": all_results, "failed_assets": failed_assets, "insights": {}}

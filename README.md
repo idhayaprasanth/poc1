@@ -36,6 +36,7 @@ Create a `.env` file in the root directory and add the following:
 ```env id="xhpbwe"
 SAGEMAKER_ENDPOINT_NAME="your-sagemaker-endpoint-name"
 AWS_REGION="us-east-1"
+SAGEMAKER_TIMEOUT_SECONDS=180
 AI_ANALYSIS_BATCH_SIZE=1
 ```
 
@@ -45,6 +46,7 @@ AI_ANALYSIS_BATCH_SIZE=1
 | ---------------------- | -------------------------------------------- |
 | SAGEMAKER_ENDPOINT_NAME| Deployed SageMaker endpoint name             |
 | AWS_REGION             | AWS region for SageMaker runtime (optional)  |
+| SAGEMAKER_TIMEOUT_SECONDS | SageMaker invoke timeout in seconds (default: 180) |
 | AI_ANALYSIS_BATCH_SIZE | Controls batch size for AI processing        |
 
 ## Usage

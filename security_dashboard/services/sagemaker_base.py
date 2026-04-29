@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import boto3
+from botocore.config import Config
 
 
 _JSON_RE = re.compile(r"(\{.*\}|\[.*\])", re.DOTALL)
@@ -21,6 +22,7 @@ class SageMakerBaseClient:
     def __init__(self, endpoint_name: str | None = None, region_name: str | None = None):
         self.endpoint_name = endpoint_name or _env("SAGEMAKER_ENDPOINT_NAME", "")
         self.region_name = region_name or _env("AWS_REGION", "")
+        self.timeout_seconds = max(int(float(_env("SAGEMAKER_TIMEOUT_SECONDS", "180"))), 30)
 
     def enabled(self) -> bool:
         return bool(self.endpoint_name)
@@ -29,6 +31,7 @@ class SageMakerBaseClient:
         kwargs: dict[str, Any] = {}
         if self.region_name:
             kwargs["region_name"] = self.region_name
+        kwargs["config"] = Config(read_timeout=self.timeout_seconds, connect_timeout=10, retries={"max_attempts": 1})
         return boto3.client("sagemaker-runtime", **kwargs)
 
     def _write_debug_log(self, event: dict):
@@ -60,7 +63,8 @@ class SageMakerBaseClient:
             "[sagemaker] request start "
             f"endpoint={self.endpoint_name} "
             f"prompt_chars={len(prompt)} "
-            f"max_new_tokens={max_new_tokens}"
+            f"max_new_tokens={max_new_tokens} "
+            f"timeout_seconds={self.timeout_seconds}"
         )
         try:
             response = runtime.invoke_endpoint(
