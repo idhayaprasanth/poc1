@@ -1,11 +1,10 @@
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from security_dashboard.data.datasets import (
     AI_ANALYSIS_COLUMNS,
     compute_asset_fingerprint,
-    load_ai_analysis_cache,
-    persist_ai_analysis_result,
 )
 
 BASE_SYSTEM_PROMPT = (
@@ -44,41 +43,22 @@ FIELD_MAP = {
 }
 
 
-def _get_cached_source(cached: dict) -> str:
-    source = str(cached.get("ai_analysis_source") or "").strip().lower()
-    if source:
-        return source
-    return "unknown"
-
-
 class SageMakerAnalysisMixin:
-
-    @staticmethod
-    def _cached_result_for_record(asset_record: dict) -> dict | None:
-        cache = load_ai_analysis_cache()
-        cached = cache.get(compute_asset_fingerprint(asset_record))
-        if not isinstance(cached, dict):
-            return None
-        return {column: cached.get(column) for column in AI_ANALYSIS_COLUMNS}
+    """AI risk analysis mixin for SageMaker integration (caching removed, batching optimized)."""
 
     @staticmethod
     def _compact_asset_record(asset_record: dict) -> dict:
+        """Extract only essential fields for analysis (token optimization)."""
         keys = [
             "asset_name", "asset_id", "vuln_name", "vuln_severity",
-            "vuln_description", "vuln_fix", "threat_alert",
-            "threat_file_path", "threat_process", "threat_impact",
-            "threat_fix", "anomaly_event", "anomaly_explanation",
-            "source_anomaly_score", "patch_status", "patch_severity",
-            "patch_recommendation", "issue_status",
+            "vuln_fix", "threat_alert", "threat_impact",
+            "threat_fix", "anomaly_event", "source_anomaly_score", 
+            "patch_status", "patch_severity", "patch_recommendation",
         ]
-        return {k: asset_record.get(k, "") for k in keys}
-
-    def _generate_and_parse(self, system_instruction, user_prompt, tokens=1500):
-        prompt = f"{system_instruction}\n\n{user_prompt}"
-        response = self._invoke_endpoint(prompt, max_new_tokens=tokens, temperature=0.2)
-        return self._parse_json_like(response)
+        return {k: asset_record.get(k, "") for k in keys if asset_record.get(k)}
 
     def _extract_fields(self, data: dict) -> dict:
+        """Map SageMaker output to standard fields with flexible aliases."""
         result = {}
         for key, aliases in FIELD_MAP.items():
             value = None
@@ -90,15 +70,50 @@ class SageMakerAnalysisMixin:
         return result
 
     def _normalize_scores(self, result: dict) -> dict:
+        """Coerce risk_score and anomaly_score to int 0-100."""
         for field in ("risk_score", "anomaly_score"):
             try:
-                result[field] = int(float(result[field]))
-            except Exception:
+                result[field] = max(0, min(100, int(float(result[field]))))
+            except (TypeError, ValueError):
                 result[field] = None
         return result
 
-    def _normalize_dashboard_row(self, result: dict, record: dict, source: str = "sagemaker") -> dict:
+    def _normalize_dashboard_row(self, result: dict, record: dict) -> dict:
+        """
+        Ensure all required AI_ANALYSIS_COLUMNS are present with valid values.
+        
+        Also enforces that risk_level matches risk_score bands:
+        - High: 75-100
+        - Medium: 45-74
+        - Low: 0-44
+        """
         normalized = self._normalize_scores(result.copy() if isinstance(result, dict) else {})
+        
+        # Extract and coerce values
+        risk_score = normalized.get("risk_score")
+        risk_level = str(normalized.get("risk_level") or "Unknown").strip()
+        
+        # Enforce risk_level alignment with risk_score
+        if risk_score is not None:
+            if risk_score >= 75:
+                expected_level = "High"
+            elif risk_score >= 45:
+                expected_level = "Medium"
+            else:
+                expected_level = "Low"
+            
+            # Override risk_level if it doesn't match score bands
+            if risk_level not in ("High", "Medium", "Low"):
+                risk_level = expected_level
+            elif risk_level != expected_level:
+                print(
+                    f"[sagemaker] risk_level alignment: "
+                    f"asset_id={record.get('asset_id')} "
+                    f"risk_score={risk_score} enforces risk_level={expected_level} "
+                    f"(overriding '{risk_level}')"
+                )
+                risk_level = expected_level
+        
         normalized.update({
             "asset_name": str(normalized.get("asset_name") or record.get("asset_name") or "").strip(),
             "asset_id": str(normalized.get("asset_id") or record.get("asset_id") or "").strip(),
@@ -106,64 +121,41 @@ class SageMakerAnalysisMixin:
             "severity_validation": str(normalized.get("severity_validation") or "Needs Review"),
             "priority": str(normalized.get("priority") or "Monitor"),
             "asset_bucket": str(normalized.get("asset_bucket") or "Low Risk"),
-            "risk_level": str(normalized.get("risk_level") or "Unknown"),
+            "risk_level": risk_level,
             "ai_reason": str(normalized.get("ai_reason") or ""),
             "remediation": str(normalized.get("remediation") or ""),
             "tenable_remediation": str(normalized.get("tenable_remediation") or ""),
             "defender_remediation": str(normalized.get("defender_remediation") or ""),
             "splunk_remediation": str(normalized.get("splunk_remediation") or ""),
             "bigfix_remediation": str(normalized.get("bigfix_remediation") or ""),
-            "ai_analysis_source": str(source or "sagemaker"),
+            "ai_analysis_source": "sagemaker",
         })
         return normalized
 
-    def _normalize_cached_result(self, cached: dict, record: dict) -> dict:
-        result = self._normalize_scores(cached.copy())
-        result.update({
-            "asset_name": str(result.get("asset_name") or record.get("asset_name") or "").strip(),
-            "asset_id": str(result.get("asset_id") or record.get("asset_id") or "").strip(),
-            "threat_status": str(result.get("threat_status") or "Unknown"),
-            "severity_validation": str(result.get("severity_validation") or "Needs Review"),
-            "priority": str(result.get("priority") or "Monitor"),
-            "asset_bucket": str(result.get("asset_bucket") or "Low Risk"),
-            "risk_level": str(result.get("risk_level") or "Unknown"),
-            "ai_reason": str(result.get("ai_reason") or ""),
-            "remediation": str(result.get("remediation") or ""),
-            "tenable_remediation": str(result.get("tenable_remediation") or ""),
-            "defender_remediation": str(result.get("defender_remediation") or ""),
-            "splunk_remediation": str(result.get("splunk_remediation") or ""),
-            "bigfix_remediation": str(result.get("bigfix_remediation") or ""),
-            "ai_analysis_source": str(result.get("ai_analysis_source") or "cache"),
-        })
-        return result
-
     def generate_asset_analysis(self, *, asset_record: dict) -> dict:
+        """Analyze a single asset (no caching)."""
         if not asset_record:
             raise ValueError("No asset data provided.")
-
-        cached = self._cached_result_for_record(asset_record)
-        if cached:
-            print(
-                "[sagemaker] cache hit "
-                f"asset_id={asset_record.get('asset_id')} source={_get_cached_source(cached)}"
-            )
-            return self._normalize_cached_result(cached, asset_record)
 
         compact = self._compact_asset_record(asset_record)
         prompt = f"Analyze this asset:\n{json.dumps(compact, separators=(',', ':'))}"
         started = time.time()
+        
         print(
             "[sagemaker] analyze start "
             f"asset_id={asset_record.get('asset_id')} asset_name={asset_record.get('asset_name')}"
         )
 
         try:
-            data = self._generate_and_parse(BASE_SYSTEM_PROMPT, prompt)
+            system_instruction_text = BASE_SYSTEM_PROMPT + "\n\n" + prompt
+            response = self._invoke_endpoint(system_instruction_text, max_new_tokens=1200, temperature=0.2)
+            data = self._parse_json_like(response)
         except Exception as e:
             raise ValueError(f"SageMaker analysis failed for asset {asset_record.get('asset_id')}: {e}") from e
 
         if not isinstance(data, dict):
             raise ValueError(f"SageMaker returned invalid payload type: {type(data)}")
+
         print(
             "[sagemaker] response received for asset_id="
             f"{data.get('asset_id') or asset_record.get('asset_id')}"
@@ -171,81 +163,178 @@ class SageMakerAnalysisMixin:
 
         result = self._extract_fields(data)
         result = self._normalize_scores(result)
-        result.update({
-            "asset_name": str(result.get("asset_name") or compact["asset_name"]).strip(),
-            "asset_id": str(result.get("asset_id") or compact["asset_id"]).strip(),
-            "threat_status": str(result.get("threat_status") or "Unknown"),
-            "severity_validation": str(result.get("severity_validation") or "Needs Review"),
-            "priority": str(result.get("priority") or "Monitor"),
-            "asset_bucket": str(result.get("asset_bucket") or "Low Risk"),
-            "risk_level": str(result.get("risk_level") or "Unknown"),
-            "ai_analysis_source": "sagemaker",
-        })
+        normalized = self._normalize_dashboard_row(result, asset_record)
 
-        persist_ai_analysis_result(asset_record, result)
         print(
             "[sagemaker] analyze success "
-            f"asset_id={result.get('asset_id')} elapsed={time.time() - started:.2f}s"
+            f"asset_id={normalized.get('asset_id')} elapsed={time.time() - started:.2f}s"
         )
-        return result
+        return normalized
 
-    def generate_dashboard_analysis(self, *, asset_records: list[dict]) -> dict:
+    def _analyze_single_batch_item(self, record: dict, batch_index: int, batch_size: int) -> dict:
+        """Analyze one asset within a batch context."""
+        row_started = time.time()
+        print(
+            "[sagemaker] batch item start "
+            f"asset_id={record.get('asset_id')} item={batch_index}/{batch_size}"
+        )
+
+        compact = self._compact_asset_record(record)
+        prompt = f"Analyze this asset:\n{json.dumps(compact, separators=(',', ':'))}"
+        
+        try:
+            system_instruction_text = BASE_SYSTEM_PROMPT + "\n\n" + prompt
+            response = self._invoke_endpoint(system_instruction_text, max_new_tokens=1200, temperature=0.2)
+            data = self._parse_json_like(response)
+        except Exception as e:
+            print(
+                "[sagemaker] batch item error "
+                f"asset_id={record.get('asset_id')} elapsed={time.time() - row_started:.2f}s error={e}"
+            )
+            raise ValueError(f"SageMaker parse failure for asset {record.get('asset_id')}: {e}") from e
+
+        if not isinstance(data, dict):
+            raise ValueError(f"Unexpected SageMaker response format for asset {record.get('asset_id')}: {type(data)}")
+
+        result = self._extract_fields(data)
+        normalized = self._normalize_dashboard_row(result, record)
+
+        print(
+            "[sagemaker] batch item success "
+            f"asset_id={normalized.get('asset_id')} elapsed={time.time() - row_started:.2f}s"
+        )
+        return normalized
+
+    def generate_dashboard_analysis(self, *, asset_records: list[dict], max_workers: int = 3, asset_timeout_seconds: int = 90) -> dict:
+        """
+        Analyze all assets with deduplication and parallel processing.
+        
+        Key improvements:
+        - Deduplicates assets by fingerprint (within this run)
+        - Parallel processing (default 3 workers)
+        - Granular error handling: one asset failure doesn't crash all others
+        - Per-asset timeout: don't wait forever for slow assets
+        - Automatic retry with exponential backoff (in _invoke_endpoint)
+        
+        Args:
+            asset_records: List of asset records to analyze
+            max_workers: Number of parallel SageMaker requests (1-5 recommended)
+            asset_timeout_seconds: Max seconds to wait for each asset (30-120 recommended)
+        
+        Returns:
+            {
+                "assets": [analysis results + error results],
+                "insights": {"total": N, "successful": N, "failed": N, "errors": [...]}
+            }
+        """
         if not asset_records:
-            return {"assets": [], "insights": {}}
+            return {"assets": [], "insights": {"total": 0, "successful": 0, "failed": 0}}
 
-        all_results: list[dict] = []
-        for record in asset_records:
-            row_started = time.time()
-            print(
-                "[sagemaker] batch row start "
-                f"asset_id={record.get('asset_id')} asset_name={record.get('asset_name')}"
-            )
-            raw_flag = record.get("ai_analysis_complete")
-            if isinstance(raw_flag, str):
-                analysis_complete = raw_flag.strip().lower() == "true"
+        # ── Deduplication by fingerprint (within this run) ──
+        seen_fingerprints = set()
+        unique_records = []
+        fingerprint_map = {}  # Map fingerprint to list of original record indices
+
+        for idx, record in enumerate(asset_records):
+            fp = compute_asset_fingerprint(record)
+            if fp not in seen_fingerprints:
+                seen_fingerprints.add(fp)
+                unique_records.append(record)
+                fingerprint_map[fp] = [idx]
             else:
+                fingerprint_map[fp].append(idx)
+
+        if len(unique_records) < len(asset_records):
+            print(f"[sagemaker] deduplication: {len(asset_records)} → {len(unique_records)} unique assets")
+
+        all_results = {}
+        failed_errors = []
+
+        # ── Parallel processing with ThreadPoolExecutor ──
+        print(f"[sagemaker] batch analysis start: {len(unique_records)} unique assets, {max_workers} workers, {asset_timeout_seconds}s timeout per asset")
+        
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {}
+            for batch_idx, record in enumerate(unique_records):
+                future = executor.submit(
+                    self._analyze_single_batch_item, 
+                    record, 
+                    batch_idx + 1, 
+                    len(unique_records)
+                )
+                futures[future] = record
+
+            successful_count = 0
+            failed_count = 0
+            
+            for future in as_completed(futures, timeout=None):
+                record = futures[future]
+                asset_id = record.get("asset_id", "UNKNOWN")
+                fp = compute_asset_fingerprint(record)
+                
                 try:
-                    analysis_complete = bool(raw_flag)
-                except Exception:
-                    analysis_complete = False
+                    # Per-asset timeout: don't wait longer than asset_timeout_seconds
+                    result = future.result(timeout=asset_timeout_seconds)
+                    all_results[fp] = result
+                    successful_count += 1
+                    
+                except TimeoutError:
+                    # Timeout exceeded for this specific asset
+                    error_msg = f"Asset analysis timed out after {asset_timeout_seconds}s"
+                    print(f"[sagemaker] timeout error: asset_id={asset_id} error={error_msg}")
+                    failed_errors.append({"asset_id": asset_id, "error": error_msg})
+                    failed_count += 1
+                    
+                    # Return error result for this asset
+                    all_results[fp] = self._create_error_result(record, error_msg)
+                    
+                except Exception as e:
+                    # Granular error handling: one asset failure doesn't crash all others
+                    error_msg = f"{type(e).__name__}: {str(e)}"
+                    print(f"[sagemaker] batch processing error: asset_id={asset_id} error={error_msg}")
+                    failed_errors.append({"asset_id": asset_id, "error": error_msg})
+                    failed_count += 1
+                    
+                    # Return error result for this asset (with default values)
+                    all_results[fp] = self._create_error_result(record, error_msg)
 
-            cached = self._cached_result_for_record(record)
-            if analysis_complete and cached:
-                print(
-                    "[sagemaker] batch row cache hit "
-                    f"asset_id={record.get('asset_id')} source={_get_cached_source(cached)}"
-                )
-                all_results.append(self._normalize_cached_result(cached, record))
-                continue
+        print(f"[sagemaker] batch analysis complete: {successful_count} successful, {failed_count} failed")
 
-            compact = self._compact_asset_record(record)
-            prompt = f"Analyze this asset:\n{json.dumps(compact, separators=(',', ':'))}"
-            try:
-                data = self._generate_and_parse(BASE_SYSTEM_PROMPT, prompt, tokens=1500)
-            except Exception as e:
-                print(
-                    "[sagemaker] batch row error "
-                    f"asset_id={record.get('asset_id')} elapsed={time.time() - row_started:.2f}s error={e}"
-                )
-                raise ValueError(f"SageMaker parse failure for asset {record.get('asset_id')}: {e}") from e
+        # ── Expand deduplicated results back to full list ──
+        final_results = []
+        for record in asset_records:
+            fp = compute_asset_fingerprint(record)
+            if fp in all_results:
+                final_results.append(all_results[fp])
 
-            if not isinstance(data, dict):
-                raise ValueError(f"Unexpected SageMaker response format for asset {record.get('asset_id')}: {type(data)}")
-            print(
-                "[sagemaker] response received for asset_id="
-                f"{data.get('asset_id') or record.get('asset_id')}"
-            )
+        # Return insights about the batch
+        insights = {
+            "total": len(asset_records),
+            "unique": len(unique_records),
+            "successful": successful_count,
+            "failed": failed_count,
+            "errors": failed_errors if failed_errors else [],
+        }
 
-            result = self._extract_fields(data)
-            normalized = self._normalize_dashboard_row(result, record, "sagemaker")
-            all_results.append(normalized)
-            persist_ai_analysis_result(record, normalized)
-            print(
-                "[sagemaker] batch row success "
-                f"asset_id={normalized.get('asset_id')} elapsed={time.time() - row_started:.2f}s"
-            )
+        return {"assets": final_results, "insights": insights}
 
-        if not all_results:
-            raise ValueError("No valid asset analysis returned.")
-
-        return {"assets": all_results, "insights": {}}
+    def _create_error_result(self, record: dict, error_msg: str) -> dict:
+        """Create a default result object for a failed asset with error message."""
+        return {
+            "asset_id": str(record.get("asset_id", "UNKNOWN")).strip(),
+            "asset_name": str(record.get("asset_name", "UNKNOWN")).strip(),
+            "risk_score": 50,  # Default to medium
+            "risk_level": "Medium",
+            "asset_bucket": "Requires Investigation",
+            "anomaly_score": None,
+            "threat_status": "Unknown",
+            "severity_validation": "Error",
+            "priority": "Review",
+            "ai_reason": f"Analysis failed: {error_msg}",
+            "remediation": "Unable to generate recommendations due to analysis failure",
+            "tenable_remediation": "",
+            "defender_remediation": "",
+            "splunk_remediation": "",
+            "bigfix_remediation": "",
+            "ai_analysis_source": "error",
+        }

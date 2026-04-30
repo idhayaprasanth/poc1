@@ -195,96 +195,38 @@ def ensure_ai_analysis_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def load_ai_analysis_cache() -> dict[str, dict]:
-    if not CACHE_FILE.exists():
-        return {}
-    try:
-        cache = json.loads(CACHE_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-    return cache if isinstance(cache, dict) else {}
 
-
-def save_ai_analysis_cache(cache: dict[str, dict]) -> None:
-    CACHE_FILE.write_text(json.dumps(cache, ensure_ascii=True, indent=2), encoding="utf-8")
-
-
-def persist_ai_analysis_result(row: dict | pd.Series, analysis_result: dict) -> None:
-    fingerprint = compute_asset_fingerprint(row)
-    cache = load_ai_analysis_cache()
-    cache[fingerprint] = {
-        column: analysis_result.get(column)
-        for column in AI_ANALYSIS_COLUMNS
-    }
-    save_ai_analysis_cache(cache)
-
-
-def _resolve_cached_source(cached: dict) -> str:
-    """
-    Determine the ai_analysis_source for a raw cache entry.
-
-    Handles three cases:
-      1. ai_analysis_source is explicitly set to a non-empty string.
-      2. ai_analysis_source is None/missing but ai_reason contains the
-         local-fallback marker phrase (backward compatibility).
-      3. Neither — treat as unknown so it gets re-analyzed rather than
-         silently served as a valid model result.
-    """
-    source = str(cached.get("ai_analysis_source") or "").strip().lower()
-    if source:
-        return source
-    ai_reason = str(cached.get("ai_reason") or "").strip().lower()
-    if "local fallback" in ai_reason:
-        return "local_fallback"
-    # A cache entry with no source and no fallback marker is treated as
-    # unknown rather than valid, so it will be re-analyzed by the model.
-    return "unknown"
-
-
-def apply_cached_ai_analysis(df: pd.DataFrame) -> pd.DataFrame:
-    df = ensure_ai_analysis_columns(df)
-    cache = load_ai_analysis_cache()
-    if not cache:
-        return df
-
-    for idx, row in df.iterrows():
-        cached = cache.get(compute_asset_fingerprint(row))
-        if not cached:
-            # No cache entry at all — leave ai_analysis_complete=False so it
-            # gets queued for AI analysis.
-            continue
-
-        for column in AI_ANALYSIS_COLUMNS:
-            df.at[idx, column] = cached.get(column, pd.NA)
-
-        cached_source = _resolve_cached_source(cached)
-
-        # Write the resolved source back to the DataFrame so downstream
-        # code sees a consistent value even for legacy cache entries.
-        if cached_source:
-            df.at[idx, "ai_analysis_source"] = cached_source
-
-        # Cached results are reused as-is; AI reruns only happen for new fingerprints.
-        df.at[idx, "ai_analysis_complete"] = True
-        df.at[idx, "ai_analysis_error"] = pd.NA
-
-        print(
-            f"[cache] {row.get('asset_id')} source={cached_source!r} "
-            "needs_retry=False "
-            "complete=True"
-        )
-
-    return df
 
 
 def _read_dataset(name: str) -> pd.DataFrame:
     path = DATASET_FILES[name]
     if not path.exists():
         raise FileNotFoundError(f"Missing dataset CSV for {name}: {path}")
-    df = pd.read_csv(path)
+    
+    try:
+        df = pd.read_csv(path)
+    except Exception as e:
+        raise ValueError(f"Failed to parse CSV file '{name}' ({path}): {e}") from e
 
+    # Validate minimum structure
+    if df.empty:
+        raise ValueError(f"CSV file '{name}' is empty (0 rows)")
+    
+    if len(df.columns) == 0:
+        raise ValueError(f"CSV file '{name}' has no columns")
+
+    # Apply column aliases
     alias_map = DATASET_COLUMN_ALIASES.get(name, {})
     if alias_map:
+        # Check if expected source columns exist (before aliasing)
+        expected_source_cols = set(alias_map.keys())
+        actual_cols = set(df.columns)
+        missing_cols = expected_source_cols - actual_cols
+        
+        if missing_cols:
+            # Warn but don't fail (fallback to normalization will handle it)
+            print(f"[datasets] warning: CSV '{name}' missing expected columns: {missing_cols}")
+        
         df = df.rename(columns=alias_map)
 
     # Generic header normalization as a fallback for spacing/casing differences.
@@ -295,8 +237,17 @@ def _read_dataset(name: str) -> pd.DataFrame:
         }
     )
 
+    # Validate asset_id presence and uniqueness
     if "asset_id" not in df.columns:
+        print(f"[datasets] warning: CSV '{name}' has no asset_id column, will be auto-generated")
         df["asset_id"] = pd.Series([pd.NA] * len(df), dtype="object")
+    else:
+        # Check for non-null asset_ids
+        null_asset_ids = df["asset_id"].isna().sum()
+        if null_asset_ids == len(df):
+            print(f"[datasets] warning: CSV '{name}' has all null asset_ids")
+        elif null_asset_ids > 0:
+            print(f"[datasets] warning: CSV '{name}' has {null_asset_ids} null asset_ids out of {len(df)} rows")
 
     if "asset_name" not in df.columns:
         df["asset_name"] = df["asset_id"].astype("object")
@@ -306,7 +257,11 @@ def _read_dataset(name: str) -> pd.DataFrame:
             df[column] = pd.Series([pd.NA] * len(df), dtype="object")
 
     selected_columns = DATASET_OUTPUT_COLUMNS.get(name, list(df.columns))
-    return df[selected_columns].copy()
+    result = df[selected_columns].copy()
+    
+    print(f"[datasets] loaded {name}: {len(result)} rows, {len(result.columns)} columns")
+    
+    return result
 
 
 def build_merged_dataset() -> pd.DataFrame:
@@ -351,4 +306,4 @@ def build_merged_dataset() -> pd.DataFrame:
     else:
         df.insert(0, "asset_id", generated_ids)
 
-    return apply_cached_ai_analysis(df)
+    return df

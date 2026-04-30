@@ -17,7 +17,6 @@ from security_dashboard.data.datasets import (
     build_merged_dataset,
     coerce_ai_analysis_complete_series,
     ensure_ai_analysis_columns,
-    persist_ai_analysis_result,
 )
 from security_dashboard.layout import create_layout
 from security_dashboard.services.sagemaker_client import SageMakerClient
@@ -671,7 +670,6 @@ def run_dashboard_analysis(analysis_request, json_data):
 
             df.at[matched_idx, "ai_analysis_complete"] = True
             df.at[matched_idx, "ai_analysis_error"] = pd.NA
-            persist_ai_analysis_result(index_to_record[matched_idx], ai_row)
 
             asset_label = str(
                 index_to_record[matched_idx].get("asset_name")

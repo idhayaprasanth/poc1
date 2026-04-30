@@ -21,15 +21,19 @@ class SageMakerBaseClient:
     def __init__(self, endpoint_name: str | None = None, region_name: str | None = None):
         self.endpoint_name = endpoint_name or _env("SAGEMAKER_ENDPOINT_NAME", "")
         self.region_name = region_name or _env("AWS_REGION", "")
+        self._client = None  # Connection pooling: reuse boto3 client
 
     def enabled(self) -> bool:
         return bool(self.endpoint_name)
 
     def _runtime_client(self):
-        kwargs: dict[str, Any] = {}
-        if self.region_name:
-            kwargs["region_name"] = self.region_name
-        return boto3.client("sagemaker-runtime", **kwargs)
+        """Get or create cached boto3 client (connection pooling)."""
+        if self._client is None:
+            kwargs: dict[str, Any] = {}
+            if self.region_name:
+                kwargs["region_name"] = self.region_name
+            self._client = boto3.client("sagemaker-runtime", **kwargs)
+        return self._client
 
     def _write_debug_log(self, event: dict):
         try:
@@ -41,7 +45,23 @@ class SageMakerBaseClient:
         except Exception as exc:
             print(f"[sagemaker] debug log write failed: {type(exc).__name__}: {exc}")
 
-    def _invoke_endpoint(self, prompt: str, *, max_new_tokens: int = 1500, temperature: float = 0.2):
+    def _invoke_endpoint(self, prompt: str, *, max_new_tokens: int = 1500, temperature: float = 0.2, max_retries: int = 3):
+        """
+        Invoke SageMaker endpoint with automatic retry on transient failures.
+        
+        Args:
+            prompt: System prompt for the model
+            max_new_tokens: Maximum tokens in response
+            temperature: Model temperature (0.0-1.0)
+            max_retries: Number of retry attempts (exponential backoff: 1s, 2s, 4s)
+        
+        Returns:
+            Model response (dict)
+        
+        Raises:
+            ValueError: If endpoint not configured
+            Exception: After max_retries exhausted
+        """
         if not self.enabled():
             raise ValueError("SageMaker endpoint is not configured. Set SAGEMAKER_ENDPOINT_NAME.")
 
@@ -55,51 +75,118 @@ class SageMakerBaseClient:
         }
 
         runtime = self._runtime_client()
-        start = time.time()
-        print(
-            "[sagemaker] request start "
-            f"endpoint={self.endpoint_name} "
-            f"prompt_chars={len(prompt)} "
-            f"max_new_tokens={max_new_tokens}"
-        )
-        try:
-            response = runtime.invoke_endpoint(
-                EndpointName=self.endpoint_name,
-                ContentType="application/json",
-                Body=json.dumps(payload),
-            )
-            raw_body = response["Body"].read().decode()
-            decoded = json.loads(raw_body)
-            elapsed = time.time() - start
-            self._write_debug_log(
-                {
-                    "event": "invoke_success",
-                    "endpoint": self.endpoint_name,
-                    "elapsed_seconds": round(elapsed, 3),
-                    "request_payload": payload,
-                    "raw_response_body": raw_body,
-                    "decoded_response": decoded,
-                }
-            )
-            print(f"[sagemaker] request success endpoint={self.endpoint_name} elapsed={elapsed:.2f}s")
-            return decoded
-        except Exception as exc:
-            elapsed = time.time() - start
-            self._write_debug_log(
-                {
-                    "event": "invoke_error",
-                    "endpoint": self.endpoint_name,
-                    "elapsed_seconds": round(elapsed, 3),
-                    "request_payload": payload,
-                    "error_type": type(exc).__name__,
-                    "error": str(exc),
-                }
-            )
+        last_error = None
+        
+        for attempt in range(max_retries):
+            start = time.time()
             print(
-                "[sagemaker] request error "
-                f"endpoint={self.endpoint_name} elapsed={elapsed:.2f}s error={type(exc).__name__}: {exc}"
+                "[sagemaker] request start "
+                f"endpoint={self.endpoint_name} "
+                f"prompt_chars={len(prompt)} "
+                f"max_new_tokens={max_new_tokens} "
+                f"attempt={attempt + 1}/{max_retries}"
             )
-            raise
+            try:
+                response = runtime.invoke_endpoint(
+                    EndpointName=self.endpoint_name,
+                    ContentType="application/json",
+                    Body=json.dumps(payload),
+                )
+                raw_body = response["Body"].read().decode()
+                decoded = json.loads(raw_body)
+                elapsed = time.time() - start
+                self._write_debug_log(
+                    {
+                        "event": "invoke_success",
+                        "endpoint": self.endpoint_name,
+                        "elapsed_seconds": round(elapsed, 3),
+                        "attempt": attempt + 1,
+                        "request_payload": payload,
+                        "raw_response_body": raw_body,
+                        "decoded_response": decoded,
+                    }
+                )
+                print(f"[sagemaker] request success endpoint={self.endpoint_name} elapsed={elapsed:.2f}s attempt={attempt + 1}")
+                return decoded
+            except Exception as exc:
+                elapsed = time.time() - start
+                last_error = exc
+                is_transient = self._is_transient_error(exc)
+                should_retry = is_transient and attempt < max_retries - 1
+                
+                self._write_debug_log(
+                    {
+                        "event": "invoke_error",
+                        "endpoint": self.endpoint_name,
+                        "elapsed_seconds": round(elapsed, 3),
+                        "attempt": attempt + 1,
+                        "is_transient": is_transient,
+                        "will_retry": should_retry,
+                        "request_payload": payload,
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                    }
+                )
+                
+                if should_retry:
+                    backoff_seconds = 2 ** attempt  # 1s, 2s, 4s
+                    print(
+                        "[sagemaker] transient error, retrying in "
+                        f"{backoff_seconds}s attempt={attempt + 1}/{max_retries} "
+                        f"error={type(exc).__name__}: {exc}"
+                    )
+                    time.sleep(backoff_seconds)
+                else:
+                    print(
+                        "[sagemaker] request error (no retry) "
+                        f"endpoint={self.endpoint_name} elapsed={elapsed:.2f}s "
+                        f"attempt={attempt + 1}/{max_retries} "
+                        f"error={type(exc).__name__}: {exc}"
+                    )
+                    raise
+
+        # Should not reach here, but just in case
+        raise last_error or Exception("SageMaker invocation failed after all retries")
+
+    @staticmethod
+    def _is_transient_error(exc: Exception) -> bool:
+        """
+        Check if error is transient (retryable) vs permanent.
+        
+        Transient errors:
+        - ThrottlingException (rate limit)
+        - ReadTimeoutError (network timeout)
+        - ServiceUnavailableException (endpoint temporarily down)
+        
+        Permanent errors:
+        - EndpointNotFound, ValidationException, etc.
+        """
+        error_type = type(exc).__name__
+        error_msg = str(exc).lower()
+        
+        transient_types = {
+            "ThrottlingException",
+            "ReadTimeoutError",
+            "ConnectTimeoutError",
+            "ServiceUnavailableException",
+            "InternalServerError",
+            "TimeoutError",
+        }
+        
+        if error_type in transient_types:
+            return True
+        
+        # Check error message for transient indicators
+        transient_phrases = [
+            "rate exceeded",
+            "throttled",
+            "timeout",
+            "temporarily",
+            "unavailable",
+            "service is unavailable",
+        ]
+        
+        return any(phrase in error_msg for phrase in transient_phrases)
 
     @staticmethod
     def _extract_generated_text(response) -> str:
@@ -148,4 +235,5 @@ class SageMakerBaseClient:
     def generate_text(self, system_instruction: str, user_prompt: str) -> str:
         prompt = f"{system_instruction}\n\n{user_prompt}"
         response = self._invoke_endpoint(prompt, max_new_tokens=700, temperature=0.2)
+        return self._extract_generated_text(response)
         return self._extract_generated_text(response).strip()
