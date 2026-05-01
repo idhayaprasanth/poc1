@@ -9,25 +9,11 @@ from security_dashboard.data.datasets import (
 )
 from security_dashboard.services.structured_output_validator import StructuredOutputValidator
 from security_dashboard.services.prompt_sanitizer import PromptSanitizer
+from security_dashboard.services.prompt_templates import get_template
+from security_dashboard.config import get_analysis_prompt_template_version
 
 
 logger = logging.getLogger(__name__)
-
-BASE_SYSTEM_PROMPT = (
-    "You are a cybersecurity risk analysis engine. "
-    "Do not include Reasoning. Do not include <think> tags. "
-    "Return ONLY valid JSON. No markdown. No explanation. "
-    "Return exactly one JSON object with keys: "
-    "asset_name, asset_id, threat_status, severity_validation, priority, "
-    "asset_bucket, risk_level, risk_score, anomaly_score, ai_reason, remediation, "
-    "tenable_remediation, defender_remediation, splunk_remediation, bigfix_remediation. "
-    "Rules: "
-    "risk_score and anomaly_score must be integers 0-100. "
-    "risk_level must be one of High, Medium, Low and must match risk_score bands: "
-    "High=75-100, Medium=45-74, Low=0-44. "
-    "Use only provided input data; do not invent facts. "
-    "If data is missing, keep conservative scoring and note uncertainty in ai_reason."
-)
 
 
 class SageMakerAnalysisMixin:
@@ -38,11 +24,10 @@ class SageMakerAnalysisMixin:
     Integrates PromptSanitizer for injection prevention.
     """
     
-    def __init__(self, debug: bool = False):
-        """Initialize with validator and sanitizer."""
-        self._validator = StructuredOutputValidator(debug=debug)
+    def __init__(self, *args, **kwargs):
+        """Initialize the mixin while preserving cooperative multiple inheritance."""
+        super().__init__(*args, **kwargs)
         self._sanitizer = PromptSanitizer()
-        self.debug = debug
 
     @staticmethod
     def _compact_asset_record(asset_record: dict) -> dict:
@@ -65,19 +50,21 @@ class SageMakerAnalysisMixin:
         # Sanitize asset data for JSON embedding (injection prevention)
         sanitized_compact = self._sanitizer.sanitize_asset_record(compact)
         
-        prompt = f"Analyze this asset:\n{{data}}".replace(
-            "{data}", 
-            json.dumps(sanitized_compact, separators=(',', ':'))
-        )
+        # Get template version from config and render with asset data
+        template_version = get_analysis_prompt_template_version()
+        template = get_template("asset_analysis", template_version)
+        asset_data_json = json.dumps(sanitized_compact, separators=(',', ':'))
+        system_instruction_text = template.render(asset_data=f"Analyze this asset:\n{asset_data_json}")
+        
         started = time.time()
         
         print(
             "[sagemaker] analyze start "
-            f"asset_id={asset_record.get('asset_id')} asset_name={asset_record.get('asset_name')}"
+            f"asset_id={asset_record.get('asset_id')} asset_name={asset_record.get('asset_name')} "
+            f"template_version={template_version}"
         )
 
         try:
-            system_instruction_text = BASE_SYSTEM_PROMPT + "\n\n" + prompt
             response = self._invoke_endpoint(system_instruction_text, max_new_tokens=1200, temperature=0.2)
             
             # Use StructuredOutputValidator instead of old parsing methods
@@ -116,13 +103,13 @@ class SageMakerAnalysisMixin:
         # Sanitize asset data (injection prevention)
         sanitized_compact = self._sanitizer.sanitize_asset_record(compact)
         
-        prompt = f"Analyze this asset:\n{{data}}".replace(
-            "{data}",
-            json.dumps(sanitized_compact, separators=(',', ':'))
-        )
+        # Get template version from config and render with asset data
+        template_version = get_analysis_prompt_template_version()
+        template = get_template("asset_analysis", template_version)
+        asset_data_json = json.dumps(sanitized_compact, separators=(',', ':'))
+        system_instruction_text = template.render(asset_data=f"Analyze this asset:\n{asset_data_json}")
         
         try:
-            system_instruction_text = BASE_SYSTEM_PROMPT + "\n\n" + prompt
             response = self._invoke_endpoint(system_instruction_text, max_new_tokens=1200, temperature=0.2)
             
             # Use validator instead of old _parse_json_like + _extract_fields + _normalize_*

@@ -6,7 +6,8 @@ from security_dashboard.services.sagemaker_base import SageMakerBaseClient
 
 
 class SageMakerClient(SageMakerAnalysisMixin, SageMakerChatbotMixin, SageMakerBaseClient):
-    pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 __all__ = ["SageMakerClient", "is_security_question"]

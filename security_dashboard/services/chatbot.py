@@ -1,9 +1,9 @@
 """SageMaker-powered security chatbot helpers."""
 
-import json
 import logging
 
-from security_dashboard.services.structured_output_validator import StructuredOutputValidator
+from security_dashboard.services.prompt_templates import get_template
+from security_dashboard.config import get_chatbot_prompt_template_version
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +24,6 @@ def is_security_question(text: str) -> bool:
         return False
     lowered = text.lower()
     return any(k in lowered for k in SECURITY_KEYWORDS)
-
-
-# 🔹 Shorter system prompt (token optimized)
-SYSTEM_PROMPT = (
-    "You are a cybersecurity assistant. Answer only security-related questions. "
-    "Use provided context. Be concise and actionable. Do not invent data."
-)
 
 
 def _fallback_security_answer(question: str, context_text: str) -> str:
@@ -60,10 +53,9 @@ def _fallback_security_answer(question: str, context_text: str) -> str:
 class SageMakerChatbotMixin:
     """Chatbot mixin with structured response validation."""
     
-    def __init__(self, debug: bool = False):
-        """Initialize with validator."""
-        self._validator = StructuredOutputValidator(debug=debug)
-        self.debug = debug
+    def __init__(self, *args, **kwargs):
+        """Initialize the mixin while preserving cooperative multiple inheritance."""
+        super().__init__(*args, **kwargs)
 
     def generate_security_answer(
         self,
@@ -91,14 +83,18 @@ class SageMakerChatbotMixin:
                 chat_history.append(f"{role}: {text}")
         
         history_text = "\n".join(chat_history)
-        prompt = (
-            f"Conversation history:\n{history_text}\n\n"
-            f"Context:\n{context_text}\n\n"
-            f"Question:\n{question}"
+        
+        # Get template version from config and render with chat context
+        template_version = get_chatbot_prompt_template_version()
+        template = get_template("chatbot", template_version)
+        rendered_prompt = template.render(
+            history=history_text,
+            context=context_text,
+            question=question
         )
 
         try:
-            response_text = self.generate_text(SYSTEM_PROMPT, prompt)
+            response_text = self.generate_text(rendered_prompt, "")
             
             # Optionally validate as structured response
             # For now, return raw text (simple chatbot mode)
