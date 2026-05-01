@@ -129,14 +129,16 @@ class AssetAnalysisTemplate(PromptTemplate):
         "Return ONLY valid JSON. No markdown. No explanation.\n\n"
         "CRITICAL RULES:\n"
         "1. risk_score must be an INTEGER from 0-100\n"
-        "2. risk_level must be EXACTLY one of: 'High', 'Medium', 'Low'\n"
-        "3. Risk level bands: High (75-100), Medium (45-74), Low (0-44)\n"
-        "4. risk_level MUST match risk_score:\n"
+        "2. anomaly_score must be an INTEGER from 0-100\n"
+        "3. priority must be an INTEGER from 1-5 (1=Critical, 5=Low)\n"
+        "4. risk_level must be EXACTLY one of: 'High', 'Medium', 'Low'\n"
+        "5. Risk level bands: High (75-100), Medium (45-74), Low (0-44)\n"
+        "6. risk_level MUST match risk_score:\n"
         "   - If risk_score >= 75, risk_level MUST be 'High'\n"
         "   - If 45 <= risk_score < 75, risk_level MUST be 'Medium'\n"
         "   - If risk_score < 45, risk_level MUST be 'Low'\n"
-        "5. Use ONLY data provided; do not invent facts\n"
-        "6. Be conservative in scoring if data is incomplete\n\n"
+        "7. Use ONLY data provided; do not invent facts\n"
+        "8. Be conservative in scoring if data is incomplete\n\n"
         "REQUIRED OUTPUT FIELDS:\n"
         "asset_name, asset_id, threat_status, severity_validation, priority,\n"
         "asset_bucket, risk_level, risk_score, anomaly_score, ai_reason, remediation,\n"
@@ -146,6 +148,7 @@ class AssetAnalysisTemplate(PromptTemplate):
         '  "asset_name": "server-prod-01",\n'
         '  "asset_id": "asset-12345",\n'
         '  "risk_score": 78,\n'
+        '  "anomaly_score": 35,\n'
         '  "risk_level": "High",\n'
         '  "threat_status": "Active",\n'
         '  "priority": 1,\n'

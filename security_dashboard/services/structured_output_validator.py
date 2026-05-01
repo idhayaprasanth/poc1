@@ -248,17 +248,33 @@ class StructuredOutputValidator:
         Allows LLM to output field names in various formats (camelCase, kebab-case, etc.)
         and maps them to the canonical schema names.
         
+        Also performs type coercion for numeric fields that may come as strings from LLM.
+        
         Returns:
-            Dictionary with canonical field names
+            Dictionary with canonical field names and coerced types
         """
         normalized = {}
         used_aliases = set()
+        
+        # Integer fields that should be coerced from strings if needed
+        INT_FIELDS = {"risk_score", "anomaly_score", "priority"}
         
         # Map each FIELD_ALIAS to the first matching key found in data
         for canonical_name, aliases in self.FIELD_ALIASES.items():
             for alias in aliases:
                 if alias in data and alias not in used_aliases:
-                    normalized[canonical_name] = data[alias]
+                    value = data[alias]
+                    
+                    # Type coercion for integer fields
+                    if canonical_name in INT_FIELDS and isinstance(value, str):
+                        try:
+                            value = int(value)
+                        except (ValueError, TypeError):
+                            # If conversion fails, keep as-is and let schema validation handle it
+                            if self.debug:
+                                logger.debug(f"Failed to coerce {canonical_name}='{value}' to int")
+                    
+                    normalized[canonical_name] = value
                     used_aliases.add(alias)
                     break
             
