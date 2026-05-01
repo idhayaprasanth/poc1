@@ -127,7 +127,7 @@ class AssetAnalysisTemplate(PromptTemplate):
         "You are a cybersecurity risk analysis engine. "
         "RESPOND WITH ONLY A JSON OBJECT. NO TEXT BEFORE OR AFTER JSON. "
         "DO NOT WRITE 'Here is', 'My analysis', OR ANY PREAMBLE. "
-        "START IMMEDIATELY WITH { AND END WITH }}.\n\n"
+        "START IMMEDIATELY WITH {{ AND END WITH }}.\n\n"
         "RULES:\n"
         "- risk_score: NUMBER 0-100 (e.g. 75)\n"
         "- anomaly_score: NUMBER 0-100\n"
@@ -136,11 +136,11 @@ class AssetAnalysisTemplate(PromptTemplate):
         "- threat_status: 'Active'|'Potential'|'Resolved'|'Unknown'\n"
         "- Use ONLY provided data. No invented facts. If missing: conservative scoring + uncertainty in ai_reason.\n\n"
         "OUTPUT EXACTLY THIS FORMAT (NO TEXT BEFORE {{ OR AFTER }}):\n"
-        '{{"asset_name":"server-prod","asset_id":"asset-001","risk_score":78,"anomaly_score":35,'
+        '{{ "asset_name":"server-prod","asset_id":"asset-001","risk_score":78,"anomaly_score":35,'
         '"priority":1,"risk_level":"High","threat_status":"Active","asset_bucket":"Production",'
         '"severity_validation":"Confirmed","ai_reason":"Critical vuln","remediation":"Apply patch",'
         '"tenable_remediation":"","defender_remediation":"","splunk_remediation":"","bigfix_remediation":"",'
-        '"ai_analysis_source":"sagemaker"}}\n\n'
+        '"ai_analysis_source":"sagemaker" }}\n\n'
         "ASSET DATA:\n"
         "{asset_data}"
     )
