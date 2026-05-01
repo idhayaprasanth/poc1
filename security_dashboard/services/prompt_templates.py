@@ -14,8 +14,8 @@ from abc import ABC, abstractmethod
 import json
 
 from pydantic import BaseModel
-from prompt_sanitizer import PromptSanitizer
-from schemas import AssetAnalysisOutput, ChatbotResponse
+from security_dashboard.services.prompt_sanitizer import PromptSanitizer
+from security_dashboard.services.schemas import AssetAnalysisOutput, ChatbotResponse
 
 
 class TemplateVersion(str, Enum):

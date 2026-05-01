@@ -24,7 +24,7 @@ from datetime import datetime
 
 from pydantic import ValidationError as PydanticValidationError
 
-from schemas import (
+from security_dashboard.services.schemas import (
     AssetAnalysisOutput,
     ChatbotResponse,
     ValidationResult,
