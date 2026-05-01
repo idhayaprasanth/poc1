@@ -1,15 +1,15 @@
-import ast
 import json
 import os
-import re
 import time
 from pathlib import Path
 from typing import Any
 
 import boto3
 
+from security_dashboard.services.structured_output_validator import StructuredOutputValidator
+from security_dashboard.services.schemas import ValidationResult
 
-_JSON_RE = re.compile(r"(\{.*\}|\[.*\])", re.DOTALL)
+
 _SAGEMAKER_DEBUG_LOG_FILE = Path(__file__).resolve().parents[1] / "data" / "sagemaker_api_debug.jsonl"
 
 
@@ -18,10 +18,12 @@ def _env(name: str, default: str) -> str:
 
 
 class SageMakerBaseClient:
-    def __init__(self, endpoint_name: str | None = None, region_name: str | None = None):
+    def __init__(self, endpoint_name: str | None = None, region_name: str | None = None, debug: bool = False):
         self.endpoint_name = endpoint_name or _env("SAGEMAKER_ENDPOINT_NAME", "")
         self.region_name = region_name or _env("AWS_REGION", "")
+        self.debug = debug
         self._client = None  # Connection pooling: reuse boto3 client
+        self._validator = StructuredOutputValidator(debug=debug)
 
     def enabled(self) -> bool:
         return bool(self.endpoint_name)
@@ -190,50 +192,72 @@ class SageMakerBaseClient:
 
     @staticmethod
     def _extract_generated_text(response) -> str:
+        """Extract generated text from SageMaker response."""
         if isinstance(response, list) and response:
             return str(response[0].get("generated_text", ""))
         if isinstance(response, dict):
             return str(response.get("generated_text", ""))
         return str(response or "")
 
-    @staticmethod
-    def _extract_json_payload(text: str) -> str:
-        if not text:
-            return ""
-        cleaned = re.sub(r"</?think>", "", text, flags=re.IGNORECASE).strip()
-        start = cleaned.find("{")
-        end = cleaned.rfind("}") + 1
-        if start >= 0 and end > start:
-            cleaned = cleaned[start:end]
-        cleaned = cleaned.replace("\\n", "").replace("\n", "")
-        if '\\"' in cleaned:
-            cleaned = cleaned.replace('\\"', '"')
-        match = _JSON_RE.search(cleaned)
-        return match.group(0).strip() if match else cleaned
-
-    def _parse_json_like(self, response):
-        text = response if isinstance(response, str) else self._extract_generated_text(response)
-        cleaned = self._extract_json_payload(text)
-        try:
-            return json.loads(cleaned)
-        except Exception:
-            try:
-                return ast.literal_eval(cleaned)
-            except Exception as exc:
-                self._write_debug_log(
-                    {
-                        "event": "parse_error",
-                        "endpoint": self.endpoint_name,
-                        "error_type": type(exc).__name__,
-                        "error": str(exc),
-                        "raw_text": text,
-                        "cleaned_text": cleaned,
-                    }
-                )
-                raise ValueError(f"SageMaker failed to return valid JSON: {exc}") from exc
-
+    def validate_asset_analysis_response(
+        self,
+        response: Any,
+        include_raw_response: bool = False
+    ) -> ValidationResult:
+        """
+        Validate a SageMaker response as an asset analysis.
+        
+        Uses StructuredOutputValidator to:
+        1. Extract JSON from response text
+        2. Normalize field names
+        3. Validate against AssetAnalysisOutput schema
+        
+        Args:
+            response: SageMaker response (dict from boto3)
+            include_raw_response: Include raw response in result
+        
+        Returns:
+            ValidationResult with either valid AssetAnalysisOutput or per-field errors
+        """
+        response_text = self._extract_generated_text(response)
+        return self._validator.validate_asset_analysis(
+            response_text,
+            include_raw_response=include_raw_response
+        )
+    
+    def validate_chatbot_response(
+        self,
+        response_dict: dict,
+        include_raw_response: bool = False
+    ) -> ValidationResult:
+        """
+        Validate a SageMaker response as a chatbot response.
+        
+        Args:
+            response_dict: Parsed response dictionary
+            include_raw_response: Include raw response in result
+        
+        Returns:
+            ValidationResult with either valid ChatbotResponse or errors
+        """
+        return self._validator.validate_chatbot_response(
+            response_dict,
+            include_raw_response=include_raw_response
+        )
+    
     def generate_text(self, system_instruction: str, user_prompt: str) -> str:
+        """
+        Generate text using SageMaker endpoint (simple text generation).
+        
+        Used for chatbot responses without structured validation.
+        
+        Args:
+            system_instruction: System prompt
+            user_prompt: User input
+        
+        Returns:
+            Generated text response
+        """
         prompt = f"{system_instruction}\n\n{user_prompt}"
         response = self._invoke_endpoint(prompt, max_new_tokens=700, temperature=0.2)
-        return self._extract_generated_text(response)
         return self._extract_generated_text(response).strip()

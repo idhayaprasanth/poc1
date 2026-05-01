@@ -2,4 +2,6 @@ dash
 pandas
 plotly
 boto3
+pydantic>=2.0
+outlines>=0.0.40
 

@@ -1,5 +1,12 @@
 """SageMaker-powered security chatbot helpers."""
 
+import json
+import logging
+
+from security_dashboard.services.structured_output_validator import StructuredOutputValidator
+
+logger = logging.getLogger(__name__)
+
 # 🔹 Faster lookup (tuple + lowercase once)
 SECURITY_KEYWORDS = tuple(k.lower() for k in [
     "security", "cyber", "cybersecurity", "infosec", "vulnerability", "vuln",
@@ -51,6 +58,12 @@ def _fallback_security_answer(question: str, context_text: str) -> str:
 
 
 class SageMakerChatbotMixin:
+    """Chatbot mixin with structured response validation."""
+    
+    def __init__(self, debug: bool = False):
+        """Initialize with validator."""
+        self._validator = StructuredOutputValidator(debug=debug)
+        self.debug = debug
 
     def generate_security_answer(
         self,
@@ -59,6 +72,11 @@ class SageMakerChatbotMixin:
         context_text: str,
         history: list[dict] | None = None,
     ) -> str:
+        """
+        Generate a security-focused chatbot response.
+        
+        Falls back gracefully if LLM is unavailable or question is not security-related.
+        """
         if not self.enabled():
             return "SageMaker endpoint is not configured. Set SAGEMAKER_ENDPOINT_NAME."
 
@@ -71,6 +89,7 @@ class SageMakerChatbotMixin:
             text = item.get("text", "")
             if text:
                 chat_history.append(f"{role}: {text}")
+        
         history_text = "\n".join(chat_history)
         prompt = (
             f"Conversation history:\n{history_text}\n\n"
@@ -79,10 +98,16 @@ class SageMakerChatbotMixin:
         )
 
         try:
-            response = self.generate_text(SYSTEM_PROMPT, prompt)
-            if response:
-                return response.strip()
-        except Exception:
+            response_text = self.generate_text(SYSTEM_PROMPT, prompt)
+            
+            # Optionally validate as structured response
+            # For now, return raw text (simple chatbot mode)
+            # To validate: parse as JSON + validate using _validator.validate_chatbot_response()
+            
+            if response_text:
+                return response_text.strip()
+        except Exception as e:
+            logger.error(f"Chatbot generation failed: {e}")
             return _fallback_security_answer(question, context_text)
 
         return "AI response unavailable. Please try again."

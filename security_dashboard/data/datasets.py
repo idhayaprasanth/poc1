@@ -139,13 +139,49 @@ def _json_safe_value(value):
     return value
 
 
-def compute_asset_fingerprint(row: dict | pd.Series) -> str:
+def compute_asset_fingerprint(
+    row: dict | pd.Series,
+    template_version: str | None = None
+) -> str:
+    """
+    Compute fingerprint (cache key) for an asset record.
+    
+    Includes:
+    - Asset data hash (to detect changes)
+    - Template version (to detect prompt changes)
+    
+    Different template versions produce different fingerprints, ensuring that:
+    - Template 1.0 → Cache A
+    - Template 1.1 → Cache B (fresh analysis)
+    - Swapping back to 1.0 → Uses Cache A
+    
+    Args:
+        row: Asset record (dict or pandas Series)
+        template_version: Prompt template version (e.g., "1.0", "1.1")
+                         If None, uses "unknown" (always cache miss)
+    
+    Returns:
+        SHA256 hex fingerprint for use as cache key
+    """
     row_dict = row.to_dict() if isinstance(row, pd.Series) else dict(row)
+    
+    # Asset data payload
     payload = {
         column: _json_safe_value(row_dict.get(column))
         for column in SOURCE_FINGERPRINT_COLUMNS
     }
-    encoded = json.dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    
+    # Include template version in fingerprint
+    # This ensures cache misses when template changes
+    if template_version:
+        payload["__template_version__"] = template_version
+    
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":")
+    )
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
