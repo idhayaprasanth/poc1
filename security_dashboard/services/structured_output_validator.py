@@ -195,6 +195,7 @@ class StructuredOutputValidator:
         Handles:
         - <think>...</think> tags (reasoning models)
         - Markdown code blocks (```json ...```)
+        - Preamble text before JSON (e.g., "My analysis is: {...}")
         - Plain JSON objects
         - Escaped newlines and quotes
         
@@ -225,14 +226,31 @@ class StructuredOutputValidator:
             json_str = text_cleaned[first_brace:last_brace + 1]
             
             # Clean up common LLM output artifacts
-            # Remove escaped newlines
-            json_str = json_str.replace(r'\n', ' ')
+            # Remove escaped newlines and quotes
+            json_str = json_str.replace(r'\n', ' ').replace(r'\r', ' ')
             json_str = json_str.replace(r'\"', '"')
+            
+            # Fix incomplete JSON: if it ends abruptly (missing closing quote/bracket),
+            # try to complete it with minimal fields
+            if json_str.count('"') % 2 != 0:
+                # Odd number of quotes means likely incomplete
+                json_str = json_str.rstrip(', ') + '}'
             
             try:
                 parsed = json.loads(json_str)
                 return parsed, "braces_extraction"
             except json.JSONDecodeError as e:
+                # If parsing failed, try to extract just the complete key-value pairs
+                # This handles cases where JSON is truncated mid-field
+                try:
+                    partial_parsed = self._extract_partial_json(json_str)
+                    if partial_parsed:
+                        if self.debug:
+                            logger.debug(f"Extracted partial JSON (incomplete response): {partial_parsed}")
+                        return partial_parsed, "partial_extraction"
+                except Exception:
+                    pass
+                
                 if self.debug:
                     logger.debug(f"Failed to parse extracted JSON: {e}")
         
@@ -243,6 +261,44 @@ class StructuredOutputValidator:
         except json.JSONDecodeError as e:
             logger.error(f"Failed to extract JSON from response: {e}\nResponse text: {text[:200]}")
             raise ValueError(f"Could not extract valid JSON from response: {e}")
+    
+    def _extract_partial_json(self, json_str: str) -> Dict[str, Any]:
+        """
+        Extract partial JSON object from incomplete/truncated responses.
+        
+        Handles cases where LLM output is cut off mid-field and doesn't form valid JSON.
+        This is a last-resort method to salvage what we can.
+        
+        Args:
+            json_str: Incomplete JSON string
+            
+        Returns:
+            Dictionary of extracted key-value pairs, or empty dict if nothing salvageable
+        """
+        result = {}
+        
+        # Match complete "key": value pairs (quoted keys with various value types)
+        # Handles: strings, numbers, booleans, nulls, and nested objects
+        pattern = r'"([^"]+)"\s*:\s*(?:"([^"]*?)"|([0-9]+(?:\.[0-9]+)?)|true|false|null|{[^}]*})'
+        
+        for match in re.finditer(pattern, json_str):
+            key = match.group(1)
+            str_value = match.group(2)
+            num_value = match.group(3)
+            
+            if str_value is not None:
+                result[key] = str_value
+            elif num_value is not None:
+                try:
+                    if '.' in num_value:
+                        result[key] = float(num_value)
+                    else:
+                        result[key] = int(num_value)
+                except (ValueError, TypeError):
+                    result[key] = num_value
+        
+        return result if result else {}
+    
     
     def _normalize_field_names(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """

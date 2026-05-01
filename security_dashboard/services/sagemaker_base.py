@@ -47,7 +47,7 @@ class SageMakerBaseClient:
         except Exception as exc:
             print(f"[sagemaker] debug log write failed: {type(exc).__name__}: {exc}")
 
-    def _invoke_endpoint(self, prompt: str, *, max_new_tokens: int = 1500, temperature: float = 0.2, max_retries: int = 3):
+    def _invoke_endpoint(self, prompt: str, *, max_new_tokens: int = 1500, temperature: float = 0.2, max_retries: int = 3, use_json_schema: bool = True):
         """
         Invoke SageMaker endpoint with automatic retry on transient failures.
         
@@ -56,6 +56,7 @@ class SageMakerBaseClient:
             max_new_tokens: Maximum tokens in response
             temperature: Model temperature (0.0-1.0)
             max_retries: Number of retry attempts (exponential backoff: 1s, 2s, 4s)
+            use_json_schema: Whether to use TGI JSON schema constraint (enforces valid JSON at generation time)
         
         Returns:
             Model response (dict)
@@ -75,18 +76,46 @@ class SageMakerBaseClient:
                 "return_full_text": False,
             },
         }
+        
+        # Add TGI JSON schema constraint if supported (enforces JSON-only output at generation)
+        if use_json_schema:
+            # TGI supports grammar-based constraints; a simple JSON schema constraint
+            # tells the model to only generate valid JSON objects
+            payload["parameters"]["schema"] = {
+                "type": "object",
+                "properties": {
+                    "asset_name": {"type": "string"},
+                    "asset_id": {"type": "string"},
+                    "risk_score": {"type": "integer", "minimum": 0, "maximum": 100},
+                    "anomaly_score": {"type": "integer", "minimum": 0, "maximum": 100},
+                    "priority": {"type": "integer", "minimum": 1, "maximum": 5},
+                    "risk_level": {"type": "string", "enum": ["High", "Medium", "Low"]},
+                    "threat_status": {"type": "string"},
+                    "severity_validation": {"type": "string"},
+                    "asset_bucket": {"type": "string"},
+                    "ai_reason": {"type": "string"},
+                    "remediation": {"type": "string"},
+                    "tenable_remediation": {"type": "string"},
+                    "defender_remediation": {"type": "string"},
+                    "splunk_remediation": {"type": "string"},
+                    "bigfix_remediation": {"type": "string"},
+                    "ai_analysis_source": {"type": "string"},
+                },
+                "required": ["asset_id", "risk_score", "priority", "risk_level"],
+            }
 
         runtime = self._runtime_client()
         last_error = None
         
         for attempt in range(max_retries):
             start = time.time()
+            schema_info = " with JSON schema constraint" if use_json_schema else ""
             print(
                 "[sagemaker] request start "
                 f"endpoint={self.endpoint_name} "
                 f"prompt_chars={len(prompt)} "
                 f"max_new_tokens={max_new_tokens} "
-                f"attempt={attempt + 1}/{max_retries}"
+                f"attempt={attempt + 1}/{max_retries}{schema_info}"
             )
             try:
                 response = runtime.invoke_endpoint(

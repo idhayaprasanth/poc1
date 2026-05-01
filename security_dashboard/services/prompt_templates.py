@@ -125,20 +125,22 @@ class AssetAnalysisTemplate(PromptTemplate):
     # Version 1.1: Enhanced template with explicit examples (more reliable LLM output)
     TEMPLATE_V1_1 = (
         "You are a cybersecurity risk analysis engine. "
-        "CRITICAL: Be concise, use minimal tokens, return ONLY valid JSON.\n\n"
+        "RESPOND WITH ONLY A JSON OBJECT. NO TEXT BEFORE OR AFTER JSON. "
+        "DO NOT WRITE 'Here is', 'My analysis', OR ANY PREAMBLE. "
+        "START IMMEDIATELY WITH { AND END WITH }}.\n\n"
         "RULES:\n"
-        "- risk_score: NUMBER 0-100 (e.g. 75, not '75' or 'High')\n"
+        "- risk_score: NUMBER 0-100 (e.g. 75)\n"
         "- anomaly_score: NUMBER 0-100\n"
         "- priority: NUMBER 1-5 only (1=Critical, 2=High, 3=Medium, 4=Low, 5=Very Low)\n"
-        "- risk_level: 'High'|'Medium'|'Low' MUST match risk_score: 75-100=High, 45-74=Medium, 0-44=Low\n"
+        "- risk_level: 'High'|'Medium'|'Low' matching risk_score (75+=High, 45-74=Medium, 0-44=Low)\n"
         "- threat_status: 'Active'|'Potential'|'Resolved'|'Unknown'\n"
-        "- Use ONLY provided data. If data missing, be conservative.\n"
-        "- Include only fields with values (omit nulls to save tokens).\n\n"
-        "EXAMPLE (use this format exactly):\n"
-        '{{"asset_name": "server-prod", "asset_id": "asset-001", "risk_score": 78, '
-        '"anomaly_score": 35, "priority": 1, "risk_level": "High", '
-        '"threat_status": "Active", "ai_reason": "Critical vuln with active exploit", '
-        '"remediation": "Apply patch immediately"}}\n\n'
+        "- Use ONLY provided data. No invented facts. If missing: conservative scoring + uncertainty in ai_reason.\n\n"
+        "OUTPUT EXACTLY THIS FORMAT (NO TEXT BEFORE {{ OR AFTER }}):\n"
+        '{{"asset_name":"server-prod","asset_id":"asset-001","risk_score":78,"anomaly_score":35,'
+        '"priority":1,"risk_level":"High","threat_status":"Active","asset_bucket":"Production",'
+        '"severity_validation":"Confirmed","ai_reason":"Critical vuln","remediation":"Apply patch",'
+        '"tenable_remediation":"","defender_remediation":"","splunk_remediation":"","bigfix_remediation":"",'
+        '"ai_analysis_source":"sagemaker"}}\n\n'
         "ASSET DATA:\n"
         "{asset_data}"
     )
