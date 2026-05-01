@@ -43,6 +43,8 @@ SOURCE_FINGERPRINT_COLUMNS = [
 
 ### Why These 17?
 
+test text 
+
 - **Excludes AI output**: risk_score, risk_level, remediation, etc. (these are generated, not input)
 - **Includes all source data**: Covers Tenable, Defender, Splunk, BigFix fields
 - **Includes temporal marker**: scan_date ensures new scans invalidate cache
