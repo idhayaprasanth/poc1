@@ -31,12 +31,17 @@ class SageMakerAnalysisMixin:
 
     @staticmethod
     def _compact_asset_record(asset_record: dict) -> dict:
-        """Extract only essential fields for analysis (token optimization)."""
+        """Extract only CRITICAL fields for analysis (aggressive token optimization).
+        
+        Reduced from 13 to 6 priority fields to minimize token usage while maintaining
+        high-quality risk analysis. Less critical fields are omitted to fit within token limits.
+        """
+        # Priority order: vulnerability + threat + anomaly > patch status > fix details
         keys = [
-            "asset_name", "asset_id", "vuln_name", "vuln_severity",
-            "vuln_fix", "threat_alert", "threat_impact",
-            "threat_fix", "anomaly_event", "source_anomaly_score", 
-            "patch_status", "patch_severity", "patch_recommendation",
+            "asset_name", "asset_id",           # Asset identity
+            "vuln_severity", "threat_alert",    # Critical risk signals
+            "anomaly_event",                      # Behavioral anomalies
+            "patch_status",                       # Remediation status
         ]
         return {k: asset_record.get(k, "") for k in keys if asset_record.get(k)}
 
@@ -65,7 +70,8 @@ class SageMakerAnalysisMixin:
         )
 
         try:
-            response = self._invoke_endpoint(system_instruction_text, max_new_tokens=1200, temperature=0.2)
+            # Token optimization: reduce max_new_tokens to 600, lower temperature for deterministic output
+            response = self._invoke_endpoint(system_instruction_text, max_new_tokens=600, temperature=0.1)
             
             # Use StructuredOutputValidator instead of old parsing methods
             validation_result = self.validate_asset_analysis_response(response)
@@ -110,7 +116,8 @@ class SageMakerAnalysisMixin:
         system_instruction_text = template.render(asset_data=f"Analyze this asset:\n{asset_data_json}")
         
         try:
-            response = self._invoke_endpoint(system_instruction_text, max_new_tokens=1200, temperature=0.2)
+            # Token optimization: reduce max_new_tokens to 600, lower temperature for deterministic output
+            response = self._invoke_endpoint(system_instruction_text, max_new_tokens=600, temperature=0.1)
             
             # Use validator instead of old _parse_json_like + _extract_fields + _normalize_*
             validation_result = self.validate_asset_analysis_response(response)

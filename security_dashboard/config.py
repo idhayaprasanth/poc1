@@ -37,15 +37,16 @@ def get_ai_analysis_batch_size(default: int = 1) -> int:
     return max(1, min(5, value))
 
 
-def get_analysis_prompt_template_version(default: str = "1.0") -> str:
+def get_analysis_prompt_template_version(default: str = "1.1") -> str:
     """
     Get the prompt template version for asset analysis.
     
     Allows A/B testing by swapping template versions via .env:
-        ANALYSIS_PROMPT_TEMPLATE_VERSION=1.1
+        ANALYSIS_PROMPT_TEMPLATE_VERSION=1.0  # Use old version
+        ANALYSIS_PROMPT_TEMPLATE_VERSION=1.1  # Use token-optimized version (default)
     
     Args:
-        default: Default version if not set (default: "1.0")
+        default: Default version if not set (default: "1.1" - token-optimized)
     
     Returns:
         Template version string (e.g., "1.0", "1.1")

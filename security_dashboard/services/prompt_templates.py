@@ -125,35 +125,20 @@ class AssetAnalysisTemplate(PromptTemplate):
     # Version 1.1: Enhanced template with explicit examples (more reliable LLM output)
     TEMPLATE_V1_1 = (
         "You are a cybersecurity risk analysis engine. "
-        "Do not include Reasoning. Do not include <think> tags. "
-        "Return ONLY valid JSON. No markdown. No explanation.\n\n"
-        "CRITICAL RULES:\n"
-        "1. risk_score must be an INTEGER from 0-100\n"
-        "2. anomaly_score must be an INTEGER from 0-100\n"
-        "3. priority must be an INTEGER from 1-5 (1=Critical, 5=Low)\n"
-        "4. risk_level must be EXACTLY one of: 'High', 'Medium', 'Low'\n"
-        "5. Risk level bands: High (75-100), Medium (45-74), Low (0-44)\n"
-        "6. risk_level MUST match risk_score:\n"
-        "   - If risk_score >= 75, risk_level MUST be 'High'\n"
-        "   - If 45 <= risk_score < 75, risk_level MUST be 'Medium'\n"
-        "   - If risk_score < 45, risk_level MUST be 'Low'\n"
-        "7. Use ONLY data provided; do not invent facts\n"
-        "8. Be conservative in scoring if data is incomplete\n\n"
-        "REQUIRED OUTPUT FIELDS:\n"
-        "asset_name, asset_id, threat_status, severity_validation, priority,\n"
-        "asset_bucket, risk_level, risk_score, anomaly_score, ai_reason, remediation,\n"
-        "tenable_remediation, defender_remediation, splunk_remediation, bigfix_remediation\n\n"
-        "EXAMPLE OUTPUT:\n"
-        '{{\n'
-        '  "asset_name": "server-prod-01",\n'
-        '  "asset_id": "asset-12345",\n'
-        '  "risk_score": 78,\n'
-        '  "anomaly_score": 35,\n'
-        '  "risk_level": "High",\n'
-        '  "threat_status": "Active",\n'
-        '  "priority": 1,\n'
-        '  ...\n'
-        '}}\n\n'
+        "CRITICAL: Be concise, use minimal tokens, return ONLY valid JSON.\n\n"
+        "RULES:\n"
+        "- risk_score: NUMBER 0-100 (e.g. 75, not '75' or 'High')\n"
+        "- anomaly_score: NUMBER 0-100\n"
+        "- priority: NUMBER 1-5 only (1=Critical, 2=High, 3=Medium, 4=Low, 5=Very Low)\n"
+        "- risk_level: 'High'|'Medium'|'Low' MUST match risk_score: 75-100=High, 45-74=Medium, 0-44=Low\n"
+        "- threat_status: 'Active'|'Potential'|'Resolved'|'Unknown'\n"
+        "- Use ONLY provided data. If data missing, be conservative.\n"
+        "- Include only fields with values (omit nulls to save tokens).\n\n"
+        "EXAMPLE (use this format exactly):\n"
+        '{{"asset_name": "server-prod", "asset_id": "asset-001", "risk_score": 78, '
+        '"anomaly_score": 35, "priority": 1, "risk_level": "High", '
+        '"threat_status": "Active", "ai_reason": "Critical vuln with active exploit", '
+        '"remediation": "Apply patch immediately"}}\n\n'
         "ASSET DATA:\n"
         "{asset_data}"
     )

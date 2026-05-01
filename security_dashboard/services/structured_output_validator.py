@@ -101,11 +101,14 @@ class StructuredOutputValidator:
             if self.debug:
                 logger.debug(f"Extracted JSON via {extraction_method}: {json.dumps(parsed_dict, default=str)}")
             
-            # Step 2: Normalize field names
+            # Step 2: Normalize field names (includes type coercion)
             normalized_dict = self._normalize_field_names(parsed_dict)
             
             if self.debug:
-                logger.debug(f"Normalized fields: {list(normalized_dict.keys())}")
+                logger.debug(f"After normalization: {json.dumps(normalized_dict, default=str)}")
+                # Log specifically what priority became
+                if 'priority' in normalized_dict:
+                    logger.debug(f"Priority normalized to: {normalized_dict['priority']} (type: {type(normalized_dict['priority']).__name__})")
             
             # Step 3: Validate against schema
             validated_data = AssetAnalysisOutput(**normalized_dict)
@@ -249,6 +252,7 @@ class StructuredOutputValidator:
         and maps them to the canonical schema names.
         
         Also performs type coercion for numeric fields that may come as strings from LLM.
+        Handles priority text level mappings (Critical -> 1, High -> 2, etc.).
         
         Returns:
             Dictionary with canonical field names and coerced types
@@ -259,6 +263,15 @@ class StructuredOutputValidator:
         # Integer fields that should be coerced from strings if needed
         INT_FIELDS = {"risk_score", "anomaly_score", "priority"}
         
+        # Priority text-to-number mapping (if LLM returns "Critical" instead of 1)
+        PRIORITY_LEVEL_MAP = {
+            "critical": 1, "critical-priority": 1, "crit": 1,
+            "high": 2, "high-priority": 2,
+            "medium": 3, "medium-priority": 3, "med": 3,
+            "low": 4, "low-priority": 4,
+            "very low": 5, "very-low": 5, "minimal": 5,
+        }
+        
         # Map each FIELD_ALIAS to the first matching key found in data
         for canonical_name, aliases in self.FIELD_ALIASES.items():
             for alias in aliases:
@@ -267,12 +280,25 @@ class StructuredOutputValidator:
                     
                     # Type coercion for integer fields
                     if canonical_name in INT_FIELDS and isinstance(value, str):
-                        try:
-                            value = int(value)
-                        except (ValueError, TypeError):
-                            # If conversion fails, keep as-is and let schema validation handle it
-                            if self.debug:
-                                logger.debug(f"Failed to coerce {canonical_name}='{value}' to int")
+                        if canonical_name == "priority":
+                            # Try to map priority text levels to numbers
+                            priority_lower = str(value).lower().strip()
+                            if priority_lower in PRIORITY_LEVEL_MAP:
+                                value = PRIORITY_LEVEL_MAP[priority_lower]
+                            else:
+                                # Try to convert as numeric string
+                                try:
+                                    value = int(value)
+                                except (ValueError, TypeError):
+                                    if self.debug:
+                                        logger.debug(f"Failed to coerce priority='{value}' (not in map, not numeric)")
+                        else:
+                            # For risk_score, anomaly_score: just convert numeric strings
+                            try:
+                                value = int(value)
+                            except (ValueError, TypeError):
+                                if self.debug:
+                                    logger.debug(f"Failed to coerce {canonical_name}='{value}' to int")
                     
                     normalized[canonical_name] = value
                     used_aliases.add(alias)

@@ -555,7 +555,7 @@ def run_dashboard_analysis(analysis_request, json_data):
             return no_update, {"state": "warning", "message": f"{failed_count} row(s) failed AI analysis and were skipped. Check the terminal logs."}, None
         return no_update, {"state": "complete", "message": "AI analysis is up to date."}, None
 
-    client = SageMakerClient()
+    client = SageMakerClient(debug=True)
     if not client.enabled():
         return (
             no_update,
@@ -1193,7 +1193,7 @@ def chat_respond(n, user_msg, current_msgs, history, json_data):
         f"Top assets by risk_score:\n" + "\n".join(lines)
     )
 
-    client = SageMakerClient()
+    client = SageMakerClient(debug=True)
     response = client.generate_security_answer(question=user_msg.strip(), context_text=context_text, history=history)
 
     user_bubble = html.Div(user_msg, style={

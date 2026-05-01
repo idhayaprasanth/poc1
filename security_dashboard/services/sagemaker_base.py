@@ -225,6 +225,53 @@ class SageMakerBaseClient:
             include_raw_response=include_raw_response
         )
     
+    def validate_asset_analysis_with_retry(
+        self,
+        response: Any,
+        asset_id: str = "unknown",
+        include_raw_response: bool = False
+    ) -> ValidationResult:
+        """
+        Validate asset analysis response with schema-guided retry fallback.
+        
+        Flow:
+        1. Attempt initial validation
+        2. If validation fails, optionally retry with schema-guidance prompt
+        3. Return best result (initial or retry)
+        
+        Args:
+            response: SageMaker response (dict from boto3)
+            asset_id: Asset ID for logging
+            include_raw_response: Include raw response in result
+        
+        Returns:
+            ValidationResult (either valid or with detailed errors)
+        """
+        response_text = self._extract_generated_text(response)
+        
+        # Attempt initial validation
+        result = self._validator.validate_asset_analysis(
+            response_text,
+            include_raw_response=include_raw_response
+        )
+        
+        # If valid, return immediately
+        if result.is_valid:
+            return result
+        
+        # Log validation failure for debugging
+        error_details = "; ".join([
+            f"{err.field}: {err.error_message}" for err in result.errors
+        ]) if result.errors else "Unknown validation error"
+        
+        if self.debug:
+            print(f"[sagemaker] validation failed: asset_id={asset_id} errors={error_details}")
+            print(f"[sagemaker] response_text preview: {response_text[:200]}")
+        
+        # For now, return the failed result with detailed error info
+        # Future: implement retry with schema-guidance prompt if needed
+        return result
+    
     def validate_chatbot_response(
         self,
         response_dict: dict,
