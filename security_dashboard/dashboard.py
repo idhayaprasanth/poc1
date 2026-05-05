@@ -11,7 +11,7 @@ from datetime import datetime
 import pandas as pd
 from dash import Dash, html, dcc, dash_table, Input, Output, State, callback, no_update, ctx
 
-from security_dashboard.config import get_ai_analysis_batch_size, load_env_file
+from security_dashboard.config import get_ai_analysis_batch_size, load_env_file, get_ollama_model, get_analysis_prompt_template_version
 from security_dashboard.data.datasets import (
     AI_ANALYSIS_COLUMNS,
     build_merged_dataset,
@@ -20,6 +20,7 @@ from security_dashboard.data.datasets import (
 )
 from security_dashboard.layout import create_layout
 from security_dashboard.services.sagemaker_client import SageMakerClient
+from security_dashboard.services.export_service import ExportService
 
 load_env_file()
 AI_ANALYSIS_BATCH_SIZE = get_ai_analysis_batch_size()
@@ -1208,3 +1209,160 @@ def chat_respond(n, user_msg, current_msgs, history, json_data):
 
     new_history = (history + [{"role": "user", "text": user_msg.strip()}, {"role": "assistant", "text": response}])[-20:]
     return current_msgs + [user_bubble, bot_bubble], "", new_history
+
+
+# ── Export Callbacks ──
+
+@callback(
+    Output("export-modal", "style"),
+    Output("export-modal-backdrop", "style"),
+    Input("export-btn", "n_clicks"),
+    Input("export-cancel-btn", "n_clicks"),
+    State("export-modal", "style"),
+    prevent_initial_call=True,
+)
+def toggle_export_modal(export_clicks, cancel_clicks, current_style):
+    """Toggle export modal visibility."""
+    if not ctx.triggered_id:
+        raise no_update
+    
+    is_open = current_style.get("display") == "block" if current_style else False
+    
+    if ctx.triggered_id == "export-btn":
+        # Open modal
+        modal_style = dict(current_style or {})
+        modal_style["display"] = "block"
+        backdrop_style = {
+            "display": "block",
+            "position": "fixed",
+            "top": 0,
+            "left": 0,
+            "right": 0,
+            "bottom": 0,
+            "background": "rgba(0,0,0,0.5)",
+            "zIndex": 100,
+        }
+        return modal_style, backdrop_style
+    else:
+        # Close modal
+        modal_style = dict(current_style or {})
+        modal_style["display"] = "none"
+        backdrop_style = {
+            "display": "none",
+            "position": "fixed",
+            "top": 0,
+            "left": 0,
+            "right": 0,
+            "bottom": 0,
+            "background": "rgba(0,0,0,0.5)",
+            "zIndex": 100,
+        }
+        return modal_style, backdrop_style
+
+
+@callback(
+    Output("export-preview-text", "children"),
+    Input("export-scope-dropdown", "value"),
+    State("merged-data-store", "data"),
+    State("asset-table-high", "selected_rows"),
+    State("asset-table-medium", "selected_rows"),
+    State("asset-table-low", "selected_rows"),
+    State("asset-table-high", "data"),
+    State("asset-table-medium", "data"),
+    State("asset-table-low", "data"),
+)
+def update_export_preview(scope, merged_data, high_rows, med_rows, low_rows, high_data, med_data, low_data):
+    """Update export preview with row count and columns."""
+    if not merged_data:
+        return "Export 0 rows with 14 columns"
+    
+    df = pd.read_json(io.StringIO(merged_data), orient="split")
+    
+    if scope == "selected":
+        selected_rows = {
+            "asset-table-high": (high_rows, high_data),
+            "asset-table-medium": (med_rows, med_data),
+            "asset-table-low": (low_rows, low_data),
+        }
+        df = ExportService.filter_by_scope(df, scope="selected", selected_rows=selected_rows)
+    
+    row_count = len(df)
+    col_count = len([c for c in AI_ANALYSIS_COLUMNS if c in df.columns])
+    
+    return f"Export {row_count} rows with {col_count} columns"
+
+
+@callback(
+    Output("download-csv", "data"),
+    Output("export-modal", "style", allow_duplicate=True),
+    Output("export-modal-backdrop", "style", allow_duplicate=True),
+    Input("export-confirm-btn", "n_clicks"),
+    State("export-format-dropdown", "value"),
+    State("export-scope-dropdown", "value"),
+    State("merged-data-store", "data"),
+    State("asset-table-high", "selected_rows"),
+    State("asset-table-medium", "selected_rows"),
+    State("asset-table-low", "selected_rows"),
+    State("asset-table-high", "data"),
+    State("asset-table-medium", "data"),
+    State("asset-table-low", "data"),
+    prevent_initial_call=True,
+)
+def handle_export(
+    export_clicks,
+    export_format,
+    export_scope,
+    merged_data,
+    high_rows,
+    med_rows,
+    low_rows,
+    high_data,
+    med_data,
+    low_data,
+):
+    """Generate and trigger download of export file."""
+    if not export_clicks or not merged_data:
+        raise no_update
+    
+    # Load merged data
+    df = pd.read_json(io.StringIO(merged_data), orient="split")
+    
+    # Apply scope filter
+    selected_rows = {
+        "asset-table-high": (high_rows, high_data),
+        "asset-table-medium": (med_rows, med_data),
+        "asset-table-low": (low_rows, low_data),
+    }
+    df_export = ExportService.filter_by_scope(df, scope=export_scope, selected_rows=selected_rows)
+    
+    # Build asset counts for metadata/summary
+    asset_counts = ExportService.build_asset_counts(df_export)
+    model = get_ollama_model()
+    template_version = get_analysis_prompt_template_version()
+    
+    # Generate filename
+    filename = ExportService.generate_filename(format=export_format, model=model)
+    
+    try:
+        if export_format == "excel":
+            # Generate Excel file
+            excel_bytes = ExportService.to_excel(
+                df_export,
+                asset_counts=asset_counts,
+                model=model,
+                template_version=template_version
+            )
+            download_data = dcc.send_bytes(excel_bytes, filename)
+        else:
+            # Generate CSV file
+            csv_bytes = ExportService.to_csv(df_export, model=model)
+            download_data = dcc.send_bytes(csv_bytes, filename)
+    except Exception as e:
+        print(f"[export] Error generating export file: {e}")
+        raise no_update
+    
+    # Close modal
+    modal_style = {"display": "none"}
+    backdrop_style = {"display": "none"}
+    
+    return download_data, modal_style, backdrop_style

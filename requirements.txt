@@ -4,4 +4,5 @@ plotly
 requests
 pydantic>=2.0
 outlines>=0.0.40
+openpyxl
 

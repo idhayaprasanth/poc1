@@ -419,6 +419,157 @@ def create_layout(df_base, analysis_status_initial=None):
                         ],
                     ),
                     dcc.Download(id="download-csv"),
+                    dcc.Store(id="export-options-store", data={}),
+                ],
+            ),
+            html.Div(
+                id="export-modal-backdrop",
+                style={
+                    "display": "none",
+                    "position": "fixed",
+                    "top": 0,
+                    "left": 0,
+                    "right": 0,
+                    "bottom": 0,
+                    "background": "rgba(0,0,0,0.5)",
+                    "zIndex": 100,
+                },
+            ),
+            html.Div(
+                id="export-modal",
+                style={
+                    "display": "none",
+                    "position": "fixed",
+                    "top": "50%",
+                    "left": "50%",
+                    "transform": "translate(-50%, -50%)",
+                    "background": COLORS["card"],
+                    "borderRadius": "4px",
+                    "boxShadow": "0 8px 32px rgba(27,27,27,0.2)",
+                    "zIndex": 101,
+                    "width": "90%",
+                    "maxWidth": "500px",
+                    "padding": "24px",
+                },
+                children=[
+                    html.H2(
+                        "Export Analysis Data",
+                        style={
+                            "fontSize": "22px",
+                            "fontWeight": "700",
+                            "margin": "0 0 20px 0",
+                            "color": COLORS["text"],
+                        },
+                    ),
+                    html.Div(
+                        style={"marginBottom": "20px"},
+                        children=[
+                            html.Label(
+                                "Export Format",
+                                style={
+                                    "display": "block",
+                                    "fontSize": "15px",
+                                    "fontWeight": "600",
+                                    "marginBottom": "8px",
+                                    "color": COLORS["text"],
+                                },
+                            ),
+                            dcc.Dropdown(
+                                id="export-format-dropdown",
+                                options=[
+                                    {"label": "CSV", "value": "csv"},
+                                    {"label": "Excel (.xlsx)", "value": "excel"},
+                                ],
+                                value="csv",
+                                clearable=False,
+                                searchable=False,
+                                style={"width": "100%", "fontSize": "15px"},
+                            ),
+                        ],
+                    ),
+                    html.Div(
+                        style={"marginBottom": "20px"},
+                        children=[
+                            html.Label(
+                                "Export Scope",
+                                style={
+                                    "display": "block",
+                                    "fontSize": "15px",
+                                    "fontWeight": "600",
+                                    "marginBottom": "8px",
+                                    "color": COLORS["text"],
+                                },
+                            ),
+                            dcc.Dropdown(
+                                id="export-scope-dropdown",
+                                options=[
+                                    {"label": "All Analyzed Assets", "value": "all"},
+                                    {"label": "Selected Rows Only", "value": "selected"},
+                                ],
+                                value="all",
+                                clearable=False,
+                                searchable=False,
+                                style={"width": "100%", "fontSize": "15px"},
+                            ),
+                        ],
+                    ),
+                    html.Div(
+                        style={
+                            "background": COLORS["info_bg"],
+                            "padding": "12px",
+                            "borderRadius": "4px",
+                            "marginBottom": "20px",
+                            "border": f"1px solid {COLORS['border']}",
+                        },
+                        children=[
+                            html.Span(
+                                id="export-preview-text",
+                                children="Export 0 rows with 14 columns",
+                                style={
+                                    "fontSize": "14px",
+                                    "color": COLORS["text"],
+                                    "fontWeight": "600",
+                                },
+                            ),
+                        ],
+                    ),
+                    html.Div(
+                        style={"display": "flex", "gap": "12px", "justifyContent": "flex-end"},
+                        children=[
+                            html.Button(
+                                "Cancel",
+                                id="export-cancel-btn",
+                                n_clicks=0,
+                                style={
+                                    "background": COLORS["card"],
+                                    "color": COLORS["primary"],
+                                    "border": f"2px solid {COLORS['border']}",
+                                    "borderRadius": "4px",
+                                    "padding": "10px 20px",
+                                    "cursor": "pointer",
+                                    "fontSize": "15px",
+                                    "fontWeight": "700",
+                                    "fontFamily": "inherit",
+                                },
+                            ),
+                            html.Button(
+                                "Export",
+                                id="export-confirm-btn",
+                                n_clicks=0,
+                                style={
+                                    "background": COLORS["primary"],
+                                    "color": "white",
+                                    "border": "none",
+                                    "borderRadius": "4px",
+                                    "padding": "10px 20px",
+                                    "cursor": "pointer",
+                                    "fontSize": "15px",
+                                    "fontWeight": "700",
+                                    "fontFamily": "inherit",
+                                },
+                            ),
+                        ],
+                    ),
                 ],
             ),
             html.Div(
