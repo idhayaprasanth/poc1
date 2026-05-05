@@ -94,3 +94,40 @@ def use_outlines_orchestration(default: bool = True) -> bool:
     else:
         return default
 
+
+def get_ollama_base_url(default: str = "http://localhost:11434") -> str:
+    """
+    Get the Ollama base URL.
+    
+    Configuration via .env:
+        OLLAMA_BASE_URL=http://localhost:11434  (local development)
+        OLLAMA_BASE_URL=http://ollama-server:11434  (remote server)
+    
+    Args:
+        default: Default Ollama URL if not set (default: "http://localhost:11434")
+    
+    Returns:
+        Base URL string
+    """
+    url = str(os.getenv("OLLAMA_BASE_URL", "")).strip()
+    return url if url else default
+
+
+def get_ollama_model(default: str = "neural-chat") -> str:
+    """
+    Get the Ollama model name.
+    
+    Configuration via .env:
+        OLLAMA_MODEL=neural-chat  (default, 7B model optimized for instruction following)
+        OLLAMA_MODEL=mistral     (7B model, higher quality)
+        OLLAMA_MODEL=llama2      (7B/13B model)
+    
+    Args:
+        default: Default model if not set (default: "neural-chat")
+    
+    Returns:
+        Model name string
+    """
+    model = str(os.getenv("OLLAMA_MODEL", "")).strip()
+    return model if model else default
+

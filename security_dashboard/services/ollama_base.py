@@ -4,140 +4,116 @@ import time
 from pathlib import Path
 from typing import Any
 
-import boto3
+import requests
 
 from security_dashboard.services.structured_output_validator import StructuredOutputValidator
 from security_dashboard.services.schemas import ValidationResult
 
 
-_SAGEMAKER_DEBUG_LOG_FILE = Path(__file__).resolve().parents[1] / "data" / "sagemaker_api_debug.jsonl"
+_OLLAMA_DEBUG_LOG_FILE = Path(__file__).resolve().parents[1] / "data" / "sagemaker_api_debug.jsonl"
 
 
 def _env(name: str, default: str) -> str:
     return (os.getenv(name) or str(default)).strip()
 
 
-class SageMakerBaseClient:
-    def __init__(self, endpoint_name: str | None = None, region_name: str | None = None, debug: bool = False):
-        self.endpoint_name = endpoint_name or _env("SAGEMAKER_ENDPOINT_NAME", "")
-        self.region_name = region_name or _env("AWS_REGION", "")
+class OllamaBaseClient:
+    def __init__(self, base_url: str | None = None, model: str | None = None, debug: bool = False):
+        self.base_url = (base_url or _env("OLLAMA_BASE_URL", "http://localhost:11434")).rstrip("/")
+        self.model = model or _env("OLLAMA_MODEL", "neural-chat")
         self.debug = debug
-        self._client = None  # Connection pooling: reuse boto3 client
+        self._session = None  # Connection pooling: reuse requests session
         self._validator = StructuredOutputValidator(debug=debug)
 
     def enabled(self) -> bool:
-        return bool(self.endpoint_name)
+        return bool(self.base_url and self.model)
 
-    def _runtime_client(self):
-        """Get or create cached boto3 client (connection pooling)."""
-        if self._client is None:
-            kwargs: dict[str, Any] = {}
-            if self.region_name:
-                kwargs["region_name"] = self.region_name
-            self._client = boto3.client("sagemaker-runtime", **kwargs)
-        return self._client
+    def _http_session(self) -> requests.Session:
+        """Get or create cached requests session (connection pooling)."""
+        if self._session is None:
+            self._session = requests.Session()
+            self._session.timeout = 120  # Default timeout: 120 seconds
+        return self._session
 
     def _write_debug_log(self, event: dict):
         try:
-            _SAGEMAKER_DEBUG_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+            _OLLAMA_DEBUG_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
             payload = dict(event or {})
             payload["logged_at"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
-            with _SAGEMAKER_DEBUG_LOG_FILE.open("a", encoding="utf-8") as handle:
+            with _OLLAMA_DEBUG_LOG_FILE.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(payload, ensure_ascii=True) + "\n")
         except Exception as exc:
-            print(f"[sagemaker] debug log write failed: {type(exc).__name__}: {exc}")
+            print(f"[ollama] debug log write failed: {type(exc).__name__}: {exc}")
 
     def _invoke_endpoint(self, prompt: str, *, max_new_tokens: int = 1500, temperature: float = 0.2, max_retries: int = 3, use_json_schema: bool = True):
         """
-        Invoke SageMaker endpoint with automatic retry on transient failures.
+        Invoke Ollama endpoint with automatic retry on transient failures.
         
         Args:
             prompt: System prompt for the model
             max_new_tokens: Maximum tokens in response
             temperature: Model temperature (0.0-1.0)
             max_retries: Number of retry attempts (exponential backoff: 1s, 2s, 4s)
-            use_json_schema: Whether to use TGI JSON schema constraint (enforces valid JSON at generation time)
+            use_json_schema: Ignored for Ollama (parameter kept for API compatibility with SageMaker)
         
         Returns:
             Model response (dict)
         
         Raises:
-            ValueError: If endpoint not configured
+            ValueError: If Ollama not configured
             Exception: After max_retries exhausted
         """
         if not self.enabled():
-            raise ValueError("SageMaker endpoint is not configured. Set SAGEMAKER_ENDPOINT_NAME.")
+            raise ValueError(f"Ollama is not configured. Set OLLAMA_BASE_URL and OLLAMA_MODEL. Currently: base_url={self.base_url}, model={self.model}")
 
+        # Ollama /api/generate endpoint expects prompt in 'prompt' field
         payload = {
-            "inputs": prompt,
-            "parameters": {
-                "max_new_tokens": max_new_tokens,
+            "model": self.model,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
                 "temperature": temperature,
-                "return_full_text": False,
+                "num_predict": max_new_tokens,
             },
         }
-        
-        # Add TGI JSON schema constraint if supported (enforces JSON-only output at generation)
-        if use_json_schema:
-            # TGI supports grammar-based constraints; a simple JSON schema constraint
-            # tells the model to only generate valid JSON objects
-            payload["parameters"]["schema"] = {
-                "type": "object",
-                "properties": {
-                    "asset_name": {"type": "string"},
-                    "asset_id": {"type": "string"},
-                    "risk_score": {"type": "integer", "minimum": 0, "maximum": 100},
-                    "anomaly_score": {"type": "integer", "minimum": 0, "maximum": 100},
-                    "priority": {"type": "integer", "minimum": 1, "maximum": 5},
-                    "risk_level": {"type": "string", "enum": ["High", "Medium", "Low"]},
-                    "threat_status": {"type": "string"},
-                    "severity_validation": {"type": "string"},
-                    "asset_bucket": {"type": "string"},
-                    "ai_reason": {"type": "string"},
-                    "remediation": {"type": "string"},
-                    "tenable_remediation": {"type": "string"},
-                    "defender_remediation": {"type": "string"},
-                    "splunk_remediation": {"type": "string"},
-                    "bigfix_remediation": {"type": "string"},
-                    "ai_analysis_source": {"type": "string"},
-                },
-                "required": ["asset_id", "risk_score", "priority", "risk_level"],
-            }
 
-        runtime = self._runtime_client()
+        session = self._http_session()
+        endpoint_url = f"{self.base_url}/api/generate"
         last_error = None
         
         for attempt in range(max_retries):
             start = time.time()
-            schema_info = " with JSON schema constraint" if use_json_schema else ""
             print(
-                "[sagemaker] request start "
-                f"endpoint={self.endpoint_name} "
+                "[ollama] request start "
+                f"url={endpoint_url} "
+                f"model={self.model} "
                 f"prompt_chars={len(prompt)} "
                 f"max_new_tokens={max_new_tokens} "
-                f"attempt={attempt + 1}/{max_retries}{schema_info}"
+                f"attempt={attempt + 1}/{max_retries}"
             )
             try:
-                response = runtime.invoke_endpoint(
-                    EndpointName=self.endpoint_name,
-                    ContentType="application/json",
-                    Body=json.dumps(payload),
+                response = session.post(
+                    endpoint_url,
+                    json=payload,
+                    timeout=120,
                 )
-                raw_body = response["Body"].read().decode()
-                decoded = json.loads(raw_body)
+                response.raise_for_status()
+                decoded = response.json()
                 elapsed = time.time() - start
                 self._write_debug_log(
                     {
                         "event": "invoke_success",
-                        "endpoint": self.endpoint_name,
+                        "provider": "ollama",
+                        "model": self.model,
+                        "endpoint": endpoint_url,
                         "elapsed_seconds": round(elapsed, 3),
                         "attempt": attempt + 1,
                         "request_payload": payload,
-                        "raw_response_body": raw_body,
+                        "raw_response_body": response.text,
                         "decoded_response": decoded,
                     }
                 )
-                print(f"[sagemaker] request success endpoint={self.endpoint_name} elapsed={elapsed:.2f}s attempt={attempt + 1}")
+                print(f"[ollama] request success model={self.model} elapsed={elapsed:.2f}s attempt={attempt + 1}")
                 return decoded
             except Exception as exc:
                 elapsed = time.time() - start
@@ -148,7 +124,9 @@ class SageMakerBaseClient:
                 self._write_debug_log(
                     {
                         "event": "invoke_error",
-                        "endpoint": self.endpoint_name,
+                        "provider": "ollama",
+                        "model": self.model,
+                        "endpoint": endpoint_url,
                         "elapsed_seconds": round(elapsed, 3),
                         "attempt": attempt + 1,
                         "is_transient": is_transient,
@@ -162,22 +140,22 @@ class SageMakerBaseClient:
                 if should_retry:
                     backoff_seconds = 2 ** attempt  # 1s, 2s, 4s
                     print(
-                        "[sagemaker] transient error, retrying in "
+                        "[ollama] transient error, retrying in "
                         f"{backoff_seconds}s attempt={attempt + 1}/{max_retries} "
                         f"error={type(exc).__name__}: {exc}"
                     )
                     time.sleep(backoff_seconds)
                 else:
                     print(
-                        "[sagemaker] request error (no retry) "
-                        f"endpoint={self.endpoint_name} elapsed={elapsed:.2f}s "
+                        "[ollama] request error (no retry) "
+                        f"model={self.model} elapsed={elapsed:.2f}s "
                         f"attempt={attempt + 1}/{max_retries} "
                         f"error={type(exc).__name__}: {exc}"
                     )
                     raise
 
         # Should not reach here, but just in case
-        raise last_error or Exception("SageMaker invocation failed after all retries")
+        raise last_error or Exception("Ollama invocation failed after all retries")
 
     @staticmethod
     def _is_transient_error(exc: Exception) -> bool:
@@ -185,47 +163,58 @@ class SageMakerBaseClient:
         Check if error is transient (retryable) vs permanent.
         
         Transient errors:
-        - ThrottlingException (rate limit)
-        - ReadTimeoutError (network timeout)
-        - ServiceUnavailableException (endpoint temporarily down)
+        - ConnectionError (network unavailable)
+        - Timeout (request took too long)
+        - 5xx errors (server errors)
         
         Permanent errors:
-        - EndpointNotFound, ValidationException, etc.
+        - 4xx errors (client errors, except 408/429)
+        - Invalid model name, etc.
         """
         error_type = type(exc).__name__
         error_msg = str(exc).lower()
         
         transient_types = {
-            "ThrottlingException",
+            "ConnectionError",
             "ReadTimeoutError",
             "ConnectTimeoutError",
-            "ServiceUnavailableException",
-            "InternalServerError",
+            "Timeout",
             "TimeoutError",
+            "RemoteDisconnected",
+            "BrokenPipeError",
         }
         
         if error_type in transient_types:
             return True
         
+        # Check for HTTP errors
+        if isinstance(exc, requests.HTTPError):
+            status_code = exc.response.status_code
+            # 5xx errors and 408 (timeout), 429 (too many requests) are transient
+            if status_code >= 500 or status_code in (408, 429):
+                return True
+            # 4xx errors are generally permanent
+            return False
+        
         # Check error message for transient indicators
         transient_phrases = [
-            "rate exceeded",
-            "throttled",
+            "connection refused",
+            "connection reset",
             "timeout",
             "temporarily",
             "unavailable",
             "service is unavailable",
+            "connection error",
+            "network unreachable",
         ]
         
         return any(phrase in error_msg for phrase in transient_phrases)
 
     @staticmethod
     def _extract_generated_text(response) -> str:
-        """Extract generated text from SageMaker response."""
-        if isinstance(response, list) and response:
-            return str(response[0].get("generated_text", ""))
+        """Extract generated text from Ollama response."""
         if isinstance(response, dict):
-            return str(response.get("generated_text", ""))
+            return str(response.get("response", ""))
         return str(response or "")
 
     def validate_asset_analysis_response(
@@ -234,7 +223,7 @@ class SageMakerBaseClient:
         include_raw_response: bool = False
     ) -> ValidationResult:
         """
-        Validate a SageMaker response as an asset analysis.
+        Validate an Ollama response as an asset analysis.
         
         Uses StructuredOutputValidator to:
         1. Extract JSON from response text
@@ -242,7 +231,7 @@ class SageMakerBaseClient:
         3. Validate against AssetAnalysisOutput schema
         
         Args:
-            response: SageMaker response (dict from boto3)
+            response: Ollama response (dict from HTTP POST)
             include_raw_response: Include raw response in result
         
         Returns:
@@ -269,7 +258,7 @@ class SageMakerBaseClient:
         3. Return best result (initial or retry)
         
         Args:
-            response: SageMaker response (dict from boto3)
+            response: Ollama response (dict from HTTP POST)
             asset_id: Asset ID for logging
             include_raw_response: Include raw response in result
         
@@ -294,46 +283,8 @@ class SageMakerBaseClient:
         ]) if result.errors else "Unknown validation error"
         
         if self.debug:
-            print(f"[sagemaker] validation failed: asset_id={asset_id} errors={error_details}")
-            print(f"[sagemaker] response_text preview: {response_text[:200]}")
+            print(f"[ollama] validation failed: asset_id={asset_id} errors={error_details}")
+            print(f"[ollama] response_text preview: {response_text[:200]}")
         
         # For now, return the failed result with detailed error info
-        # Future: implement retry with schema-guidance prompt if needed
         return result
-    
-    def validate_chatbot_response(
-        self,
-        response_dict: dict,
-        include_raw_response: bool = False
-    ) -> ValidationResult:
-        """
-        Validate a SageMaker response as a chatbot response.
-        
-        Args:
-            response_dict: Parsed response dictionary
-            include_raw_response: Include raw response in result
-        
-        Returns:
-            ValidationResult with either valid ChatbotResponse or errors
-        """
-        return self._validator.validate_chatbot_response(
-            response_dict,
-            include_raw_response=include_raw_response
-        )
-    
-    def generate_text(self, system_instruction: str, user_prompt: str) -> str:
-        """
-        Generate text using SageMaker endpoint (simple text generation).
-        
-        Used for chatbot responses without structured validation.
-        
-        Args:
-            system_instruction: System prompt
-            user_prompt: User input
-        
-        Returns:
-            Generated text response
-        """
-        prompt = f"{system_instruction}\n\n{user_prompt}"
-        response = self._invoke_endpoint(prompt, max_new_tokens=700, temperature=0.2)
-        return self._extract_generated_text(response).strip()

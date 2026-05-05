@@ -1,7 +1,7 @@
 dash
 pandas
 plotly
-boto3
+requests
 pydantic>=2.0
 outlines>=0.0.40
 
