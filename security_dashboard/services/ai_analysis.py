@@ -1,6 +1,5 @@
 import json
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from security_dashboard.data.datasets import (
     AI_ANALYSIS_COLUMNS,
@@ -205,21 +204,20 @@ class SageMakerAnalysisMixin:
         )
         return normalized
 
-    def generate_dashboard_analysis(self, *, asset_records: list[dict], max_workers: int = 3, asset_timeout_seconds: int = 90) -> dict:
+    def generate_dashboard_analysis(self, *, asset_records: list[dict], max_workers: int = 1, asset_timeout_seconds: int = 90) -> dict:
         """
-        Analyze all assets with deduplication and parallel processing.
+        Analyze all assets with deduplication and sequential processing.
         
         Key improvements:
         - Deduplicates assets by fingerprint (within this run)
-        - Parallel processing (default 3 workers)
+        - Sequential processing (one SageMaker request at a time)
         - Granular error handling: one asset failure doesn't crash all others
-        - Per-asset timeout: don't wait forever for slow assets
         - Automatic retry with exponential backoff (in _invoke_endpoint)
         
         Args:
             asset_records: List of asset records to analyze
-            max_workers: Number of parallel SageMaker requests (1-5 recommended)
-            asset_timeout_seconds: Max seconds to wait for each asset (30-120 recommended)
+            max_workers: Kept for compatibility; sequential mode always uses one worker
+            asset_timeout_seconds: Kept for compatibility; not enforced in sequential mode
         
         Returns:
             {
@@ -251,52 +249,34 @@ class SageMakerAnalysisMixin:
         failed_errors = []
 
         # ── Parallel processing with ThreadPoolExecutor ──
-        print(f"[sagemaker] batch analysis start: {len(unique_records)} unique assets, {max_workers} workers, {asset_timeout_seconds}s timeout per asset")
-        
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {}
-            for batch_idx, record in enumerate(unique_records):
-                future = executor.submit(
-                    self._analyze_single_batch_item, 
-                    record, 
-                    batch_idx + 1, 
+        print(
+            f"[sagemaker] batch analysis start: {len(unique_records)} unique assets, "
+            "sequential mode, 1 worker"
+        )
+
+        successful_count = 0
+        failed_count = 0
+
+        for batch_idx, record in enumerate(unique_records):
+            asset_id = record.get("asset_id", "UNKNOWN")
+            fp = compute_asset_fingerprint(record)
+
+            try:
+                result = self._analyze_single_batch_item(
+                    record,
+                    batch_idx + 1,
                     len(unique_records)
                 )
-                futures[future] = record
+                all_results[fp] = result
+                successful_count += 1
+            except Exception as e:
+                error_msg = f"{type(e).__name__}: {str(e)}"
+                print(f"[sagemaker] batch processing error: asset_id={asset_id} error={error_msg}")
+                failed_errors.append({"asset_id": asset_id, "error": error_msg})
+                failed_count += 1
 
-            successful_count = 0
-            failed_count = 0
-            
-            for future in as_completed(futures, timeout=None):
-                record = futures[future]
-                asset_id = record.get("asset_id", "UNKNOWN")
-                fp = compute_asset_fingerprint(record)
-                
-                try:
-                    # Per-asset timeout: don't wait longer than asset_timeout_seconds
-                    result = future.result(timeout=asset_timeout_seconds)
-                    all_results[fp] = result
-                    successful_count += 1
-                    
-                except TimeoutError:
-                    # Timeout exceeded for this specific asset
-                    error_msg = f"Asset analysis timed out after {asset_timeout_seconds}s"
-                    print(f"[sagemaker] timeout error: asset_id={asset_id} error={error_msg}")
-                    failed_errors.append({"asset_id": asset_id, "error": error_msg})
-                    failed_count += 1
-                    
-                    # Return error result for this asset
-                    all_results[fp] = self._create_error_result(record, error_msg)
-                    
-                except Exception as e:
-                    # Granular error handling: one asset failure doesn't crash all others
-                    error_msg = f"{type(e).__name__}: {str(e)}"
-                    print(f"[sagemaker] batch processing error: asset_id={asset_id} error={error_msg}")
-                    failed_errors.append({"asset_id": asset_id, "error": error_msg})
-                    failed_count += 1
-                    
-                    # Return error result for this asset (with default values)
-                    all_results[fp] = self._create_error_result(record, error_msg)
+                # Return error result for this asset (with default values)
+                all_results[fp] = self._create_error_result(record, error_msg)
 
         print(f"[sagemaker] batch analysis complete: {successful_count} successful, {failed_count} failed")
 
