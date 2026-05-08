@@ -2,4 +2,6 @@ dash
 pandas
 plotly
 boto3
+tiktoken
+pytest
 

@@ -5,6 +5,7 @@ from security_dashboard.data.datasets import (
     AI_ANALYSIS_COLUMNS,
     compute_asset_fingerprint,
 )
+from security_dashboard.services.result_envelope import AnalysisResult
 
 BASE_SYSTEM_PROMPT = (
     "You are a cybersecurity risk analysis engine. "
@@ -55,6 +56,136 @@ class SageMakerAnalysisMixin:
             "patch_status", "patch_severity", "patch_recommendation",
         ]
         return {k: asset_record.get(k, "") for k in keys if asset_record.get(k)}
+
+    def _split_asset_for_chunking(self, asset_record: dict) -> list[dict]:
+        """
+        Split a large asset record into focused analysis chunks (e.g., vulnerabilities, threats, anomalies).
+        
+        Used when a single row exceeds token budget. Each chunk focuses on one data category
+        and is analyzed separately, then results are merged.
+        
+        Args:
+            asset_record: Asset record to split
+        
+        Returns:
+            List of focused asset records (each with a subset of data)
+        """
+        chunks = []
+        base_fields = {
+            "asset_name": asset_record.get("asset_name"),
+            "asset_id": asset_record.get("asset_id"),
+        }
+        
+        # Chunk 1: Vulnerability focus
+        if any(asset_record.get(k) for k in ["vuln_name", "vuln_severity", "vuln_fix"]):
+            chunks.append({
+                **base_fields,
+                "vuln_name": asset_record.get("vuln_name"),
+                "vuln_severity": asset_record.get("vuln_severity"),
+                "vuln_fix": asset_record.get("vuln_fix"),
+                "_chunk_focus": "vulnerability",
+            })
+        
+        # Chunk 2: Threat focus
+        if any(asset_record.get(k) for k in ["threat_alert", "threat_impact", "threat_fix"]):
+            chunks.append({
+                **base_fields,
+                "threat_alert": asset_record.get("threat_alert"),
+                "threat_impact": asset_record.get("threat_impact"),
+                "threat_fix": asset_record.get("threat_fix"),
+                "_chunk_focus": "threat",
+            })
+        
+        # Chunk 3: Anomaly focus
+        if any(asset_record.get(k) for k in ["anomaly_event", "source_anomaly_score"]):
+            chunks.append({
+                **base_fields,
+                "anomaly_event": asset_record.get("anomaly_event"),
+                "source_anomaly_score": asset_record.get("source_anomaly_score"),
+                "_chunk_focus": "anomaly",
+            })
+        
+        # Chunk 4: Patch focus
+        if any(asset_record.get(k) for k in ["patch_status", "patch_severity", "patch_recommendation"]):
+            chunks.append({
+                **base_fields,
+                "patch_status": asset_record.get("patch_status"),
+                "patch_severity": asset_record.get("patch_severity"),
+                "patch_recommendation": asset_record.get("patch_recommendation"),
+                "_chunk_focus": "patch",
+            })
+        
+        if not chunks:
+            # Fallback: return original record as single chunk
+            return [asset_record]
+        
+        return chunks
+
+    def _merge_chunk_results(self, chunk_results: list[dict]) -> dict:
+        """
+        Merge results from multiple focused analyses back into a single result.
+        
+        Combines vulnerability, threat, anomaly, and patch insights.
+        Takes the highest risk_score if multiple chunks provided different scores.
+        
+        Args:
+            chunk_results: List of analysis results from chunks
+        
+        Returns:
+            Merged result dict
+        """
+        if not chunk_results:
+            return {}
+        
+        if len(chunk_results) == 1:
+            return chunk_results[0]
+        
+        # Start with first result as base
+        merged = dict(chunk_results[0])
+        
+        # Merge vulnerability and threat insights
+        vulnerability_reasons = []
+        threat_reasons = []
+        anomaly_reasons = []
+        patch_reasons = []
+        max_risk_score = merged.get("risk_score") or 0
+        
+        for result in chunk_results[1:]:
+            # Collect reasoning from each chunk
+            focus = result.get("_chunk_focus", "")
+            reason = result.get("ai_reason", "")
+            
+            if focus == "vulnerability" and reason:
+                vulnerability_reasons.append(reason)
+            elif focus == "threat" and reason:
+                threat_reasons.append(reason)
+            elif focus == "anomaly" and reason:
+                anomaly_reasons.append(reason)
+            elif focus == "patch" and reason:
+                patch_reasons.append(reason)
+            
+            # Track highest risk score
+            risk_score = result.get("risk_score")
+            if risk_score and risk_score > max_risk_score:
+                max_risk_score = risk_score
+                merged["risk_level"] = result.get("risk_level")
+            
+            # Merge remediation advice
+            for field in ["tenable_remediation", "defender_remediation", "splunk_remediation", "bigfix_remediation"]:
+                if result.get(field) and not merged.get(field):
+                    merged[field] = result[field]
+        
+        # Update with merged values
+        merged["risk_score"] = max_risk_score
+        
+        # Combine all reasoning
+        all_reasons = vulnerability_reasons + threat_reasons + anomaly_reasons + patch_reasons
+        merged["ai_reason"] = " | ".join(all_reasons) if all_reasons else merged.get("ai_reason", "")
+        
+        # Clean up chunk markers
+        merged.pop("_chunk_focus", None)
+        
+        return merged
 
     def _extract_fields(self, data: dict) -> dict:
         """Map SageMaker output to standard fields with flexible aliases."""
@@ -318,3 +449,136 @@ class SageMakerAnalysisMixin:
             "bigfix_remediation": "",
             "ai_analysis_source": "error",
         }
+
+    def analyze_row_isolated(self, *, asset_record: dict, row_index: int = 0, total_rows: int = 0) -> dict:
+        """
+        Analyze a single row with strict context window management and error handling.
+        
+        This is the primary orchestration method for row-isolated analysis:
+        - Checks context budget before invoking SageMaker
+        - Returns structured result for both success and failure
+        - Handles token overflow with adaptive chunking (future)
+        - Never carries state between rows
+        
+        Args:
+            asset_record: Single asset record to analyze
+            row_index: Current row index (for logging)
+            total_rows: Total rows being analyzed (for logging)
+        
+        Returns:
+            Structured result dict (always valid schema, even on error)
+        """
+        if not asset_record:
+            return AnalysisResult.failure(
+                asset_name="",
+                asset_id="",
+                error_type="input_error",
+                error_message="No asset data provided",
+            )
+        
+        asset_id = asset_record.get("asset_id", "UNKNOWN")
+        asset_name = asset_record.get("asset_name", "UNKNOWN")
+        row_label = f"{row_index + 1}/{total_rows}" if total_rows > 0 else str(row_index + 1)
+        
+        print(
+            f"[orchestration] row-isolated analysis start "
+            f"asset_id={asset_id} asset_name={asset_name} row={row_label}"
+        )
+        
+        row_started = time.time()
+        
+        try:
+            # Step 1: Compact asset data to reduce token count
+            compact = self._compact_asset_record(asset_record)
+            if not compact:
+                return AnalysisResult.failure(
+                    asset_name=asset_name,
+                    asset_id=asset_id,
+                    error_type="data_error",
+                    error_message="No analyzable data in asset record",
+                )
+            
+            # Step 2: Build row-scoped prompt (fresh, no prior context)
+            prompt = f"Analyze this asset:\n{json.dumps(compact, separators=(',', ':'))}"
+            system_instruction = BASE_SYSTEM_PROMPT + "\n\n" + prompt
+            
+            # Step 3: Check context budget before invoking
+            budget_check = self.check_context_budget(system_instruction)
+            if not budget_check["fits"]:
+                return AnalysisResult.failure(
+                    asset_name=asset_name,
+                    asset_id=asset_id,
+                    error_type="token_overflow",
+                    error_message=f"Prompt exceeds token budget ({budget_check['token_count']} tokens)",
+                    error_context={
+                        "token_overflow": True,
+                        "token_count": budget_check["token_count"],
+                        "safe_budget": budget_check["safe_budget"],
+                    },
+                )
+            
+            print(
+                f"[orchestration] row-isolated budget check passed "
+                f"asset_id={asset_id} tokens={budget_check['token_count']} "
+                f"remaining={budget_check['budget_remaining']}"
+            )
+            
+            # Step 4: Invoke SageMaker (fresh request, fresh context)
+            response = self._invoke_endpoint(
+                system_instruction,
+                max_new_tokens=600,  # Conservative token budget
+                temperature=0.1,      # Very low for determinism
+            )
+            
+            # Step 5: Parse response
+            data = self._parse_json_like(response)
+            if not isinstance(data, dict):
+                return AnalysisResult.failure(
+                    asset_name=asset_name,
+                    asset_id=asset_id,
+                    error_type="parse_error",
+                    error_message=f"Invalid response type: {type(data).__name__}",
+                )
+            
+            # Step 6: Extract and normalize
+            result = self._extract_fields(data)
+            result = self._normalize_scores(result)
+            normalized = self._normalize_dashboard_row(result, asset_record)
+            
+            # Step 7: Wrap in success envelope
+            wrapped = AnalysisResult.success(normalized)
+            
+            elapsed = time.time() - row_started
+            print(
+                f"[orchestration] row-isolated success "
+                f"asset_id={asset_id} elapsed={elapsed:.2f}s row={row_label}"
+            )
+            
+            return wrapped
+            
+        except ValueError as ve:
+            # Specific value errors (e.g., "SageMaker endpoint not configured")
+            elapsed = time.time() - row_started
+            print(
+                f"[orchestration] row-isolated error (ValueError) "
+                f"asset_id={asset_id} elapsed={elapsed:.2f}s error={ve}"
+            )
+            return AnalysisResult.failure(
+                asset_name=asset_name,
+                asset_id=asset_id,
+                error_type="sagemaker_error",
+                error_message=str(ve),
+            )
+        except Exception as e:
+            # Unexpected errors
+            elapsed = time.time() - row_started
+            print(
+                f"[orchestration] row-isolated error (unexpected) "
+                f"asset_id={asset_id} elapsed={elapsed:.2f}s error_type={type(e).__name__} error={e}"
+            )
+            return AnalysisResult.failure(
+                asset_name=asset_name,
+                asset_id=asset_id,
+                error_type=type(e).__name__,
+                error_message=str(e),
+            )

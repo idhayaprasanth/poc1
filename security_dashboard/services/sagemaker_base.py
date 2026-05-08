@@ -7,10 +7,33 @@ from pathlib import Path
 from typing import Any
 
 import boto3
+import tiktoken
 
 
 _JSON_RE = re.compile(r"(\{.*\}|\[.*\])", re.DOTALL)
 _SAGEMAKER_DEBUG_LOG_FILE = Path(__file__).resolve().parents[1] / "data" / "sagemaker_api_debug.jsonl"
+
+# Context window configuration (tokens)
+# 32K total window, reserve 1.2K for output, system prompt ~200 tokens
+CONTEXT_WINDOW_TOKENS = 32000
+OUTPUT_RESERVE_TOKENS = 1200
+SYSTEM_PROMPT_OVERHEAD_TOKENS = 200
+SAFE_INPUT_BUDGET = CONTEXT_WINDOW_TOKENS - OUTPUT_RESERVE_TOKENS - SYSTEM_PROMPT_OVERHEAD_TOKENS  # ~30.6K
+
+# Token counter (cached globally to avoid re-initializing)
+_TIKTOKEN_ENCODING = None
+
+
+def _get_tokenizer():
+    """Get or initialize tiktoken encoding (cl100k_base for GPT models)."""
+    global _TIKTOKEN_ENCODING
+    if _TIKTOKEN_ENCODING is None:
+        try:
+            _TIKTOKEN_ENCODING = tiktoken.get_encoding("cl100k_base")
+        except Exception as e:
+            print(f"[sagemaker] tiktoken initialization failed: {e}, using fallback estimation")
+            _TIKTOKEN_ENCODING = None
+    return _TIKTOKEN_ENCODING
 
 
 def _env(name: str, default: str) -> str:
@@ -25,6 +48,52 @@ class SageMakerBaseClient:
 
     def enabled(self) -> bool:
         return bool(self.endpoint_name)
+
+    def count_tokens(self, text: str) -> int:
+        """
+        Count tokens in a string using tiktoken (cl100k_base encoding).
+        Falls back to character/4 estimation if tiktoken unavailable.
+        
+        Args:
+            text: Text to count
+        
+        Returns:
+            Number of tokens
+        """
+        try:
+            enc = _get_tokenizer()
+            if enc:
+                return len(enc.encode(text))
+        except Exception as e:
+            print(f"[sagemaker] token count failed for text: {e}")
+        
+        # Fallback: rough heuristic (1 token ≈ 4 characters)
+        return max(1, len(text) // 4)
+
+    def check_context_budget(self, prompt: str) -> dict:
+        """
+        Check if a prompt fits within the safe context budget.
+        
+        Args:
+            prompt: Prompt text to check
+        
+        Returns:
+            {
+                "fits": bool,
+                "token_count": int,
+                "budget_remaining": int,
+                "safe_budget": int,
+            }
+        """
+        token_count = self.count_tokens(prompt)
+        fits = token_count <= SAFE_INPUT_BUDGET
+        budget_remaining = max(0, SAFE_INPUT_BUDGET - token_count)
+        return {
+            "fits": fits,
+            "token_count": token_count,
+            "budget_remaining": budget_remaining,
+            "safe_budget": SAFE_INPUT_BUDGET,
+        }
 
     def _runtime_client(self):
         """Get or create cached boto3 client (connection pooling)."""
@@ -79,10 +148,21 @@ class SageMakerBaseClient:
         
         for attempt in range(max_retries):
             start = time.time()
+            token_count = self.count_tokens(prompt)
+            budget_check = self.check_context_budget(prompt)
+            
+            if not budget_check["fits"]:
+                raise ValueError(
+                    f"Prompt exceeds safe context budget: "
+                    f"{token_count} tokens (budget: {SAFE_INPUT_BUDGET}). "
+                    f"Consider splitting the request or reducing input data."
+                )
+            
             print(
                 "[sagemaker] request start "
                 f"endpoint={self.endpoint_name} "
-                f"prompt_chars={len(prompt)} "
+                f"prompt_tokens={token_count} "
+                f"budget_remaining={budget_check['budget_remaining']} "
                 f"max_new_tokens={max_new_tokens} "
                 f"attempt={attempt + 1}/{max_retries}"
             )
@@ -101,12 +181,14 @@ class SageMakerBaseClient:
                         "endpoint": self.endpoint_name,
                         "elapsed_seconds": round(elapsed, 3),
                         "attempt": attempt + 1,
+                        "prompt_tokens": token_count,
+                        "budget_remaining": budget_check["budget_remaining"],
                         "request_payload": payload,
                         "raw_response_body": raw_body,
                         "decoded_response": decoded,
                     }
                 )
-                print(f"[sagemaker] request success endpoint={self.endpoint_name} elapsed={elapsed:.2f}s attempt={attempt + 1}")
+                print(f"[sagemaker] request success endpoint={self.endpoint_name} elapsed={elapsed:.2f}s attempt={attempt + 1} tokens={token_count}")
                 return decoded
             except Exception as exc:
                 elapsed = time.time() - start
@@ -120,6 +202,8 @@ class SageMakerBaseClient:
                         "endpoint": self.endpoint_name,
                         "elapsed_seconds": round(elapsed, 3),
                         "attempt": attempt + 1,
+                        "prompt_tokens": token_count,
+                        "budget_remaining": budget_check["budget_remaining"],
                         "is_transient": is_transient,
                         "will_retry": should_retry,
                         "request_payload": payload,
