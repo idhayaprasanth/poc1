@@ -8,7 +8,7 @@ from dash import html, Input, Output, State, no_update
 from security_dashboard.analysis import run_analysis_worker_thread
 from security_dashboard.theme import COLORS
 from security_dashboard.filters import analysis_pending_mask, analysis_error_mask
-from security_dashboard.data.datasets import ensure_ai_analysis_columns
+from security_dashboard.data.datasets import ensure_ai_analysis_columns, clear_ai_analysis_columns
 from security_dashboard.services.dgx_spark_server_client import DGXSparkServerClient
 from .shared import analysis_background_state
 
@@ -189,3 +189,37 @@ def register_analysis_callbacks(app, ai_analysis_batch_size: int) -> None:
                 "fontWeight": "600",
             },
         )
+
+    @app.callback(
+        Output("merged-data-store", "data", allow_duplicate=True),
+        Input("rerun-btn", "n_clicks"),
+        State("merged-data-store", "data"),
+        prevent_initial_call=True,
+    )
+    def trigger_rerun(n_clicks, json_data):
+        if not n_clicks:
+            return no_update
+        df = pd.read_json(io.StringIO(json_data), orient="split")
+        df = clear_ai_analysis_columns(df)
+        return df.to_json(date_format="iso", orient="split")
+
+    @app.callback(
+        Output("rerun-btn", "disabled"),
+        Output("rerun-btn", "style"),
+        Input("analysis-status-store", "data"),
+    )
+    def update_rerun_button(status):
+        status = status or {}
+        is_running = status.get("state") == "running"
+        style = {
+            "background": COLORS["border"] if is_running else COLORS["primary"],
+            "color": COLORS["text_muted"] if is_running else "white",
+            "border": "none",
+            "borderRadius": "4px",
+            "padding": "10px 20px",
+            "cursor": "not-allowed" if is_running else "pointer",
+            "fontSize": "15px",
+            "fontWeight": "700",
+            "fontFamily": "inherit",
+        }
+        return is_running, style

@@ -127,20 +127,14 @@ def build_asset_table(table_id: str, df: pd.DataFrame) -> dash_table.DataTable:
         Dash DataTable component
     """
     cols_display = [
-        "asset_id", "asset_name", "vuln_name", "vuln_severity", "threat_alert",
+        "asset_id", "asset_name", "vuln_name", "threat_alert",
         "patch_status", "anomaly_score", "risk_score", "risk_level", "issue_status",
     ]
 
-    # Add AI analysis columns if any rows have completed analysis
-    has_ai = bool(analysis_completion_mask(df).any())
-    if has_ai:
-        cols_display += ["threat_status", "severity_validation", "priority", "remediation"]
-
     col_names = {
         "asset_id": "Asset ID", "asset_name": "Hostname", "vuln_name": "Vulnerability",
-        "vuln_severity": "Severity", "threat_alert": "Threat", "patch_status": "Patch",
+        "threat_alert": "Threat", "patch_status": "Patch",
         "anomaly_score": "Anomaly", "risk_score": "Risk Score", "risk_level": "Level", "issue_status": "Issue Status",
-        "threat_status": "Threat Status", "severity_validation": "Severity Check", "priority": "Priority", "remediation": "Remediation",
     }
 
     # Filter to existing columns only
@@ -185,7 +179,6 @@ def build_asset_table(table_id: str, df: pd.DataFrame) -> dash_table.DataTable:
             "fontFamily": '"Source Sans 3", "Source Sans Pro", sans-serif',
         },
         style_data_conditional=[
-            {"if": {"filter_query": '{Severity} = "Immediate"', "column_id": "priority"}, "color": COLORS["high"], "fontWeight": "600"},
             {"if": {"filter_query": '{risk_level} = "Critical"', "column_id": "risk_level"}, "color": COLORS["high"], "fontWeight": "700"},
             {"if": {"filter_query": '{risk_level} = "High"', "column_id": "risk_level"}, "color": COLORS["high"], "fontWeight": "700"},
             {"if": {"filter_query": '{risk_level} = "Medium"', "column_id": "risk_level"}, "color": COLORS["medium"], "fontWeight": "700"},
@@ -195,8 +188,6 @@ def build_asset_table(table_id: str, df: pd.DataFrame) -> dash_table.DataTable:
             {"if": {"filter_query": '{issue_status} = "Resolved"', "column_id": "issue_status"}, "color": COLORS["low"], "fontWeight": "600"},
             {"if": {"filter_query": '{patch_status} = "Missing"', "column_id": "patch_status"}, "color": COLORS["high"], "fontWeight": "600"},
             {"if": {"filter_query": '{patch_status} = "Pending"', "column_id": "patch_status"}, "color": COLORS["medium"], "fontWeight": "600"},
-            {"if": {"filter_query": '{threat_status} = "True Positive"', "column_id": "threat_status"}, "color": COLORS["high"], "fontWeight": "600"},
-            {"if": {"filter_query": '{priority} = "Immediate"', "column_id": "priority"}, "color": COLORS["high"], "fontWeight": "600"},
             {"if": {"state": "selected"}, "backgroundColor": COLORS["primary_light"], "border": "none"},
         ],
         style_as_list_view=True,

@@ -57,10 +57,11 @@ class DetailPanelRenderer:
 
         # Build sections
         children = [self._render_risk_header(risk_score_text, risk_level_text, risk_style)]
-        children.extend(self._render_source_sections(row))
-
+        
         if pd.notna(row.get("ai_reason")):
             children.append(self._section("AI Summary", {"Summary": row.get("ai_reason", "—")}))
+
+        children.extend(self._render_source_sections(row))
 
         # Issue status
         issue_status = row.get("issue_status", "Open")
@@ -94,7 +95,7 @@ class DetailPanelRenderer:
             },
             children=[
                 html.Div(children=[
-                    html.Span("Risk Score", style={
+                    html.Span("AI Overall", style={
                         "display": "block",
                         "fontSize": "13px",
                         "fontWeight": "700",

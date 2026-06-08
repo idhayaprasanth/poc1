@@ -139,8 +139,24 @@ def create_layout(df_base, analysis_status_initial=None):
                                         },
                                     ),
                                     html.Div(
-                                        style={"display": "flex", "gap": "8px"},
+                                        style={"display": "flex", "gap": "12px", "alignItems": "center"},
                                         children=[
+                                            html.Button(
+                                                "Rerun Analysis",
+                                                id="rerun-btn",
+                                                n_clicks=0,
+                                                style={
+                                                    "background": COLORS["primary"],
+                                                    "color": "white",
+                                                    "border": "none",
+                                                    "borderRadius": "4px",
+                                                    "padding": "10px 20px",
+                                                    "cursor": "pointer",
+                                                    "fontSize": "15px",
+                                                    "fontWeight": "700",
+                                                    "fontFamily": "inherit",
+                                                },
+                                            ),
                                             html.Button(
                                                 "Export CSV",
                                                 id="export-btn",
@@ -282,7 +298,7 @@ def create_layout(df_base, analysis_status_initial=None):
                                     "overflowY": "auto",
                                     "transition": "transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)",
                                     "transform": "translateX(0)",
-                                    "padding": "10px 20px 20px 20px",
+                                    "padding": "0",
                                 },
                                 children=[
                                     html.Button(
@@ -298,11 +314,12 @@ def create_layout(df_base, analysis_status_initial=None):
                                             "cursor": "pointer",
                                             "padding": "5px",
                                             "zIndex": 52,
+                                            "display": "none",
                                         },
                                     ),
                                     html.Div(
                                         id="detail-panel-content",
-                                        style={"padding": "12px 0 24px 0"},
+                                        style={"padding": "0"},
                                         children=[
                                             html.Div(
                                                 id="detail-header",
@@ -409,14 +426,19 @@ def create_layout(df_base, analysis_status_initial=None):
                                                 ],
                                             ),
                                             html.Div(
-                                                id="detail-divider",
-                                                style={
-                                                    "height": "1px",
-                                                    "backgroundColor": COLORS["border"],
-                                                    "margin": "0 0 20px",
-                                                },
+                                                style={"padding": "20px 24px 24px 24px"},
+                                                children=[
+                                                    html.Div(
+                                                        id="detail-divider",
+                                                        style={
+                                                            "height": "1px",
+                                                            "backgroundColor": COLORS["border"],
+                                                            "margin": "0 0 20px",
+                                                        },
+                                                    ),
+                                                    html.Div(id="detail-body"),
+                                                ],
                                             ),
-                                            html.Div(id="detail-body"),
                                         ],
                                     ),
                                 ],
