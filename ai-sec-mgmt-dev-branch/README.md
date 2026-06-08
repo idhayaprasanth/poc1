@@ -14,6 +14,62 @@ A unified cybersecurity monitoring dashboard built with Python and Dash. This pr
 * AI-generated security insights
 * Integrated AI chat assistant
 
+## Data Processing and AI Analysis Flow
+
+The application processes security events and coordinates with the AI analysis engine through the following automated pipeline:
+
+### 1. Ingestion of Security Data Sources
+Data is ingested from three primary CSV data sources located in `security_dashboard/data/seed_data/`:
+* **Tenable**: Vulnerability data containing Plugin IDs, severity impact, CVE mappings, and vendor-recommended solutions.
+* **Defender**: Endpoint detection alerts indicating process name, file path, threat impact, and status.
+* **Splunk**: Security event logs detailing anomaly events, rule triggers, source anomaly scores, and recommendations.
+
+### 2. Merging & Normalization
+* The datasets are read, normalized, and mapped based on their configured column aliases in `security_dashboard/data/datasets.py`.
+* A join is performed on `asset_name` (representing the Hostname) to aggregate Tenable, Defender, and Splunk alerts under unified records.
+* The system keeps the Hostname (`host-001`) and the unique `Asset ID` (`asset-001`) distinct.
+
+### 3. Payload Creation
+For each merged asset, the system builds a structured JSON payload representing all collected security metrics:
+```json
+{
+  "asset_id": "asset-001",
+  "sources": {
+    "tenable": [
+      {
+        "Severity": "Critical",
+        "Name": "OpenSSH RCE Exposure",
+        "State": "open",
+        "Solution": "Upgrade OpenSSH..."
+      }
+    ],
+    "splunk": [
+      {
+        "Risk Score": 9.2,
+        "Rule Name": "Brute Force Attempt",
+        "Status": "open"
+      }
+    ],
+    "defender": [
+      {
+        "Severity": "High",
+        "Title": "Mimikatz execution",
+        "Status": "open"
+      }
+    ]
+  }
+}
+```
+
+### 4. Sending to AI Analysis
+* The structured payload is appended to the `ANALYSIS_SYSTEM_PROMPT` containing specific cybersecurity analyst context and scoring rules.
+* The combined prompt is dispatched to the **DGX Spark Server** model endpoint (`meta-llama/Llama-3.1-8B-Instruct` or similar) via an HTTP API request.
+
+### 5. Response Extraction & Rendering
+* The client extracts the JSON block from the model's raw text response.
+* Variables such as `overall_risk_score` (between 0.0 and 10.0), `overall_priority_level`, and `ai_summary` are parsed and normalized.
+* The dashboard displays these AI-analyzed insights dynamically, with risk scores rounded to 1 decimal place, and renders the executive summaries directly in the sticky asset detail panel.
+
 ## Installation
 
 ### 1. Clone the repository
