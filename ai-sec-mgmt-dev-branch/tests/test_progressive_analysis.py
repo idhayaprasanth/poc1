@@ -21,31 +21,32 @@ class RecordingState(AnalysisBackgroundState):
 
 
 class FakeDGXClient:
-    def generate_dashboard_analysis(self, asset_records):
-        return {
-            "assets": [
-                {
-                    "asset_id": asset_records[0]["asset_id"],
-                    "asset_name": asset_records[0]["asset_name"],
-                    "risk_score": 9.5,
-                    "risk_level": "Critical",
-                    "asset_bucket": "Critical Risk",
-                    "anomaly_score": 8.0,
-                    "priority": "Immediate",
-                    "remediation": "Patch immediately.",
-                },
-                {
-                    "asset_id": asset_records[1]["asset_id"],
-                    "asset_name": asset_records[1]["asset_name"],
-                    "risk_score": 7.2,
-                    "risk_level": "High",
-                    "asset_bucket": "High Risk",
-                    "anomaly_score": 5.0,
-                    "priority": "High",
-                    "remediation": "Patch soon.",
-                },
-            ]
-        }
+    def generate_asset_analysis(self, asset_record):
+        asset_id = asset_record.get("asset_id")
+        if asset_id == "A-1":
+            return {
+                "asset_id": "A-1",
+                "asset_name": "host-1",
+                "risk_score": 9.5,
+                "risk_level": "Critical",
+                "asset_bucket": "Critical Risk",
+                "anomaly_score": 8.0,
+                "priority": "Immediate",
+                "remediation": "Patch immediately.",
+            }
+        elif asset_id == "A-2":
+            return {
+                "asset_id": "A-2",
+                "asset_name": "host-2",
+                "risk_score": 7.2,
+                "risk_level": "High",
+                "asset_bucket": "High Risk",
+                "anomaly_score": 5.0,
+                "priority": "High",
+                "remediation": "Patch soon.",
+            }
+        else:
+            raise Exception("No valid AI analysis returned for this row")
 
 
 class ProgressiveAnalysisTests(unittest.TestCase):

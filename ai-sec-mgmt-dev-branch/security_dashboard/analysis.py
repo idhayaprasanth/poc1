@@ -5,6 +5,7 @@ Handles batching, LLM communication, and progress tracking.
 
 import logging
 import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 
 from security_dashboard.data.datasets import AI_ANALYSIS_COLUMNS, ensure_ai_analysis_columns
@@ -127,8 +128,8 @@ def run_analysis_worker_thread(
     state: AnalysisBackgroundState,
 ) -> None:
     """
-    Background worker thread that batches rows and calls LLM for analysis.
-    Updates shared state with progress and results.
+    Background worker thread that batches rows and calls LLM for analysis in parallel.
+    Updates shared state with progress and results progressively after each row finishes.
     
     Args:
         request_id: Unique ID for this analysis request
@@ -162,124 +163,64 @@ def run_analysis_worker_thread(
         ]
 
         logger.info(
-            "Starting AI analysis batch %s for %s row(s): %s",
+            "Starting AI analysis batch %s for %s row(s) in parallel: %s",
             batch_number,
             len(batch_indices),
             ", ".join(batch_assets),
         )
 
-        try:
-            batch_result = client.generate_dashboard_analysis(asset_records=batch_records)
-        except Exception as exc:
-            logger.exception("AI analysis batch failed")
-            for idx in batch_indices:
-                df.at[idx, "ai_analysis_error"] = str(exc)
-            total_failed += len(batch_indices)
-            state.update_progress(
-                df.to_json(date_format="iso", orient="split"),
-                {
-                    "state": "running",
-                    "message": (
-                        f"Batch {batch_number} failed; continuing with remaining rows. "
-                        f"{int(analysis_pending_mask(df).sum())} row(s) remaining."
-                    ),
-                },
-            )
-            continue
+        max_workers = min(4, len(batch_indices))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_idx = {
+                executor.submit(client.generate_asset_analysis, asset_record=df.loc[idx].to_dict()): idx
+                for idx in batch_indices
+            }
 
-        # Parse LLM response
-        assets = (batch_result or {}).get("assets", []) if isinstance(batch_result, dict) else []
+            for future in as_completed(future_to_idx):
+                idx = future_to_idx[future]
+                asset_label = str(df.loc[idx].get("asset_name") or df.loc[idx].get("asset_id") or f"row {idx + 1}")
+                try:
+                    ai_row = future.result()
+                    if not isinstance(ai_row, dict):
+                        raise ValueError("No valid AI analysis returned for this row.")
 
-        # Build lookup tables for matching returned rows to dataframe
-        index_to_record = {idx: record for idx, record in zip(batch_indices, batch_records)}
-        unresolved_indices = set(batch_indices)
-        id_to_indices = {}
-        name_to_indices = {}
+                    # Update dataframe with LLM analysis results
+                    for col in AI_ANALYSIS_COLUMNS:
+                        value = ai_row.get(col)
+                        if col in ("risk_score", "anomaly_score"):
+                            try:
+                                value = float(value)
+                            except Exception:
+                                value = pd.NA
+                        df.at[idx, col] = value
 
-        for idx, record in index_to_record.items():
-            asset_id = str(record.get("asset_id") or "").strip()
-            asset_name = str(record.get("asset_name") or "").strip()
-            if asset_id:
-                id_to_indices.setdefault(asset_id, []).append(idx)
-            if asset_name:
-                name_to_indices.setdefault(asset_name, []).append(idx)
+                    df.at[idx, "ai_analysis_complete"] = True
+                    df.at[idx, "ai_analysis_error"] = pd.NA
+                    total_completed += 1
+                    logger.info("AI analysis completed successfully for %s", asset_label)
+                except Exception as exc:
+                    logger.exception("AI analysis failed for asset %s", asset_label)
+                    df.at[idx, "ai_analysis_error"] = str(exc)
+                    total_failed += 1
 
-        # Match LLM results to dataframe rows
-        completed_assets = []
-        for ai_row in assets:
-            if not isinstance(ai_row, dict):
-                continue
-
-            matched_idx = None
-            ai_asset_id = str(ai_row.get("asset_id") or "").strip()
-            ai_asset_name = str(ai_row.get("asset_name") or "").strip()
-
-            if ai_asset_id and id_to_indices.get(ai_asset_id):
-                matched_idx = id_to_indices[ai_asset_id].pop(0)
-            elif ai_asset_name and name_to_indices.get(ai_asset_name):
-                matched_idx = name_to_indices[ai_asset_name].pop(0)
-
-            if matched_idx is None or matched_idx not in unresolved_indices:
-                continue
-
-            # Update dataframe with LLM analysis results
-            for col in AI_ANALYSIS_COLUMNS:
-                value = ai_row.get(col)
-                if col in ("risk_score", "anomaly_score"):
-                    try:
-                        value = float(value)
-                    except Exception:
-                        value = pd.NA
-                df.at[matched_idx, col] = value
-
-            df.at[matched_idx, "ai_analysis_complete"] = True
-            df.at[matched_idx, "ai_analysis_error"] = pd.NA
-
-            asset_label = str(
-                index_to_record[matched_idx].get("asset_name")
-                or index_to_record[matched_idx].get("asset_id")
-                or f"row {matched_idx + 1}"
-            )
-            completed_assets.append(asset_label)
-            unresolved_indices.remove(matched_idx)
-            total_completed += 1
-
-            pending_left = int(analysis_pending_mask(df).sum())
-            state.update_progress(
-                df.to_json(date_format="iso", orient="split"),
-                {
-                    "state": "running",
-                    "message": (
-                        f"Analyzed {total_completed} of {total_rows} row(s). "
-                        f"{pending_left} row(s) remaining."
-                    ),
-                },
-            )
-
-        # Mark unresolved rows as errors
-        for idx in unresolved_indices:
-            df.at[idx, "ai_analysis_error"] = "No valid AI analysis returned for this row in the current batch."
-
-        total_failed += len(unresolved_indices)
-        pending_left = int(analysis_pending_mask(df).sum())
-
-        state.update_progress(
-            df.to_json(date_format="iso", orient="split"),
-            {
-                "state": "running",
-                "message": (
-                    f"Processed batch {batch_number}. Analyzed {total_completed} of {total_rows} row(s). "
-                    f"{pending_left} row(s) remaining."
-                ),
-            },
-        )
+                # Update progress in state immediately after each row completes
+                pending_left = int(analysis_pending_mask(df).sum())
+                state.update_progress(
+                    df.to_json(date_format="iso", orient="split"),
+                    {
+                        "state": "running",
+                        "message": (
+                            f"Analyzed {total_completed} of {total_rows} row(s). "
+                            f"{pending_left} row(s) remaining."
+                        ),
+                    },
+                )
 
         logger.info(
-            "Completed AI analysis batch %s. Success=%s, Failed=%s. Completed assets: %s",
+            "Completed AI analysis batch %s. Success=%s, Failed=%s.",
             batch_number,
-            len(completed_assets),
-            len(unresolved_indices),
-            completed_assets,
+            total_completed,
+            total_failed,
         )
 
     # Final status

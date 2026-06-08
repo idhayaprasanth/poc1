@@ -22,6 +22,7 @@ df_base = build_merged_dataset()
 app = Dash(
     __name__,
     suppress_callback_exceptions=True,
+    update_title=None,
     external_stylesheets=[
         "https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&display=swap",
     ],
