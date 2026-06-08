@@ -12,7 +12,7 @@ from pathlib import Path
 import requests
 from requests.exceptions import RequestException
 
-SOURCES = ["tenable", "bigfix", "splunk", "defender"]
+SOURCES = ["tenable", "splunk", "defender"]
 PRIORITY_ORDER = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1}
 RISK_LEVEL_BY_PRIORITY = {
     "Critical": "High",
@@ -60,7 +60,6 @@ ANALYSIS_SYSTEM_PROMPT = (
     "{\n"
     '  "asset_id": "<id>",\n'
     '  "tenable":  {"risk_score": <0-10 float>, "priority_level": "<Critical|High|Medium|Low>", "remediation": "<concise action>"},\n'
-    '  "bigfix":   {"risk_score": <0-10 float>, "priority_level": "<Critical|High|Medium|Low>", "remediation": "<concise action>"},\n'
     '  "splunk":   {"risk_score": <0-10 float>, "priority_level": "<Critical|High|Medium|Low>", "remediation": "<concise action>"},\n'
     '  "defender": {"risk_score": <0-10 float>, "priority_level": "<Critical|High|Medium|Low>", "remediation": "<concise action>"},\n'
     '  "overall_risk_score": <0-10 float>,\n'
@@ -210,14 +209,6 @@ class DGXSparkServerClient:
                     "State": issue_status,
                     "Solution": record.get("vuln_fix"),
                     "Description": record.get("vuln_description"),
-                }),
-                "bigfix": compact_entry({
-                    "CVE": "",
-                    "Severity": record.get("patch_severity"),
-                    "CVSS": "",
-                    "Fixlet Name": record.get("patch_status"),
-                    "Status": record.get("patch_status"),
-                    "Action": record.get("patch_recommendation"),
                 }),
                 "splunk": compact_entry({
                     "CVE": "",
@@ -513,11 +504,8 @@ class DGXSparkServerClient:
             "tenable_remediation": (result.get("tenable") or {}).get("remediation"),
             "defender_remediation": (result.get("defender") or {}).get("remediation"),
             "splunk_remediation": (result.get("splunk") or {}).get("remediation"),
-            "bigfix_remediation": (result.get("bigfix") or {}).get("remediation"),
             "tenable_risk_score": get_src_score("tenable"),
             "tenable_priority_level": (result.get("tenable") or {}).get("priority_level"),
-            "bigfix_risk_score": get_src_score("bigfix"),
-            "bigfix_priority_level": (result.get("bigfix") or {}).get("priority_level"),
             "splunk_risk_score": get_src_score("splunk"),
             "splunk_priority_level": (result.get("splunk") or {}).get("priority_level"),
             "defender_risk_score": get_src_score("defender"),

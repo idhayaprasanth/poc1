@@ -128,18 +128,21 @@ def build_asset_table(table_id: str, df: pd.DataFrame) -> dash_table.DataTable:
     """
     cols_display = [
         "asset_id", "asset_name", "vuln_name", "threat_alert",
-        "patch_status", "anomaly_score", "risk_score", "risk_level", "issue_status",
+        "risk_score", "risk_level", "issue_status",
     ]
 
     col_names = {
         "asset_id": "Asset ID", "asset_name": "Hostname", "vuln_name": "Vulnerability",
-        "threat_alert": "Threat", "patch_status": "Patch",
-        "anomaly_score": "Anomaly", "risk_score": "Risk Score", "risk_level": "Level", "issue_status": "Issue Status",
+        "threat_alert": "Threat", "risk_score": "Risk Score", "risk_level": "Level", "issue_status": "Issue Status",
     }
 
     # Filter to existing columns only
     existing_cols = [c for c in cols_display if c in df.columns]
     df = df.copy()
+
+    # Round risk score to 1 decimal place if present
+    if "risk_score" in df.columns:
+        df["risk_score"] = pd.to_numeric(df["risk_score"], errors="coerce").round(1)
 
     # Sort by risk score descending
     if "risk_score" in df.columns:
@@ -186,8 +189,6 @@ def build_asset_table(table_id: str, df: pd.DataFrame) -> dash_table.DataTable:
             {"if": {"filter_query": '{issue_status} = "Open"', "column_id": "issue_status"}, "color": COLORS["high"], "fontWeight": "600"},
             {"if": {"filter_query": '{issue_status} = "In Progress"', "column_id": "issue_status"}, "color": COLORS["medium"], "fontWeight": "600"},
             {"if": {"filter_query": '{issue_status} = "Resolved"', "column_id": "issue_status"}, "color": COLORS["low"], "fontWeight": "600"},
-            {"if": {"filter_query": '{patch_status} = "Missing"', "column_id": "patch_status"}, "color": COLORS["high"], "fontWeight": "600"},
-            {"if": {"filter_query": '{patch_status} = "Pending"', "column_id": "patch_status"}, "color": COLORS["medium"], "fontWeight": "600"},
             {"if": {"state": "selected"}, "backgroundColor": COLORS["primary_light"], "border": "none"},
         ],
         style_as_list_view=True,

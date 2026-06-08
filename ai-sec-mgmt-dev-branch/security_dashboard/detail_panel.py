@@ -154,12 +154,6 @@ class DetailPanelRenderer:
                 "Model Priority": row.get("splunk_priority_level", "—"),
                 "Model Remediation": row.get("splunk_remediation", "—"),
             }),
-            self._section("Patch Status", {
-                "Status": row.get("patch_status", "—"),
-                "Severity": row.get("patch_severity", "—"),
-                "Action": row.get("patch_recommendation", "—"),
-                "Issue Status": row.get("issue_status", "—"),
-            }),
         ]
 
     def _section(self, title: str, fields: dict) -> html.Div:

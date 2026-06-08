@@ -88,7 +88,7 @@ def create_layout(df_base, analysis_status_initial=None):
                                         },
                                     ),
                                     html.P(
-                                        "AI-driven threat analysis and prioritization across Tenable, Defender, Splunk, and BigFix",
+                                        "AI-driven threat analysis and prioritization across Tenable, Defender, and Splunk",
                                         style={
                                             "fontSize": "15px",
                                             "color": COLORS["text_muted"],

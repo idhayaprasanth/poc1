@@ -18,12 +18,12 @@ DATASET_FILES = {
     "tenable": SEED_DIR / "tenable.csv",
     "defender": SEED_DIR / "defender.csv",
     "splunk": SEED_DIR / "splunk.csv",
-    "bigfix": SEED_DIR / "bigfix.csv",
 }
 
 DATASET_COLUMN_ALIASES = {
     "tenable": {
         "Asset ID": "asset_id",
+        "Asset Name": "asset_name",
         "Name": "vuln_name",
         "Severity": "vuln_severity",
         "Solution": "vuln_fix",
@@ -32,6 +32,7 @@ DATASET_COLUMN_ALIASES = {
     },
     "defender": {
         "Asset ID": "asset_id",
+        "Asset Name": "asset_name",
         "Title": "threat_alert",
         "Severity": "threat_impact",
         "Remediation": "threat_fix",
@@ -40,17 +41,11 @@ DATASET_COLUMN_ALIASES = {
     },
     "splunk": {
         "Asset ID": "asset_id",
+        "Asset Name": "asset_name",
         "Rule Name": "anomaly_event",
         "Risk Score": "source_anomaly_score",
         "Recommendation": "anomaly_explanation",
         "Status": "issue_status",
-        "Last Seen": "scan_date",
-    },
-    "bigfix": {
-        "Asset ID": "asset_id",
-        "Status": "patch_status",
-        "Severity": "patch_severity",
-        "Action": "patch_recommendation",
         "Last Seen": "scan_date",
     },
 }
@@ -82,13 +77,6 @@ DATASET_OUTPUT_COLUMNS = {
         "source_anomaly_score",
         "anomaly_explanation",
     ],
-    "bigfix": [
-        "asset_name",
-        "asset_id",
-        "patch_status",
-        "patch_severity",
-        "patch_recommendation",
-    ],
 }
 
 AI_ANALYSIS_COLUMNS = [
@@ -105,11 +93,8 @@ AI_ANALYSIS_COLUMNS = [
     "tenable_remediation",
     "defender_remediation",
     "splunk_remediation",
-    "bigfix_remediation",
     "tenable_risk_score",
     "tenable_priority_level",
-    "bigfix_risk_score",
-    "bigfix_priority_level",
     "splunk_risk_score",
     "splunk_priority_level",
     "defender_risk_score",
@@ -121,7 +106,6 @@ FLOAT_AI_ANALYSIS_COLUMNS = {
     "risk_score",
     "anomaly_score",
     "tenable_risk_score",
-    "bigfix_risk_score",
     "splunk_risk_score",
     "defender_risk_score",
 }
@@ -140,9 +124,6 @@ SOURCE_FINGERPRINT_COLUMNS = [
     "anomaly_event",
     "anomaly_explanation",
     "source_anomaly_score",
-    "patch_status",
-    "patch_severity",
-    "patch_recommendation",
     "scan_date",
 ]
 
@@ -339,20 +320,17 @@ def _read_dataset(name: str) -> pd.DataFrame:
 
 
 def build_merged_dataset() -> pd.DataFrame:
-    """Merge all four data sources by asset_name and prepare blank AI-owned fields."""
+    """Merge all three data sources by asset_name and prepare blank AI-owned fields."""
     tenable_data = _read_dataset("tenable")
     defender_data = _read_dataset("defender")
     splunk_data = _read_dataset("splunk")
-    bigfix_data = _read_dataset("bigfix")
 
     # Keep a single canonical asset_id from the primary dataset to avoid merge suffix conflicts.
     defender_data = defender_data.drop(columns=["asset_id"], errors="ignore")
     splunk_data = splunk_data.drop(columns=["asset_id"], errors="ignore")
-    bigfix_data = bigfix_data.drop(columns=["asset_id"], errors="ignore")
 
     df = tenable_data.merge(defender_data, on="asset_name", how="outer")
     df = df.merge(splunk_data, on="asset_name", how="outer")
-    df = df.merge(bigfix_data, on="asset_name", how="outer")
 
     if "source_anomaly_score" in df.columns:
         df["source_anomaly_score"] = pd.to_numeric(df["source_anomaly_score"], errors="coerce").astype("Float64")

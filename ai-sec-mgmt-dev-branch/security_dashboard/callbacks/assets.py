@@ -233,4 +233,8 @@ def register_asset_callbacks(app) -> None:
     )
     def export_csv(n, json_data):
         df = pd.read_json(io.StringIO(json_data), orient="split")
+        from security_dashboard.data.datasets import AI_ANALYSIS_COLUMNS
+        rename_map = {col: f"ai_{col}" for col in AI_ANALYSIS_COLUMNS if col in df.columns and not col.startswith("ai_")}
+        if rename_map:
+            df = df.rename(columns=rename_map)
         return dcc.send_data_frame(df.to_csv, f"security-report-{datetime.now().strftime('%Y-%m-%d')}.csv", index=False)
