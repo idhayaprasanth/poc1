@@ -14,7 +14,6 @@ from security_dashboard.detail_panel import DetailPanelRenderer
 from security_dashboard.filters import (
     analysis_completion_mask,
     analysis_error_mask,
-    analysis_is_complete,
     analysis_pending_mask,
     assign_asset_sections,
     prepare_filtered_assets,
@@ -149,7 +148,8 @@ def register_callbacks(app, ai_analysis_batch_size: int) -> None:
         if not analysis_request:
             return no_update, no_update, no_update
 
-        if analysis_background_state["running"]:
+        running, _, _, _ = analysis_background_state.get_state()
+        if running:
             return no_update, {
                 "state": "running",
                 "message": "AI analysis is already running. Progress updates will appear shortly.",
@@ -178,23 +178,24 @@ def register_callbacks(app, ai_analysis_batch_size: int) -> None:
             )
 
         request_id = str(analysis_request.get("requested_at") or datetime.now().isoformat())
-        with analysis_background_state["lock"]:
-            analysis_background_state["running"] = True
-            analysis_background_state["request_id"] = request_id
-            analysis_background_state["df_json"] = df.to_json(date_format="iso", orient="split")
-            analysis_background_state["status"] = {
+        initial_status = {
                 "state": "running",
                 "message": (
                     f"Running AI analysis in batches of {ai_analysis_batch_size} row(s). "
                     f"{int(pending.sum())} row(s) pending."
                 ),
-            }
+        }
+        analysis_background_state.start_analysis(
+            request_id,
+            df.to_json(date_format="iso", orient="split"),
+            initial_status,
+        )
 
         thread = threading.Thread(target=run_analysis_worker_thread, args=(request_id, df, ai_analysis_batch_size, analysis_background_state), daemon=True)
-        analysis_background_state["thread"] = thread
+        analysis_background_state.set_thread(thread)
         thread.start()
 
-        return no_update, analysis_background_state["status"], no_update
+        return no_update, initial_status, no_update
 
 
     @app.callback(
@@ -211,32 +212,28 @@ def register_callbacks(app, ai_analysis_batch_size: int) -> None:
             return no_update, no_update, no_update
 
         request_id = str((analysis_request or {}).get("requested_at") or "")
-        with analysis_background_state["lock"]:
-            if analysis_background_state["request_id"] != request_id:
-                return no_update, no_update, no_update
+        running, state_request_id, df_json, status = analysis_background_state.get_state()
+        if state_request_id != request_id:
+            return no_update, no_update, no_update
 
-            df_json = analysis_background_state["df_json"]
-            status = analysis_background_state["status"] or {
-                "state": "running",
-                "message": "AI analysis is running...",
-            }
+        status = status or {
+            "state": "running",
+            "message": "AI analysis is running...",
+        }
 
-            if df_json is None:
-                return no_update, status, no_update
+        if df_json is None:
+            return no_update, status, no_update
 
-            if analysis_background_state["running"]:
-                if df_json != current_json:
-                    return df_json, status, no_update
-                return no_update, status, no_update
+        if running:
+            if df_json != current_json:
+                return df_json, status, no_update
+            return no_update, status, no_update
 
-            # Analysis finished; clear the request marker.
-            analysis_background_state["thread"] = None
-            analysis_background_state["request_id"] = None
-            analysis_background_state["status"] = None
-            analysis_background_state["df_json"] = None
-            if df_json == current_json:
-                return no_update, status, None
-            return df_json, status, None
+        # Analysis finished; clear the request marker after delivering final state.
+        analysis_background_state.clear_finished_request()
+        if df_json == current_json:
+            return no_update, status, None
+        return df_json, status, None
 
 
     @app.callback(
@@ -308,12 +305,16 @@ def register_callbacks(app, ai_analysis_batch_size: int) -> None:
     # SLA / aging tracker
     @app.callback(Output("sla-panel", "children"), Input("merged-data-store", "data"))
     def update_sla_panel(json_data):
-        df = pd.read_json(io.StringIO(json_data), orient="split")
-        if not analysis_is_complete(df):
+        df = ensure_ai_analysis_columns(pd.read_json(io.StringIO(json_data), orient="split"))
+        complete_mask = analysis_completion_mask(df)
+        pending_count = int(analysis_pending_mask(df).sum())
+        failed_count = int(analysis_error_mask(df).sum())
+        if not complete_mask.any():
             return html.Div(
-                "SLA tracking will appear after AI analysis completes for all assets.",
+                "SLA tracking will appear after at least one asset completes AI analysis.",
                 style={"fontSize": "15px", "color": COLORS["text_muted"], "lineHeight": "1.5"},
             )
+        df = df.loc[complete_mask].copy()
         today = pd.Timestamp.now().normalize()
 
         first_seen = pd.to_datetime(df.get("scan_date"), errors="coerce")
@@ -323,7 +324,7 @@ def register_callbacks(app, ai_analysis_batch_size: int) -> None:
         status = df.get("issue_status", pd.Series(["Open"] * len(df))).fillna("Open")
         risk = df.get("risk_level", pd.Series(["Low"] * len(df))).fillna("Low")
 
-        sla_days = risk.map({"High": 3, "Medium": 7})
+        sla_days = risk.map({"Critical": 1, "High": 3, "Medium": 7})
         breached = sla_days.notna() & status.isin(["Open", "In Progress"]) & (age_days > sla_days)
 
         breached_count = int(breached.sum())
@@ -379,14 +380,27 @@ def register_callbacks(app, ai_analysis_batch_size: int) -> None:
             },
         )
 
-        return html.Div([
+        children = [
             html.Div(style={"display": "flex", "gap": "12px", "flexWrap": "wrap"}, children=[
                 stat_box("Open", open_count, COLORS["high"] if open_count else COLORS["low"], COLORS["card"]),
                 stat_box("In Progress", in_progress_count, COLORS["medium"] if in_progress_count else COLORS["low"], COLORS["card"]),
                 stat_box("SLA Breached", breached_count, COLORS["high"] if breached_count else COLORS["low"], COLORS["high_bg"] if breached_count else COLORS["low_bg"]),
             ]),
             breached_list,
-        ])
+        ]
+        if pending_count or failed_count:
+            children.append(
+                html.Div(
+                    f"SLA metrics include {len(df)} analyzed row(s). Pending={pending_count}, failed={failed_count}.",
+                    style={
+                        "marginTop": "12px",
+                        "fontSize": "14px",
+                        "color": COLORS["text_muted"],
+                        "lineHeight": "1.45",
+                    },
+                )
+            )
+        return html.Div(children)
     # Filtered tables
     @app.callback(
         Output("asset-table-container", "children"),
@@ -418,7 +432,7 @@ def register_callbacks(app, ai_analysis_batch_size: int) -> None:
                     .str.lower()
                 )
                 rl = rl.str.replace(r"^priority[:\s]+", "", regex=True).str.replace(r"\s*risk\s*$", "", regex=True).str.strip()
-                fallback_map = {"critical": "high", "high": "high", "medium": "medium", "med": "medium", "low": "low", "info": "low", "informational": "low"}
+                fallback_map = {"critical": "critical", "high": "high", "medium": "medium", "med": "medium", "low": "low", "info": "low", "informational": "low"}
                 reassigned = 0
                 for idx, val in rl.items():
                     section = fallback_map.get(val)
@@ -456,7 +470,7 @@ def register_callbacks(app, ai_analysis_batch_size: int) -> None:
         if failed_count:
             children.append(
                 html.Div(
-                    f"{failed_count} row(s) have AI analysis errors (listed in the risk tables below). Retry analysis when ready. Check the terminal output for the full error.",
+                    f"{failed_count} row(s) have AI analysis errors and are listed below. Retry analysis when ready. Check the terminal output for the full error.",
                     style={
                         "padding": "14px 16px",
                         "borderRadius": "4px",
@@ -472,6 +486,17 @@ def register_callbacks(app, ai_analysis_batch_size: int) -> None:
                 )
             )
         sections = []
+        if failed_count:
+            error_config = {
+                "id": "asset-table-errors",
+                "title": "Analysis Errors",
+                "section": "errors",
+                "accent": COLORS["medium"],
+                "background": COLORS["medium_bg"],
+                "empty": "No analysis errors match the current filters.",
+            }
+            sections.append(build_asset_section(error_config, df[failed_mask].copy()))
+
         for config in ASSET_TABLE_CONFIGS:
             section_df = df[(df["asset_section"] == config["section"]) & (~pending_analysis_mask)].copy()
             sections.append(build_asset_section(config, section_df))
@@ -568,22 +593,27 @@ def register_callbacks(app, ai_analysis_batch_size: int) -> None:
         if not user_msg or not user_msg.strip():
             return no_update, no_update, no_update
 
-        df = pd.read_json(io.StringIO(json_data), orient="split")
+        df = ensure_ai_analysis_columns(pd.read_json(io.StringIO(json_data), orient="split"))
         current_msgs = current_msgs or []
         history = history or []
+        complete_mask = analysis_completion_mask(df)
+        pending_count = int(analysis_pending_mask(df).sum())
+        failed_count = int(analysis_error_mask(df).sum())
 
-        if not analysis_is_complete(df):
+        if not complete_mask.any():
             user_bubble = html.Div(user_msg, style={
                 "background": COLORS["primary"], "color": "white", "padding": "12px 14px",
                 "borderRadius": "4px", "fontSize": "15px", "alignSelf": "flex-end", "maxWidth": "85%"
             })
-            bot_bubble = html.Div("AI dashboard analysis is still running. Please try again after it finishes.", style={
+            bot_bubble = html.Div("AI dashboard analysis has not completed for any assets yet. Please try again after the first asset finishes.", style={
                 "background": COLORS["primary_light"], "padding": "12px 14px",
                 "borderRadius": "4px", "fontSize": "15px",
                 "color": COLORS["text"], "maxWidth": "85%", "border": f"1px solid {COLORS['border']}",
             })
             return current_msgs + [user_bubble, bot_bubble], "", history
 
+        df = df.loc[complete_mask].copy()
+        c = int((df.get("risk_level") == "Critical").sum()) if "risk_level" in df.columns else 0
         h = int((df.get("risk_level") == "High").sum()) if "risk_level" in df.columns else 0
         m = int((df.get("risk_level") == "Medium").sum()) if "risk_level" in df.columns else 0
         lo = int((df.get("risk_level") == "Low").sum()) if "risk_level" in df.columns else 0
@@ -598,7 +628,8 @@ def register_callbacks(app, ai_analysis_batch_size: int) -> None:
             )
 
         context_text = (
-            f"Summary: total_assets={len(df)}, high={h}, medium={m}, low={lo}.\n"
+            f"Summary: analyzed_assets={len(df)}, critical={c}, high={h}, medium={m}, low={lo}. "
+            f"Pending assets excluded={pending_count}; failed analysis rows excluded={failed_count}.\n"
             f"Top assets by risk_score:\n" + "\n".join(lines)
         )
 

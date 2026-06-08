@@ -33,6 +33,19 @@ class AnalysisBackgroundState:
             self.df_json = df_json
             self.status = status
 
+    def set_thread(self, thread: threading.Thread) -> None:
+        """Atomically store the worker thread handle."""
+        with self.lock:
+            self.thread = thread
+
+    def clear_finished_request(self) -> None:
+        """Clear final state after the Dash polling callback has consumed it."""
+        with self.lock:
+            self.thread = None
+            self.request_id = None
+            self.status = None
+            self.df_json = None
+
     def update_progress(self, df_json: str, status: dict) -> None:
         """Atomically update progress during analysis."""
         with self.lock:
@@ -124,6 +137,7 @@ def run_analysis_worker_thread(
         state: Shared AnalysisBackgroundState object
     """
     client = DGXSparkServerClient()
+    total_rows = len(df)
     total_completed = 0
     total_failed = 0
     batch_number = 0
@@ -228,12 +242,24 @@ def run_analysis_worker_thread(
             )
             completed_assets.append(asset_label)
             unresolved_indices.remove(matched_idx)
+            total_completed += 1
+
+            pending_left = int(analysis_pending_mask(df).sum())
+            state.update_progress(
+                df.to_json(date_format="iso", orient="split"),
+                {
+                    "state": "running",
+                    "message": (
+                        f"Analyzed {total_completed} of {total_rows} row(s). "
+                        f"{pending_left} row(s) remaining."
+                    ),
+                },
+            )
 
         # Mark unresolved rows as errors
         for idx in unresolved_indices:
             df.at[idx, "ai_analysis_error"] = "No valid AI analysis returned for this row in the current batch."
 
-        total_completed += len(completed_assets)
         total_failed += len(unresolved_indices)
         pending_left = int(analysis_pending_mask(df).sum())
 
@@ -242,7 +268,8 @@ def run_analysis_worker_thread(
             {
                 "state": "running",
                 "message": (
-                    f"Processed batch {batch_number}. {pending_left} row(s) remaining."
+                    f"Processed batch {batch_number}. Analyzed {total_completed} of {total_rows} row(s). "
+                    f"{pending_left} row(s) remaining."
                 ),
             },
         )
