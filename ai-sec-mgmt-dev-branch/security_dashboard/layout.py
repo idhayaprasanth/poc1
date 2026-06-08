@@ -4,7 +4,10 @@ from dash import dcc, html
 
 
 def create_layout(df_base, analysis_status_initial=None):
-    from security_dashboard.dashboard import COLORS, card_style, close_svg
+    from security_dashboard.theme import CARD_STYLE, COLORS, get_close_svg
+
+    card_style = CARD_STYLE
+    close_svg = get_close_svg()
 
     if analysis_status_initial is None:
         analysis_status_initial = {"state": "pending", "message": ""}
