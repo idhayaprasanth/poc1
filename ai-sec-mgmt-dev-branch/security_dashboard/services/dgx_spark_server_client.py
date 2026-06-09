@@ -331,20 +331,52 @@ class DGXSparkServerClient:
         #     },
         # }
         payload = {
-        "model": "meta-llama/Llama-3.1-8B-Instruct",
-        "messages": [
-            {
-                "role": "system",
-                "content": system_prompt
-            },
-            {
-                "role": "user",
-                "content": user_prompt
-            }
-        ],
-        "max_tokens": 300,
-        "temperature": 0.1
-    }
+            "model": "meta-llama/Llama-3.1-8B-Instruct",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": user_prompt
+                }
+            ],
+            "max_tokens": 300,
+            "temperature": 0.1
+        }
+        
+        def sanitize_payload(val):
+            import math
+            if isinstance(val, dict):
+                cleaned = {}
+                for k, v in val.items():
+                    v_clean = sanitize_payload(v)
+                    if v_clean is not None:
+                        if isinstance(v_clean, str) and not v_clean.strip():
+                            continue
+                        if isinstance(v_clean, (list, dict)) and not v_clean:
+                            continue
+                        cleaned[k] = v_clean
+                return cleaned
+            elif isinstance(val, list):
+                cleaned_list = []
+                for v in val:
+                    v_clean = sanitize_payload(v)
+                    if v_clean is not None:
+                        cleaned_list.append(v_clean)
+                return cleaned_list
+            elif val is None:
+                return None
+            elif isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+                return None
+            elif type(val).__name__ in ("NAType", "NaTType"):
+                return None
+            elif isinstance(val, str) and val.strip().lower() in ("nan", "nat"):
+                return None
+            return val
+
+        payload = sanitize_payload(payload)
 
         try:
             response = requests.post(

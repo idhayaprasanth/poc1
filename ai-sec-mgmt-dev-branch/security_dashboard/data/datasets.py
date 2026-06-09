@@ -263,6 +263,20 @@ def load_dynamic_datasets():
     return tenable_dfs, splunk_dfs
 
 
+def sanitize_and_compact_record(record: dict) -> dict:
+    import math
+    cleaned = {}
+    for k, v in record.items():
+        if pd.notna(v) and v is not None:
+            if isinstance(v, float):
+                if math.isnan(v) or math.isinf(v):
+                    continue
+            val_str = str(v).strip()
+            if val_str != "" and val_str.lower() != "nan" and val_str.lower() != "nat":
+                cleaned[k] = v
+    return cleaned
+
+
 def build_merged_dataset() -> pd.DataFrame:
     """Load Tenable and Splunk raw CSV data, group by hostname, and merge."""
     tenable_dfs, splunk_dfs = load_dynamic_datasets()
@@ -285,7 +299,7 @@ def build_merged_dataset() -> pd.DataFrame:
             if host:
                 if host not in tenable_by_host:
                     tenable_by_host[host] = []
-                tenable_by_host[host].append(row.to_dict())
+                tenable_by_host[host].append(sanitize_and_compact_record(row.to_dict()))
 
     splunk_by_host = {}
     for path, df in splunk_dfs:
@@ -297,7 +311,7 @@ def build_merged_dataset() -> pd.DataFrame:
             if host:
                 if host not in splunk_by_host:
                     splunk_by_host[host] = []
-                splunk_by_host[host].append(row.to_dict())
+                splunk_by_host[host].append(sanitize_and_compact_record(row.to_dict()))
 
     all_hosts = set(tenable_by_host.keys()).union(set(splunk_by_host.keys()))
     
