@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 
 from security_dashboard.data.datasets import AI_ANALYSIS_COLUMNS, ensure_ai_analysis_columns
+from security_dashboard.data.datasets import normalize_ai_asset_rows
 from security_dashboard.filters import analysis_pending_mask, analysis_error_mask, analysis_completion_mask
 from security_dashboard.services.dgx_spark_server_client import DGXSparkServerClient
 
@@ -257,3 +258,50 @@ def run_analysis_worker_thread(
         logger.info("AI analysis finished. Completed rows sample: %s", completed_rows.to_dict("records"))
     except Exception:
         logger.debug("Unable to log completed rows sample after analysis.")
+
+
+def run_dataset_analysis_worker_thread(
+    request_id: str,
+    tenable_records: list[dict],
+    splunk_records: list[dict],
+    state: AnalysisBackgroundState,
+) -> None:
+    """Run one dataset-level AI correlation request for uploaded Tenable and Splunk rows."""
+    client = DGXSparkServerClient()
+    total_source_rows = len(tenable_records) + len(splunk_records)
+    state.update_progress(
+        None,
+        {
+            "state": "running",
+            "message": f"Correlating {total_source_rows} uploaded row(s) across Tenable and Splunk...",
+        },
+    )
+
+    try:
+        result = client.generate_uploaded_dataset_analysis(
+            tenable_records=tenable_records,
+            splunk_records=splunk_records,
+        )
+        assets = result.get("assets", []) if isinstance(result, dict) else []
+        df = normalize_ai_asset_rows(assets)
+        if df.empty:
+            status = {
+                "state": "warning",
+                "message": "AI analysis completed, but no analyzed assets were returned.",
+            }
+        else:
+            status = {
+                "state": "complete",
+                "message": f"AI analysis completed for {len(df)} correlated asset row(s).",
+            }
+        state.finish_analysis(df.to_json(date_format="iso", orient="split"), status)
+    except Exception as exc:
+        logger.exception("Uploaded dataset analysis failed")
+        df = normalize_ai_asset_rows([])
+        state.finish_analysis(
+            df.to_json(date_format="iso", orient="split"),
+            {
+                "state": "error",
+                "message": f"AI analysis failed: {exc}",
+            },
+        )

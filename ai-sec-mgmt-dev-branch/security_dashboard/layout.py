@@ -1,6 +1,100 @@
 """Dash layout for the security dashboard."""
 
-from dash import dcc, html
+from dash import dash_table, dcc, html
+
+
+def _upload_panel(source_label: str, upload_id: str, preview_id: str, button_id: str, status_id: str):
+    from security_dashboard.theme import CARD_STYLE, COLORS
+
+    return html.Div(
+        style={**CARD_STYLE, "marginBottom": "24px"},
+        children=[
+            html.H2(
+                f"Upload {source_label} Data",
+                style={"fontSize": "20px", "fontWeight": "700", "margin": "0 0 12px", "color": COLORS["text"]},
+            ),
+            dcc.Upload(
+                id=upload_id,
+                multiple=False,
+                children=html.Div(
+                    [html.Strong("Choose CSV file"), html.Span(" or drag it here", style={"marginLeft": "4px"})],
+                    style={
+                        "border": f"2px dashed {COLORS['border']}",
+                        "borderRadius": "4px",
+                        "padding": "28px",
+                        "textAlign": "center",
+                        "background": COLORS["bg"],
+                        "cursor": "pointer",
+                        "fontSize": "15px",
+                        "color": COLORS["text"],
+                    },
+                ),
+            ),
+            html.Div(
+                style={
+                    "display": "flex",
+                    "justifyContent": "space-between",
+                    "alignItems": "center",
+                    "marginTop": "16px",
+                    "gap": "12px",
+                },
+                children=[
+                    html.Div(id=status_id, style={"flex": "1"}),
+                    html.Button(
+                        "Insert Data",
+                        id=button_id,
+                        n_clicks=0,
+                        style={
+                            "background": COLORS["primary"],
+                            "color": "white",
+                            "border": "none",
+                            "borderRadius": "4px",
+                            "padding": "10px 20px",
+                            "cursor": "pointer",
+                            "fontSize": "15px",
+                            "fontWeight": "700",
+                            "fontFamily": "inherit",
+                            "display": "none",
+                        },
+                    ),
+                ],
+            ),
+            html.Div(id=preview_id, style={"marginTop": "16px"}),
+        ],
+    )
+
+
+def build_raw_preview_table(table_id: str, df):
+    from security_dashboard.theme import COLORS
+
+    preview = df.copy().astype("object").where(df.notna(), "")
+    return dash_table.DataTable(
+        id=table_id,
+        columns=[{"name": str(column), "id": str(column)} for column in preview.columns],
+        data=preview.to_dict("records"),
+        page_size=10,
+        style_table={"overflowX": "auto", "maxHeight": "420px", "overflowY": "auto"},
+        style_header={
+            "backgroundColor": COLORS["bg"],
+            "fontWeight": "700",
+            "fontSize": "12px",
+            "textTransform": "uppercase",
+            "color": COLORS["text_muted"],
+            "borderBottom": f"2px solid {COLORS['border']}",
+        },
+        style_cell={
+            "fontSize": "14px",
+            "padding": "10px 12px",
+            "border": "none",
+            "borderBottom": f"1px solid {COLORS['border']}",
+            "textAlign": "left",
+            "maxWidth": "240px",
+            "overflow": "hidden",
+            "textOverflow": "ellipsis",
+            "fontFamily": '"Source Sans 3", "Source Sans Pro", sans-serif',
+        },
+        style_as_list_view=True,
+    )
 
 
 def create_layout(df_base, analysis_status_initial=None):
@@ -21,6 +115,9 @@ def create_layout(df_base, analysis_status_initial=None):
         },
         children=[
             dcc.Store(id="merged-data-store", data=df_base.to_json(date_format="iso", orient="split")),
+            dcc.Store(id="onboarding-step-store", data="tenable_upload"),
+            dcc.Store(id="tenable-raw-store", data=None),
+            dcc.Store(id="splunk-raw-store", data=None),
             dcc.Store(id="analysis-request-store", data=None),
             dcc.Store(id="analysis-status-store", data=analysis_status_initial),
             dcc.Store(id="selected-asset-store", data=None),
@@ -88,7 +185,7 @@ def create_layout(df_base, analysis_status_initial=None):
                                         },
                                     ),
                                     html.P(
-                                        "AI-driven threat analysis and prioritization across Tenable, Defender, and Splunk",
+                                        "AI-driven threat analysis and prioritization across uploaded Tenable and Splunk data",
                                         style={
                                             "fontSize": "15px",
                                             "color": COLORS["text_muted"],
@@ -110,6 +207,11 @@ def create_layout(df_base, analysis_status_initial=None):
                 className="dash-uswds-main",
                 style={"maxWidth": "87.5rem", "margin": "0 auto", "padding": "24px 24px 48px"},
                 children=[
+                    html.Div(id="onboarding-container"),
+                    html.Div(
+                        id="dashboard-content",
+                        style={"display": "none"},
+                        children=[
                     html.Div(
                         id="kpi-cards",
                         style={"display": "flex", "gap": "20px", "marginBottom": "28px", "flexWrap": "wrap"},
@@ -446,6 +548,8 @@ def create_layout(df_base, analysis_status_initial=None):
                         ],
                     ),
                     dcc.Download(id="download-csv"),
+                        ],
+                    ),
                 ],
             ),
             html.Div(

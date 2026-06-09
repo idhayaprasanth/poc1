@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import hashlib
+import base64
+import io
 import json
 import re
 from pathlib import Path
@@ -285,6 +287,111 @@ def clear_ai_analysis_columns(df: pd.DataFrame) -> pd.DataFrame:
     df["ai_analysis_complete"] = False
     df["ai_analysis_error"] = pd.Series([pd.NA] * len(df), dtype="object")
     return df
+
+
+def empty_dashboard_dataframe() -> pd.DataFrame:
+    """Return an empty dashboard-compatible dataframe for upload-first startup."""
+    base_columns = [
+        "asset_id",
+        "asset_name",
+        "vuln_name",
+        "vuln_severity",
+        "vuln_description",
+        "vuln_fix",
+        "issue_status",
+        "scan_date",
+        "anomaly_event",
+        "source_anomaly_score",
+        "anomaly_explanation",
+    ]
+    return ensure_ai_analysis_columns(pd.DataFrame(columns=base_columns))
+
+
+def parse_uploaded_csv(contents: str, filename: str | None = None) -> pd.DataFrame:
+    """Parse a Dash Upload CSV payload without applying source-specific schema rules."""
+    if not contents or "," not in contents:
+        raise ValueError("No uploaded CSV content was provided.")
+
+    if filename and not str(filename).lower().endswith(".csv"):
+        raise ValueError("Only CSV uploads are supported.")
+
+    try:
+        _, content_string = contents.split(",", 1)
+        decoded = base64.b64decode(content_string)
+    except Exception as exc:
+        raise ValueError("Unable to decode the uploaded CSV file.") from exc
+
+    try:
+        df = pd.read_csv(io.BytesIO(decoded))
+    except Exception as exc:
+        raise ValueError("Unable to parse the uploaded CSV file.") from exc
+
+    return df
+
+
+def raw_records_from_json(raw_json: str | None) -> list[dict]:
+    if not raw_json:
+        return []
+    df = pd.read_json(io.StringIO(raw_json), orient="split")
+    records = df.where(pd.notna(df), None).to_dict("records")
+    return records
+
+
+def normalize_ai_asset_rows(rows: list[dict]) -> pd.DataFrame:
+    """Convert AI-returned asset records into the dashboard dataframe contract."""
+    df = pd.DataFrame(rows or [])
+    if df.empty:
+        df = empty_dashboard_dataframe()
+    else:
+        base_columns = [
+            "asset_id",
+            "asset_name",
+            "vuln_name",
+            "vuln_severity",
+            "vuln_description",
+            "vuln_fix",
+            "issue_status",
+            "scan_date",
+            "anomaly_event",
+            "source_anomaly_score",
+            "anomaly_explanation",
+        ]
+        for col in base_columns:
+            if col not in df.columns:
+                df[col] = pd.Series([pd.NA] * len(df), dtype="object")
+            else:
+                df[col] = df[col].where(pd.notna(df[col]), pd.NA)
+
+        if "issue_status" not in df.columns or df["issue_status"].isna().all():
+            df["issue_status"] = "Open"
+        else:
+            df["issue_status"] = df["issue_status"].fillna("Open")
+
+        if "scan_date" in df.columns:
+            df["scan_date"] = pd.to_datetime(df["scan_date"], errors="coerce")
+            df["scan_date"] = df["scan_date"].fillna(pd.NaT)
+        else:
+            df["scan_date"] = pd.NaT
+
+        if "source_anomaly_score" in df.columns:
+            df["source_anomaly_score"] = pd.to_numeric(df["source_anomaly_score"], errors="coerce").astype("Float64")
+        else:
+            df["source_anomaly_score"] = pd.Series([pd.NA] * len(df), dtype="Float64")
+
+        df = ensure_ai_analysis_columns(df)
+
+    for idx in df.index:
+        val_id = df.at[idx, "asset_id"]
+        if pd.isna(val_id) or not str(val_id).strip():
+            df.at[idx, "asset_id"] = f"ASSET-{str(idx + 1).zfill(3)}"
+        
+        val_name = df.at[idx, "asset_name"]
+        if pd.isna(val_name) or not str(val_name).strip():
+            df.at[idx, "asset_name"] = df.at[idx, "asset_id"]
+
+    df["ai_analysis_complete"] = True
+    df["ai_analysis_error"] = pd.Series([pd.NA] * len(df), dtype="object")
+    return df.reset_index(drop=True)
 
 
 def _read_dataset(name: str) -> pd.DataFrame:

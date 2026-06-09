@@ -67,6 +67,46 @@ ANALYSIS_SYSTEM_PROMPT = (
     '  "ai_summary": "<2-3 sentence executive summary of the asset security posture and recommended next steps>"\n'
     "}"
 )
+DATASET_ANALYSIS_SYSTEM_PROMPT = (
+    "You are a cybersecurity analyst. Correlate uploaded Tenable and Splunk CSV rows into "
+    "dashboard-ready security asset records. Return ONLY a valid JSON object - no markdown, "
+    "no code fences, no preamble, and no repeated response.\n\n"
+    "Required JSON structure:\n"
+    "{\n"
+    '  "assets": [\n'
+    "    {\n"
+    '      "asset_id": "<id or generated stable id>",\n'
+    '      "asset_name": "<hostname or asset label>",\n'
+    '      "vuln_name": "<Tenable vulnerability name if available>",\n'
+    '      "vuln_severity": "<Tenable severity if available>",\n'
+    '      "vuln_description": "<description if available>",\n'
+    '      "vuln_fix": "<Tenable solution if available>",\n'
+    '      "anomaly_event": "<Splunk rule/event if available>",\n'
+    '      "source_anomaly_score": <0-10 float or null>,\n'
+    '      "anomaly_explanation": "<Splunk recommendation if available>",\n'
+    '      "issue_status": "<Open|In Progress|Resolved>",\n'
+    '      "scan_date": "<ISO date if available>",\n'
+    '      "risk_score": <0-10 float>,\n'
+    '      "risk_level": "<Critical|High|Medium|Low>",\n'
+    '      "asset_bucket": "<Critical Risk|High Risk|Medium Risk|Low Risk>",\n'
+    '      "overall_priority_level": "<Critical|High|Medium|Low>",\n'
+    '      "anomaly_score": <0-10 float or null>,\n'
+    '      "priority": "<Immediate|High|Planned|Monitor or similar>",\n'
+    '      "ai_reason": "<2-3 sentence summary>",\n'
+    '      "remediation": "<concise action>",\n'
+    '      "tenable_remediation": "<concise action or null>",\n'
+    '      "splunk_remediation": "<concise action or null>",\n'
+    '      "tenable_risk_score": <0-10 float or null>,\n'
+    '      "tenable_priority_level": "<Critical|High|Medium|Low or null>",\n'
+    '      "splunk_risk_score": <0-10 float or null>,\n'
+    '      "splunk_priority_level": "<Critical|High|Medium|Low or null>",\n'
+    '      "ai_analysis_source": "dgx_spark_server"\n'
+    "    }\n"
+    "  ]\n"
+    "}\n\n"
+    "Correlate assets using the strongest identifiers present in the raw rows, such as hostname, "
+    "asset name, asset id, IP address, or other shared identifiers. Do not require a fixed schema."
+)
 SECURITY_KEYWORDS = tuple(
     keyword.lower()
     for keyword in [
@@ -239,6 +279,15 @@ class DGXSparkServerClient:
             f"collected from four security tools:\n\n"
             f"{json.dumps(payload, indent=2)}\n\n"
             "Return ONLY the JSON object once. No markdown fences, no repetition, no extra text."
+        )
+
+    @staticmethod
+    def _build_uploaded_dataset_prompt(payload: dict) -> str:
+        return (
+            "Analyze and correlate these uploaded source datasets. The CSV schemas may vary; "
+            "use the raw columns as evidence and return dashboard-ready asset rows.\n\n"
+            f"{json.dumps(payload, indent=2, default=str)}\n\n"
+            "Return ONLY the JSON object once."
         )
 
     def log_raw_response(self, *, asset_id: str, raw_text: str, status: str = "OK") -> None:
@@ -583,6 +632,49 @@ class DGXSparkServerClient:
                 except Exception as exc:
                     logging.exception("Asset analysis failed for a record during parallel processing")
         return {"assets": assets, "insights": {}}
+
+    def generate_uploaded_dataset_analysis(self, *, tenable_records: list[dict], splunk_records: list[dict]) -> dict:
+        if not self.enabled():
+            raise DGXSparkServerInvocationError(
+                "Model endpoint is not configured. Set DGX_SPARK_SERVER_ENDPOINT_NAME or DGX_SPARK_SERVER_ENDPOINT_URL."
+            )
+
+        payload = {
+            "sources": {
+                "tenable": {"rows": tenable_records or []},
+                "splunk": {"rows": splunk_records or []},
+            }
+        }
+        prompt = self._build_uploaded_dataset_prompt(payload)
+        raw_text = None
+        try:
+            raw_text = self._invoke_endpoint(
+                system_prompt=DATASET_ANALYSIS_SYSTEM_PROMPT,
+                user_prompt=prompt,
+                expect_json=True,
+            )
+            parsed = self._extract_analysis_json(raw_text)
+            self.log_raw_response(asset_id="uploaded-datasets", raw_text=raw_text, status="OK")
+        except DGXSparkServerInvocationError:
+            self.log_raw_response(
+                asset_id="uploaded-datasets",
+                raw_text=raw_text if raw_text is not None else "[No response captured]",
+                status="dgx_ERROR",
+            )
+            raise
+        except (ValueError, json.JSONDecodeError):
+            self.log_raw_response(
+                asset_id="uploaded-datasets",
+                raw_text=raw_text if raw_text is not None else "[No response captured]",
+                status="PARSE_ERROR",
+            )
+            raise
+
+        if isinstance(parsed, dict) and isinstance(parsed.get("assets"), list):
+            return parsed
+        if isinstance(parsed, list):
+            return {"assets": parsed}
+        raise ValueError("Dataset analysis response must contain an assets array.")
 
     def generate_security_answer(
         self,

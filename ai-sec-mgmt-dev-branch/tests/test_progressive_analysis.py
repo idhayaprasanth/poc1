@@ -146,5 +146,156 @@ class ProgressiveAnalysisTests(unittest.TestCase):
         self.assertNotIn("remediation", df_renamed.columns)
 
 
+class MockApp:
+    def __init__(self):
+        self.callbacks = {}
+
+    def callback(self, *args, **kwargs):
+        def decorator(func):
+            self.callbacks[func.__name__] = func
+            return func
+        return decorator
+
+
+class OnboardingAndDatasetAnalysisTests(unittest.TestCase):
+    def test_csv_parsing_valid(self):
+        import base64
+        from security_dashboard.data.datasets import parse_uploaded_csv
+        valid_csv = "col1,col2\nval1,val2\n"
+        contents = "data:text/csv;base64," + base64.b64encode(valid_csv.encode()).decode()
+        df = parse_uploaded_csv(contents, "tenable.csv")
+        self.assertEqual(list(df.columns), ["col1", "col2"])
+        self.assertEqual(len(df), 1)
+
+    def test_csv_parsing_malformed(self):
+        from security_dashboard.data.datasets import parse_uploaded_csv
+        with self.assertRaises(ValueError):
+            parse_uploaded_csv("invalid_base64_data", "tenable.csv")
+        with self.assertRaises(ValueError):
+            parse_uploaded_csv("data:text/csv;base64,invalid!!!", "tenable.csv")
+
+    def test_onboarding_transitions(self):
+        from security_dashboard.callbacks.onboarding import register_onboarding_callbacks
+        
+        app = MockApp()
+        register_onboarding_callbacks(app)
+        
+        render_onboarding = app.callbacks["render_onboarding"]
+        insert_tenable = app.callbacks["insert_tenable"]
+        insert_splunk = app.callbacks["insert_splunk"]
+
+        # Initial transition: tenable_upload
+        res, style = render_onboarding(None, None, None, None)
+        self.assertEqual(style, {"display": "none"})
+        self.assertIn("Tenable", str(res))
+
+        # Insert Tenable: advances to splunk_upload
+        tenable_json = '{"columns":["col"],"index":[0],"data":[["val"]]}'
+        step = insert_tenable(1, tenable_json)
+        self.assertEqual(step, "splunk_upload")
+
+        # Step splunk_upload: shows splunk upload panel
+        res, style = render_onboarding("splunk_upload", None, tenable_json, None)
+        self.assertEqual(style, {"display": "none"})
+        self.assertIn("Splunk", str(res))
+
+        # Insert Splunk: advances to ready_to_analyze
+        splunk_json = '{"columns":["col"],"index":[0],"data":[["val"]]}'
+        step = insert_splunk(1, splunk_json)
+        self.assertEqual(step, "ready_to_analyze")
+
+        # Step ready_to_analyze: shows start analysis button
+        res, style = render_onboarding("ready_to_analyze", None, tenable_json, splunk_json)
+        self.assertEqual(style, {"display": "none"})
+        self.assertIn("Start Analysis", str(res))
+
+    def test_parse_upload_style(self):
+        import base64
+        from security_dashboard.callbacks.onboarding import register_onboarding_callbacks
+        
+        app = MockApp()
+        register_onboarding_callbacks(app)
+        parse_tenable_upload = app.callbacks["parse_tenable_upload"]
+
+        # Parse None: button should be hidden
+        res_data, res_status, res_preview, res_style = parse_tenable_upload(None, None)
+        self.assertEqual(res_style, {"display": "none"})
+
+        # Parse Valid CSV: button should be visible (display: block)
+        valid_csv = "col1,col2\nval1,val2\n"
+        contents = "data:text/csv;base64," + base64.b64encode(valid_csv.encode()).decode()
+        res_data, res_status, res_preview, res_style = parse_tenable_upload(contents, "tenable.csv")
+        self.assertEqual(res_style["display"], "block")
+
+        # Parse Malformed CSV: button should be hidden
+        res_data, res_status, res_preview, res_style = parse_tenable_upload("invalid_csv", "tenable.csv")
+        self.assertEqual(res_style, {"display": "none"})
+
+    def test_dataset_level_analysis(self):
+        from security_dashboard.analysis import run_dataset_analysis_worker_thread, AnalysisBackgroundState
+        
+        class FakeDGXClientDataset:
+            def generate_uploaded_dataset_analysis(self, tenable_records, splunk_records):
+                return {
+                    "assets": [
+                        {
+                            "asset_id": "ASSET-001",
+                            "asset_name": "host-001",
+                            "risk_score": 8.5,
+                            "risk_level": "High",
+                            "ai_reason": "High risk detected",
+                            "remediation": "Update OS",
+                        }
+                    ]
+                }
+
+        state = AnalysisBackgroundState()
+        
+        with patch("security_dashboard.analysis.DGXSparkServerClient", return_value=FakeDGXClientDataset()):
+            run_dataset_analysis_worker_thread(
+                "req-1",
+                [{"id": 1}],
+                [{"id": 2}],
+                state
+            )
+        
+        running, req_id, df_json, status = state.get_state()
+        self.assertFalse(running)
+        self.assertEqual(req_id, "req-1")
+        self.assertEqual(status["state"], "complete")
+        
+        df = pd.read_json(io.StringIO(df_json), orient="split")
+        self.assertEqual(len(df), 1)
+        self.assertEqual(df.loc[0, "asset_id"], "ASSET-001")
+        self.assertEqual(df.loc[0, "risk_score"], 8.5)
+        self.assertEqual(df.loc[0, "risk_level"], "High")
+
+    def test_regression_empty_dashboard_kpis(self):
+        from security_dashboard.callbacks.kpis import register_kpi_callbacks
+        from security_dashboard.data.datasets import empty_dashboard_dataframe
+        
+        app = MockApp()
+        register_kpi_callbacks(app)
+        update_kpis = app.callbacks["update_kpis"]
+        
+        empty_json = empty_dashboard_dataframe().to_json(date_format="iso", orient="split")
+        kpis = update_kpis(empty_json)
+        self.assertEqual(len(kpis), 5)
+        total_assets_kpi = kpis[0]
+        self.assertIn("Total Assets", str(total_assets_kpi))
+
+    def test_regression_empty_dashboard_table(self):
+        from security_dashboard.callbacks.assets import register_asset_callbacks
+        from security_dashboard.data.datasets import empty_dashboard_dataframe
+        
+        app = MockApp()
+        register_asset_callbacks(app)
+        update_table = app.callbacks["update_table"]
+        
+        empty_json = empty_dashboard_dataframe().to_json(date_format="iso", orient="split")
+        table_container = update_table(empty_json, None, "All", "default", None, None)
+        self.assertIn("No analyzed assets returned", str(table_container))
+
+
 if __name__ == "__main__":
     unittest.main()

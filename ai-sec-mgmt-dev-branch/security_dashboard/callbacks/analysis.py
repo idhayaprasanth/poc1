@@ -5,10 +5,12 @@ from datetime import datetime
 import pandas as pd
 from dash import html, Input, Output, State, no_update
 
-from security_dashboard.analysis import run_analysis_worker_thread
+from security_dashboard.analysis import run_dataset_analysis_worker_thread
 from security_dashboard.theme import COLORS
-from security_dashboard.filters import analysis_pending_mask, analysis_error_mask
-from security_dashboard.data.datasets import ensure_ai_analysis_columns, clear_ai_analysis_columns
+from security_dashboard.data.datasets import (
+    empty_dashboard_dataframe,
+    raw_records_from_json,
+)
 from security_dashboard.services.dgx_spark_server_client import DGXSparkServerClient
 from .shared import analysis_background_state
 
@@ -18,38 +20,41 @@ def register_analysis_callbacks(app, ai_analysis_batch_size: int) -> None:
     @app.callback(
         Output("analysis-request-store", "data"),
         Output("analysis-status-store", "data", allow_duplicate=True),
-        Input("merged-data-store", "data"),
-        Input("analysis-request-store", "data"),
-        prevent_initial_call="initial_duplicate",
+        Output("onboarding-step-store", "data", allow_duplicate=True),
+        Input("start-analysis-btn", "n_clicks"),
+        State("tenable-raw-store", "data"),
+        State("splunk-raw-store", "data"),
+        State("analysis-request-store", "data"),
+        prevent_initial_call=True,
     )
-    def queue_dashboard_analysis(json_data, current_request):
-        df = ensure_ai_analysis_columns(pd.read_json(io.StringIO(json_data), orient="split"))
+    def queue_dashboard_analysis(start_clicks, tenable_json, splunk_json, current_request):
+        triggered = getattr(__import__("dash").ctx, "triggered_id", None)
+        if triggered != "start-analysis-btn" or not start_clicks:
+            return no_update, no_update, no_update
+        if current_request:
+            return no_update, no_update, no_update
+
+        tenable_records = raw_records_from_json(tenable_json)
+        splunk_records = raw_records_from_json(splunk_json)
+        if not tenable_records or not splunk_records:
+            return no_update, {
+                "state": "error",
+                "message": "Upload and insert both Tenable and Splunk CSV data before starting analysis.",
+            }, no_update
+
         client = DGXSparkServerClient()
-        pending = analysis_pending_mask(df)
-        failed_count = int(analysis_error_mask(df).sum())
-        if pending.any() and not client.enabled():
+        if not client.enabled():
             return no_update, {
                 "state": "error",
                 "message": "DGX Spark Server endpoint is not configured. Set DGX_SPARK_SERVER_ENDPOINT_NAME before running AI analysis.",
-            }
-        if not pending.any():
-            if failed_count:
-                return no_update, {"state": "warning", "message": f"{failed_count} row(s) failed AI analysis and were skipped. Check the terminal logs."}
-            return no_update, {"state": "complete", "message": "AI analysis is up to date."}
-        if current_request:
-            return no_update, no_update
+            }, no_update
 
-        pending_assets = df.loc[pending, "asset_name"].fillna(df.loc[pending, "asset_id"]).tolist()
-        if len(pending_assets) > 1:
-            message = (
-                f"Running AI analysis in batches of {ai_analysis_batch_size} row(s). "
-                f"{len(pending_assets)} row(s) pending."
-            )
-        else:
-            message = f"Running AI analysis for {pending_assets[0]}..."
+        total_rows = len(tenable_records) + len(splunk_records)
+        message = f"Queued AI correlation for {total_rows} uploaded row(s)."
         return (
-            {"requested_at": datetime.now().isoformat(), "pending_count": int(pending.sum())},
+            {"requested_at": datetime.now().isoformat(), "source_row_count": total_rows},
             {"state": "running", "message": message},
+            "analyzing",
         )
 
     @app.callback(
@@ -57,10 +62,11 @@ def register_analysis_callbacks(app, ai_analysis_batch_size: int) -> None:
         Output("analysis-status-store", "data", allow_duplicate=True),
         Output("analysis-request-store", "data", allow_duplicate=True),
         Input("analysis-request-store", "data"),
-        State("merged-data-store", "data"),
+        State("tenable-raw-store", "data"),
+        State("splunk-raw-store", "data"),
         prevent_initial_call=True,
     )
-    def run_dashboard_analysis(analysis_request, json_data):
+    def run_dashboard_analysis(analysis_request, tenable_json, splunk_json):
         if not analysis_request:
             return no_update, no_update, no_update
 
@@ -70,17 +76,6 @@ def register_analysis_callbacks(app, ai_analysis_batch_size: int) -> None:
                 "state": "running",
                 "message": "AI analysis is already running. Progress updates will appear shortly.",
             }, no_update
-
-        df = ensure_ai_analysis_columns(pd.read_json(io.StringIO(json_data), orient="split"))
-        pending = analysis_pending_mask(df)
-        if not pending.any():
-            failed_count = int(analysis_error_mask(df).sum())
-            if failed_count:
-                return no_update, {
-                    "state": "warning",
-                    "message": f"{failed_count} row(s) failed AI analysis and were skipped. Check the terminal logs.",
-                }, None
-            return no_update, {"state": "complete", "message": "AI analysis is up to date."}, None
 
         client = DGXSparkServerClient()
         if not client.enabled():
@@ -93,23 +88,29 @@ def register_analysis_callbacks(app, ai_analysis_batch_size: int) -> None:
                 None,
             )
 
+        tenable_records = raw_records_from_json(tenable_json)
+        splunk_records = raw_records_from_json(splunk_json)
+        if not tenable_records or not splunk_records:
+            return (
+                empty_dashboard_dataframe().to_json(date_format="iso", orient="split"),
+                {"state": "error", "message": "Both uploaded datasets are required before analysis can run."},
+                None,
+            )
+
         request_id = str(analysis_request.get("requested_at") or datetime.now().isoformat())
         initial_status = {
             "state": "running",
-            "message": (
-                f"Running AI analysis in batches of {ai_analysis_batch_size} row(s). "
-                f"{int(pending.sum())} row(s) pending."
-            ),
+            "message": "Running AI correlation across uploaded Tenable and Splunk datasets...",
         }
         analysis_background_state.start_analysis(
             request_id,
-            df.to_json(date_format="iso", orient="split"),
+            empty_dashboard_dataframe().to_json(date_format="iso", orient="split"),
             initial_status,
         )
 
         thread = threading.Thread(
-            target=run_analysis_worker_thread,
-            args=(request_id, df, ai_analysis_batch_size, analysis_background_state),
+            target=run_dataset_analysis_worker_thread,
+            args=(request_id, tenable_records, splunk_records, analysis_background_state),
             daemon=True
         )
         analysis_background_state.set_thread(thread)
@@ -121,6 +122,7 @@ def register_analysis_callbacks(app, ai_analysis_batch_size: int) -> None:
         Output("merged-data-store", "data", allow_duplicate=True),
         Output("analysis-status-store", "data", allow_duplicate=True),
         Output("analysis-request-store", "data", allow_duplicate=True),
+        Output("onboarding-step-store", "data", allow_duplicate=True),
         Input("analysis-poll-interval", "n_intervals"),
         State("analysis-request-store", "data"),
         State("merged-data-store", "data"),
@@ -145,13 +147,13 @@ def register_analysis_callbacks(app, ai_analysis_batch_size: int) -> None:
 
         if running:
             if df_json != current_json:
-                return df_json, status, no_update
-            return no_update, status, no_update
+                return df_json, status, no_update, "dashboard"
+            return no_update, status, no_update, no_update
 
         analysis_background_state.clear_finished_request()
         if df_json == current_json:
-            return no_update, status, None
-        return df_json, status, None
+            return no_update, status, None, "dashboard"
+        return df_json, status, None, "dashboard"
 
     @app.callback(
         Output("analysis-status-banner", "children"),
@@ -191,17 +193,20 @@ def register_analysis_callbacks(app, ai_analysis_batch_size: int) -> None:
         )
 
     @app.callback(
-        Output("merged-data-store", "data", allow_duplicate=True),
+        Output("analysis-request-store", "data", allow_duplicate=True),
+        Output("analysis-status-store", "data", allow_duplicate=True),
+        Output("onboarding-step-store", "data", allow_duplicate=True),
         Input("rerun-btn", "n_clicks"),
-        State("merged-data-store", "data"),
         prevent_initial_call=True,
     )
-    def trigger_rerun(n_clicks, json_data):
+    def trigger_rerun(n_clicks):
         if not n_clicks:
-            return no_update
-        df = pd.read_json(io.StringIO(json_data), orient="split")
-        df = clear_ai_analysis_columns(df)
-        return df.to_json(date_format="iso", orient="split")
+            return no_update, no_update, no_update
+        return (
+            {"requested_at": datetime.now().isoformat(), "rerun": True},
+            {"state": "running", "message": "Queued AI rerun for uploaded datasets."},
+            "analyzing",
+        )
 
     @app.callback(
         Output("rerun-btn", "disabled"),

@@ -10,14 +10,14 @@ from dash import Dash
 from security_dashboard.analysis import build_initial_analysis_status_payload
 from security_dashboard.callbacks import register_callbacks
 from security_dashboard.config import get_ai_analysis_batch_size, load_env_file
-from security_dashboard.data.datasets import build_merged_dataset
+from security_dashboard.data.datasets import empty_dashboard_dataframe
 from security_dashboard.layout import create_layout
 
 load_env_file()
 AI_ANALYSIS_BATCH_SIZE = get_ai_analysis_batch_size()
 
 logger = logging.getLogger(__name__)
-df_base = build_merged_dataset()
+df_base = empty_dashboard_dataframe()
 
 app = Dash(
     __name__,

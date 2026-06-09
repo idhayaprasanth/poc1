@@ -96,8 +96,24 @@ def register_asset_callbacks(app) -> None:
         Input("date-range", "end_date"),
     )
     def update_table(json_data, search, risk_f, sort, date_from, date_to):
-        df = ensure_ai_analysis_columns(pd.read_json(io.StringIO(json_data), orient="split"))
-        df = prepare_filtered_assets(df, search, risk_f, sort, date_from, date_to)
+        df_all = ensure_ai_analysis_columns(pd.read_json(io.StringIO(json_data), orient="split"))
+        if df_all.empty:
+            return html.Div(
+                "No analyzed assets returned",
+                id="no-assets-message",
+                style={
+                    "padding": "32px",
+                    "textAlign": "center",
+                    "fontSize": "18px",
+                    "color": COLORS["text_muted"],
+                    "fontWeight": "600",
+                    "border": f"2px dashed {COLORS['border']}",
+                    "borderRadius": "4px",
+                    "background": COLORS["card"],
+                    "marginTop": "20px",
+                }
+            )
+        df = prepare_filtered_assets(df_all, search, risk_f, sort, date_from, date_to)
         df = assign_asset_sections(df)
 
         try:
