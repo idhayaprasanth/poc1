@@ -122,7 +122,7 @@ class DetailPanelRenderer:
         )
 
     def _render_source_sections(self, row: pd.Series) -> list:
-        """Render sections for Tenable, Defender, Splunk, Patch Status with model scores."""
+        """Render sections for Tenable and Splunk with model scores."""
         def score_text(value):
             return f"{float(value):.1f}/10" if pd.notna(value) else "—"
 
@@ -135,16 +135,6 @@ class DetailPanelRenderer:
                 "Model Risk Score": score_text(row.get("tenable_risk_score")),
                 "Model Priority": row.get("tenable_priority_level", "—"),
                 "Model Remediation": row.get("tenable_remediation", "—"),
-            }),
-            self._section("Threat (Microsoft Defender)", {
-                "Alert": row.get("threat_alert", "—"),
-                "File Path": row.get("threat_file_path", "—"),
-                "Process": row.get("threat_process", "—"),
-                "Impact": row.get("threat_impact", "—"),
-                "Fix": row.get("threat_fix", "—"),
-                "Model Risk Score": score_text(row.get("defender_risk_score")),
-                "Model Priority": row.get("defender_priority_level", "—"),
-                "Model Remediation": row.get("defender_remediation", "—"),
             }),
             self._section("Logs & Anomaly (Splunk)", {
                 "Event": row.get("anomaly_event", "—"),

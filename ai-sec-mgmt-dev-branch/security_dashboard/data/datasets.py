@@ -288,10 +288,40 @@ def clear_ai_analysis_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _read_dataset(name: str) -> pd.DataFrame:
-    path = DATASET_FILES[name]
-    if not path.exists():
-        raise FileNotFoundError(f"Missing dataset CSV for {name}: {path}")
-    df = pd.read_csv(path)
+    # Determine the subdirectory names to look into
+    dir_names = [name]
+    if name == "tenable":
+        dir_names = ["tunable", "tenable"]
+
+    csv_files = []
+    for dir_name in dir_names:
+        dir_path = SEED_DIR / dir_name
+        if dir_path.is_dir():
+            for p in dir_path.iterdir():
+                if p.is_file() and p.suffix.lower() == ".csv":
+                    csv_files.append(p)
+
+    dfs = []
+    if csv_files:
+        for file_path in csv_files:
+            try:
+                temp_df = pd.read_csv(file_path)
+                if not temp_df.empty:
+                    dfs.append(temp_df)
+            except Exception as e:
+                print(f"[datasets] Error reading CSV file {file_path}: {e}")
+
+    if dfs:
+        df = pd.concat(dfs, ignore_index=True)
+    else:
+        # Fallback to the original single file
+        fallback_path = DATASET_FILES.get(name) or (SEED_DIR / f"{name}.csv")
+        if not fallback_path.exists():
+            raise FileNotFoundError(
+                f"Missing dataset CSV or subdirectory for {name}. "
+                f"Tried subdirectories {dir_names} and fallback file {fallback_path}"
+            )
+        df = pd.read_csv(fallback_path)
 
     alias_map = DATASET_COLUMN_ALIASES.get(name, {})
     if alias_map:
