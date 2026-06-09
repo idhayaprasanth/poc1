@@ -50,7 +50,7 @@ ANALYSIS_SYSTEM_PROMPT = (
     "You are a cybersecurity analyst. Analyse the vulnerability and log data and return "
     "ONLY a valid JSON object - no markdown, no code fences, no explanation, "
     "All risk scores must be a float between 0.0 and 10.0.\n"
-    "3. Priority level must match risk score exactly:\n"
+    " Priority level must match risk score exactly:\n"
     "   Critical = score >= 9.0\n"
     "   High     = score >= 7.0 and < 9.0\n"
     "   Medium   = score >= 4.0 and < 7.0\n"
@@ -63,7 +63,7 @@ ANALYSIS_SYSTEM_PROMPT = (
     '  "splunk":   {"risk_score": <0-10 float>, "priority_level": "<Critical|High|Medium|Low>", "remediation": "<concise action>"},\n'
     '  "overall_risk_score": <0-10 float>,\n'
     '  "overall_priority_level": "<Critical|High|Medium|Low>",\n'
-    '  "ai_summary": "<2-3 sentence executive summary of the asset security posture and recommended next steps>"\n'
+    '  "ai_summary": "<4 -5 sentence clear executive summary of the asset security posture and recommended next steps>"\n'
     "}"
 )
 SECURITY_KEYWORDS = tuple(
@@ -342,7 +342,7 @@ class DGXSparkServerClient:
                     "content": user_prompt
                 }
             ],
-            "max_tokens": 300,
+            "max_tokens": 2000,
             "temperature": 0.1
         }
         

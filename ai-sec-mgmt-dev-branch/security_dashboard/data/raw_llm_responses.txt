@@ -16339,3 +16339,283 @@ STATUS      : OK
   "ai_summary": "The asset has multiple medium-severity vulnerabilities across various security tools, including Docker container escape and suspicious API requests. It is recommended to address these issues promptly to maintain a secure posture."
 }
 ================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:16:07 UTC
+STATUS      : dgx_ERROR
+--------------------------------------------------------------------------------
+[No response captured]
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:16:53 UTC
+STATUS      : dgx_ERROR
+--------------------------------------------------------------------------------
+[No response captured]
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:20:11 UTC
+STATUS      : dgx_ERROR
+--------------------------------------------------------------------------------
+[No response captured]
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:24:53 UTC
+STATUS      : dgx_ERROR
+--------------------------------------------------------------------------------
+[No response captured]
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:25:12 UTC
+STATUS      : dgx_ERROR
+--------------------------------------------------------------------------------
+[No response captured]
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:25:53 UTC
+STATUS      : dgx_ERROR
+--------------------------------------------------------------------------------
+[No response captured]
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:28:54 UTC
+STATUS      : dgx_ERROR
+--------------------------------------------------------------------------------
+[No response captured]
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:29:10 UTC
+STATUS      : dgx_ERROR
+--------------------------------------------------------------------------------
+[No response captured]
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:29:52 UTC
+STATUS      : dgx_ERROR
+--------------------------------------------------------------------------------
+[No response captured]
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:33:21 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "ppppvwbxadc02",
+  "tenable":  {"risk_score": 8.0, "priority_level": "High", "remediation": "Implement the missing security configuration"},
+  "splunk":   {"risk_score": 0.0, "priority_level": "Low", "remediation": "No action required"},
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "The asset 'ppppvwbxadc02' has a medium security posture due to high-risk vulnerabilities identified by Tenable. However, Splunk logs do not indicate any security concerns. Recommended next steps include implementing the missing security configurations and monitoring the asset for potential security threats."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:33:43 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "ppppvwbxadc02",
+  "tenable":  {"risk_score": 8.0, "priority_level": "High", "remediation": "Implement the missing security configurations"},
+  "splunk":   {"risk_score": 0.0, "priority_level": "Low", "remediation": "No action required"},
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "The asset 'ppppvwbxadc02' has a medium risk posture due to high severity vulnerabilities in Tenable scans. However, the Splunk logs do not indicate any security concerns. It is recommended to implement the missing security configurations to mitigate the identified risks."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:36:02 UTC
+STATUS      : dgx_ERROR
+--------------------------------------------------------------------------------
+[No response captured]
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 21:36:52 UTC
+STATUS      : dgx_ERROR
+--------------------------------------------------------------------------------
+[No response captured]
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 22:35:12 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "ppppvwbxadc02",
+  "tenable":  {"risk_score": 8.0, "priority_level": "High", "remediation": "Implement all missing security settings"},
+  "splunk":   {"risk_score": 8.0, "priority_level": "High", "remediation": "Implement all missing security settings"},
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset has multiple high-risk vulnerabilities and security settings that are not configured correctly. It is recommended to implement all missing security settings to mitigate these risks."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 22:36:54 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "ppppvwbxadc02",
+  "tenable":  {"risk_score": 8.0, "priority_level": "High", "remediation": "Implement the missing security configurations"},
+  "splunk":   {"risk_score": 8.0, "priority_level": "High", "remediation": "Implement the missing security configurations"},
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset 'ppppvwbxadc02' has multiple high-risk security vulnerabilities and missing configurations. It is recommended to implement the missing security configurations to mitigate these risks."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 22:52:13 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "ppppvwbxadc02",
+  "tenable":  {"risk_score": 8.0, "priority_level": "High", "remediation": "Review and remediate all identified vulnerabilities"},
+  "splunk":   {"risk_score": 8.0, "priority_level": "High", "remediation": "Review and remediate all identified suspicious activity"},
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "This asset has multiple high-risk vulnerabilities and suspicious activity, indicating a potential security risk. Remediation is required to mitigate these risks."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 22:55:27 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "ppppvwbxadc02",
+  "tenable":  {"risk_score": 8.0, "priority_level": "High", "remediation": "Review and address all high severity vulnerabilities"},
+  "splunk":   {"risk_score": 9.0, "priority_level": "Critical", "remediation": "Investigate and remediate suspicious process creation"},
+  "overall_risk_score": 8.5,
+  "overall_priority_level": "Critical",
+  "ai_summary": "The asset 'ppppvwbxadc02' has a high risk posture due to multiple high and critical severity findings. The Tenable scan identified 20 high severity vulnerabilities, while the Splunk data revealed suspicious process creation events. It is recommended to review and address all high severity vulnerabilities and investigate and remediate the suspicious process creation events."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 22:58:51 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "pppppwbaddc03",
+  "tenable":  {"risk_score": 9.0, "priority_level": "Critical", "remediation": "Implement all missing security settings"},
+  "splunk":   {"risk_score": 0.0, "priority_level": "Low", "remediation": "No vulnerabilities found"},
+  "overall_risk_score": 9.0,
+  "overall_priority_level": "Critical",
+  "ai_summary": "The asset 'pppppwbaddc03' has a high risk posture due to multiple high-severity vulnerabilities. It is recommended to implement all missing security settings to mitigate these risks. Additionally, no vulnerabilities were found in the Splunk data, indicating a secure configuration."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-002
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 22:58:52 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "ppppvwbxadc02",
+  "tenable":  {"risk_score": 8.0, "priority_level": "High", "remediation": "Review and remediate all identified vulnerabilities"},
+  "splunk":   {"risk_score": 8.0, "priority_level": "High", "remediation": "Review and remediate all identified suspicious activity"},
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset 'ppppvwbxadc02' has a high risk posture due to multiple high-risk vulnerabilities and suspicious activity. It is recommended to review and remediate all identified issues to ensure the asset's security and compliance."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-002
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 22:59:54 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "ppppvwbxadc02",
+  "tenable":  {"risk_score": 8.0, "priority_level": "High", "remediation": "Review and remediate all identified vulnerabilities"},
+  "splunk":   {"risk_score": 8.0, "priority_level": "High", "remediation": "Review and remediate all identified suspicious activity"},
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset 'ppppvwbxadc02' has a high risk posture due to multiple high-risk vulnerabilities and suspicious activity. It is recommended to review and remediate all identified issues to ensure the asset's security and compliance."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-09 23:00:00 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "pppppwbaddc03",
+  "tenable":  {"risk_score": 8.0, "priority_level": "High", "remediation": "Implement the recommended configuration for 'Interactive logon: Smart card removal behavior'"},
+  "splunk":   {"risk_score": 8.0, "priority_level": "High", "remediation": "Implement the recommended configuration for 'Interactive logon: Smart card removal behavior'"},
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset 'pppppwbaddc03' has a high risk posture due to several high-risk vulnerabilities and security events. The 'Interactive logon: Smart card removal behavior' configuration is not set to 'Lock Workstation' or higher, which is a high-risk vulnerability. Additionally, there are several security events indicating the creation of new processes, which may be indicative of malicious activity. It is recommended to implement the recommended configuration for 'Interactive logon: Smart card removal behavior' and investigate the security events further."
+}
+================================================================================
