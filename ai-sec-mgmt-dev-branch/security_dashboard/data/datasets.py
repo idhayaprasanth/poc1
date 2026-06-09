@@ -15,68 +15,8 @@ SEED_DIR = DATA_DIR / "seed_data"
 CACHE_FILE = DATA_DIR / "ai_analysis_cache.json"
 
 DATASET_FILES = {
-    "tenable": SEED_DIR / "tenable.csv",
-    "defender": SEED_DIR / "defender.csv",
-    "splunk": SEED_DIR / "splunk.csv",
-}
-
-DATASET_COLUMN_ALIASES = {
-    "tenable": {
-        "Asset ID": "asset_id",
-        "Asset Name": "asset_name",
-        "Name": "vuln_name",
-        "Severity": "vuln_severity",
-        "Solution": "vuln_fix",
-        "State": "issue_status",
-        "Last Seen": "scan_date",
-    },
-    "defender": {
-        "Asset ID": "asset_id",
-        "Asset Name": "asset_name",
-        "Title": "threat_alert",
-        "Severity": "threat_impact",
-        "Remediation": "threat_fix",
-        "Status": "issue_status",
-        "Last Seen": "scan_date",
-    },
-    "splunk": {
-        "Asset ID": "asset_id",
-        "Asset Name": "asset_name",
-        "Rule Name": "anomaly_event",
-        "Risk Score": "source_anomaly_score",
-        "Recommendation": "anomaly_explanation",
-        "Status": "issue_status",
-        "Last Seen": "scan_date",
-    },
-}
-
-DATASET_OUTPUT_COLUMNS = {
-    "tenable": [
-        "asset_name",
-        "asset_id",
-        "vuln_name",
-        "vuln_severity",
-        "vuln_description",
-        "vuln_fix",
-        "issue_status",
-        "scan_date",
-    ],
-    "defender": [
-        "asset_name",
-        "asset_id",
-        "threat_alert",
-        "threat_file_path",
-        "threat_process",
-        "threat_impact",
-        "threat_fix",
-    ],
-    "splunk": [
-        "asset_name",
-        "asset_id",
-        "anomaly_event",
-        "source_anomaly_score",
-        "anomaly_explanation",
-    ],
+    "tenable": SEED_DIR / "tenable",
+    "splunk": SEED_DIR / "splunk",
 }
 
 AI_ANALYSIS_COLUMNS = [
@@ -91,14 +31,11 @@ AI_ANALYSIS_COLUMNS = [
     "ai_reason",
     "remediation",
     "tenable_remediation",
-    "defender_remediation",
     "splunk_remediation",
     "tenable_risk_score",
     "tenable_priority_level",
     "splunk_risk_score",
     "splunk_priority_level",
-    "defender_risk_score",
-    "defender_priority_level",
     "ai_analysis_source",
 ]
 
@@ -107,24 +44,12 @@ FLOAT_AI_ANALYSIS_COLUMNS = {
     "anomaly_score",
     "tenable_risk_score",
     "splunk_risk_score",
-    "defender_risk_score",
 }
 
 SOURCE_FINGERPRINT_COLUMNS = [
     "asset_name",
-    "vuln_name",
-    "vuln_severity",
-    "vuln_description",
-    "vuln_fix",
-    "threat_alert",
-    "threat_file_path",
-    "threat_process",
-    "threat_impact",
-    "threat_fix",
-    "anomaly_event",
-    "anomaly_explanation",
-    "source_anomaly_score",
-    "scan_date",
+    "tenable_raw",
+    "splunk_raw",
 ]
 
 
@@ -159,7 +84,6 @@ def coerce_ai_analysis_complete_series(series: pd.Series) -> pd.Series:
             return False
         if isinstance(v, bool):
             return v
-        # int 0/1 from JSON, numpy scalars
         try:
             return bool(int(v))
         except (TypeError, ValueError):
@@ -217,24 +141,12 @@ def persist_ai_analysis_result(row: dict | pd.Series, analysis_result: dict) -> 
 
 
 def _resolve_cached_source(cached: dict) -> str:
-    """
-    Determine the ai_analysis_source for a raw cache entry.
-
-    Handles three cases:
-      1. ai_analysis_source is explicitly set to a non-empty string.
-      2. ai_analysis_source is None/missing but ai_reason contains the
-         local-fallback marker phrase (backward compatibility).
-      3. Neither — treat as unknown so it gets re-analyzed rather than
-         silently served as a valid DGX Spark Server result.
-    """
     source = str(cached.get("ai_analysis_source") or "").strip().lower()
     if source:
         return source
     ai_reason = str(cached.get("ai_reason") or "").strip().lower()
     if "local fallback" in ai_reason:
         return "local_fallback"
-    # A cache entry with no source and no fallback marker is treated as
-    # unknown rather than valid, so it will be re-analyzed by DGX Spark Server.
     return "unknown"
 
 
@@ -247,8 +159,6 @@ def apply_cached_ai_analysis(df: pd.DataFrame) -> pd.DataFrame:
     for idx, row in df.iterrows():
         cached = cache.get(compute_asset_fingerprint(row))
         if not cached:
-            # No cache entry at all — leave ai_analysis_complete=False so it
-            # gets queued for DGX Spark Server analysis.
             continue
 
         for column in AI_ANALYSIS_COLUMNS:
@@ -256,17 +166,14 @@ def apply_cached_ai_analysis(df: pd.DataFrame) -> pd.DataFrame:
 
         cached_source = _resolve_cached_source(cached)
 
-        # Write the resolved source back to the DataFrame so downstream
-        # code sees a consistent value even for legacy cache entries.
         if cached_source:
             df.at[idx, "ai_analysis_source"] = cached_source
 
-        # Cached results are reused as-is; AI reruns only happen for new fingerprints.
         df.at[idx, "ai_analysis_complete"] = True
         df.at[idx, "ai_analysis_error"] = pd.NA
 
         print(
-            f"[cache] {row.get('asset_id')} source={cached_source!r} "
+            f"[cache] {row.get('asset_name') or row.get('asset_id')} source={cached_source!r} "
             "needs_retry=False "
             "complete=True"
         )
@@ -287,75 +194,137 @@ def clear_ai_analysis_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _read_dataset(name: str) -> pd.DataFrame:
-    path = DATASET_FILES[name]
-    if not path.exists():
-        raise FileNotFoundError(f"Missing dataset CSV for {name}: {path}")
-    df = pd.read_csv(path)
+def extract_host(dns_name) -> str | None:
+    if pd.isna(dns_name) or not isinstance(dns_name, str):
+        return None
+    dns_name = dns_name.strip()
+    if not dns_name:
+        return None
+    return dns_name.split(".")[0].lower()
 
-    alias_map = DATASET_COLUMN_ALIASES.get(name, {})
-    if alias_map:
-        df = df.rename(columns=alias_map)
 
-    # Generic header normalization as a fallback for spacing/casing differences.
-    df = df.rename(
-        columns={
-            column: re.sub(r"[^a-z0-9]+", "_", str(column).strip().lower()).strip("_")
-            for column in df.columns
-        }
-    )
+def extract_splunk_host(row: dict | pd.Series) -> str | None:
+    row_dict = row.to_dict() if isinstance(row, pd.Series) else dict(row)
+    for col in ["host", "Computer", "ComputerName", "Caller_Computer_Name", "Caller_Machine_Name", "Client_Machine_Name", "dvc_nt_host"]:
+        val = row_dict.get(col)
+        if pd.notna(val) and isinstance(val, str) and val.strip():
+            parts = val.strip().split(".")
+            if parts:
+                return parts[0].lower()
+    return None
 
-    if "asset_id" not in df.columns:
-        df["asset_id"] = pd.Series([pd.NA] * len(df), dtype="object")
 
-    if "asset_name" not in df.columns:
-        df["asset_name"] = df["asset_id"].astype("object")
+def get_latest_date(rows: list[dict]) -> pd.Timestamp:
+    dates = []
+    for r in rows:
+        for col in ["SystemTime", "_time", "Last Seen", "scan_date"]:
+            val = r.get(col)
+            if pd.notna(val) and val != "":
+                try:
+                    dt = pd.to_datetime(val, utc=True).tz_localize(None)
+                    dates.append(dt)
+                except Exception:
+                    pass
+    if dates:
+        return max(dates)
+    return pd.Timestamp.now().normalize()
 
-    for column in DATASET_OUTPUT_COLUMNS.get(name, []):
-        if column not in df.columns:
-            df[column] = pd.Series([pd.NA] * len(df), dtype="object")
 
-    selected_columns = DATASET_OUTPUT_COLUMNS.get(name, list(df.columns))
-    return df[selected_columns].copy()
+def load_dynamic_datasets():
+    tenable_dfs = []
+    splunk_dfs = []
+    
+    tenable_dir = SEED_DIR / "tenable"
+    splunk_dir = SEED_DIR / "splunk"
+    
+    tenable_dir.mkdir(parents=True, exist_ok=True)
+    splunk_dir.mkdir(parents=True, exist_ok=True)
+    
+    all_csvs = list(tenable_dir.glob("*.csv")) + list(splunk_dir.glob("*.csv"))
+    
+    for path in all_csvs:
+        try:
+            df = pd.read_csv(path)
+            # Detect type by looking at columns
+            cols = [str(c).lower().strip() for c in df.columns]
+            if any(c in cols for c in ["dns name", "dns_name", "plugin", "plugin name"]):
+                tenable_dfs.append((path, df))
+            elif any(c in cols for c in ["eventcode", "eventid", "accessmask", "sourcetype", "splunk_server"]):
+                splunk_dfs.append((path, df))
+            else:
+                # Fallback to directory name
+                if "tenable" in path.parts:
+                    tenable_dfs.append((path, df))
+                elif "splunk" in path.parts:
+                    splunk_dfs.append((path, df))
+        except Exception as e:
+            print(f"Error reading {path}: {e}")
+            
+    return tenable_dfs, splunk_dfs
 
 
 def build_merged_dataset() -> pd.DataFrame:
-    """Merge all three data sources by asset_name and prepare blank AI-owned fields."""
-    tenable_data = _read_dataset("tenable")
-    defender_data = _read_dataset("defender")
-    splunk_data = _read_dataset("splunk")
+    """Load Tenable and Splunk raw CSV data, group by hostname, and merge."""
+    tenable_dfs, splunk_dfs = load_dynamic_datasets()
+    
+    tenable_by_host = {}
+    for path, df in tenable_dfs:
+        df_clean = df.copy()
+        df_clean.columns = [str(c).strip() for c in df_clean.columns]
+        dns_col = next((c for c in df_clean.columns if c.lower().replace("_", " ") in ["dns name", "dns_name"]), None)
+        
+        for _, row in df_clean.iterrows():
+            dns_val = row.get(dns_col) if dns_col else None
+            host = extract_host(dns_val)
+            if not host:
+                for fallback in ["NetBIOS Name", "IP Address", "host", "Computer", "ComputerName"]:
+                    fb_val = row.get(fallback)
+                    if pd.notna(fb_val):
+                        host = str(fb_val).strip().split(".")[0].lower()
+                        break
+            if host:
+                if host not in tenable_by_host:
+                    tenable_by_host[host] = []
+                tenable_by_host[host].append(row.to_dict())
 
-    # Keep a single canonical asset_id from the primary dataset to avoid merge suffix conflicts.
-    defender_data = defender_data.drop(columns=["asset_id"], errors="ignore")
-    splunk_data = splunk_data.drop(columns=["asset_id"], errors="ignore")
+    splunk_by_host = {}
+    for path, df in splunk_dfs:
+        df_clean = df.copy()
+        df_clean.columns = [str(c).strip() for c in df_clean.columns]
+        
+        for _, row in df_clean.iterrows():
+            host = extract_splunk_host(row)
+            if host:
+                if host not in splunk_by_host:
+                    splunk_by_host[host] = []
+                splunk_by_host[host].append(row.to_dict())
 
-    df = tenable_data.merge(defender_data, on="asset_name", how="outer")
-    df = df.merge(splunk_data, on="asset_name", how="outer")
+    all_hosts = set(tenable_by_host.keys()).union(set(splunk_by_host.keys()))
+    
+    records = []
+    for idx, host in enumerate(sorted(all_hosts)):
+        t_rows = tenable_by_host.get(host, [])
+        s_rows = splunk_by_host.get(host, [])
+        
+        scan_date = get_latest_date(t_rows + s_rows)
+        
+        records.append({
+            "asset_id": f"ASSET-{str(idx + 1).zfill(3)}",
+            "asset_name": host,
+            "tenable_raw": json.dumps(t_rows),
+            "splunk_raw": json.dumps(s_rows),
+            "scan_date": scan_date,
+            "issue_status": "Open"
+        })
 
-    if "source_anomaly_score" in df.columns:
-        df["source_anomaly_score"] = pd.to_numeric(df["source_anomaly_score"], errors="coerce").astype("Float64")
+    if not records:
+        df = pd.DataFrame(columns=["asset_id", "asset_name", "tenable_raw", "splunk_raw", "scan_date", "issue_status"])
     else:
-        df["source_anomaly_score"] = pd.Series([pd.NA] * len(df), dtype="Float64")
-
-    # AI-owned fields start empty and must be filled by the model, not local code.
-    df = ensure_ai_analysis_columns(df)
-
-    # Source-owned field
-    df["issue_status"] = "Open"
+        df = pd.DataFrame(records)
 
     df["scan_date"] = pd.to_datetime(df["scan_date"], errors="coerce")
-
-    df = df.reset_index(drop=True)
-    generated_ids = [f"ASSET-{str(i + 1).zfill(3)}" for i in range(len(df))]
-    if "asset_id" in df.columns:
-        asset_id_series = df["asset_id"].astype("object").where(df["asset_id"].notna(), pd.NA)
-        df["asset_id"] = [
-            str(asset_id_series.iloc[i]).strip() if pd.notna(asset_id_series.iloc[i]) and str(asset_id_series.iloc[i]).strip() else generated_ids[i]
-            for i in range(len(df))
-        ]
-        reordered = ["asset_id"] + [column for column in df.columns if column != "asset_id"]
-        df = df[reordered]
-    else:
-        df.insert(0, "asset_id", generated_ids)
-
-    return clear_ai_analysis_columns(df)
+    
+    df = ensure_ai_analysis_columns(df)
+    df = apply_cached_ai_analysis(df)
+    
+    return df

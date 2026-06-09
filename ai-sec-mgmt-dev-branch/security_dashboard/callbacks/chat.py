@@ -69,8 +69,8 @@ def register_chat_callbacks(app) -> None:
         for _, r in top.iterrows():
             lines.append(
                 f"- {r.get('asset_id','')} {r.get('asset_name','')}: {r.get('risk_score','—')}/10 "
-                f"({r.get('risk_level','—')}), issue={r.get('issue_status','—')}, patch={r.get('patch_status','—')}, "
-                f"vuln={r.get('vuln_severity','—')} {r.get('vuln_name','—')}, threat={r.get('threat_alert','—')}"
+                f"({r.get('risk_level','—')}), status={r.get('issue_status','—')}, "
+                f"remediation={r.get('remediation','—')}"
             )
 
         context_text = (

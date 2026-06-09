@@ -8,7 +8,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
 
-from security_dashboard.data.datasets import AI_ANALYSIS_COLUMNS, ensure_ai_analysis_columns
+from security_dashboard.data.datasets import AI_ANALYSIS_COLUMNS, ensure_ai_analysis_columns, persist_ai_analysis_result
 from security_dashboard.filters import analysis_pending_mask, analysis_error_mask, analysis_completion_mask
 from security_dashboard.services.dgx_spark_server_client import DGXSparkServerClient
 
@@ -198,6 +198,10 @@ def run_analysis_worker_thread(
                     df.at[idx, "ai_analysis_error"] = pd.NA
                     total_completed += 1
                     logger.info("AI analysis completed successfully for %s", asset_label)
+                    try:
+                        persist_ai_analysis_result(df.loc[idx], ai_row)
+                    except Exception as cache_exc:
+                        logger.error("Failed to persist analysis result to cache: %s", cache_exc)
                 except Exception as exc:
                     logger.exception("AI analysis failed for asset %s", asset_label)
                     df.at[idx, "ai_analysis_error"] = str(exc)

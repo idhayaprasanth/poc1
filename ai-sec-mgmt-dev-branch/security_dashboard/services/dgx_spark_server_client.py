@@ -12,7 +12,7 @@ from pathlib import Path
 import requests
 from requests.exceptions import RequestException
 
-SOURCES = ["tenable", "splunk", "defender"]
+SOURCES = ["tenable", "splunk"]
 PRIORITY_ORDER = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1}
 RISK_LEVEL_BY_PRIORITY = {
     "Critical": "High",
@@ -47,7 +47,7 @@ PRIORITY_COLOR = {
     "Low": "\033[0;32m",
 }
 ANALYSIS_SYSTEM_PROMPT = (
-    "You are a cybersecurity analyst. Analyse the vulnerability data and return "
+    "You are a cybersecurity analyst. Analyse the vulnerability and log data and return "
     "ONLY a valid JSON object - no markdown, no code fences, no explanation, "
     "All risk scores must be a float between 0.0 and 10.0.\n"
     "3. Priority level must match risk score exactly:\n"
@@ -58,10 +58,9 @@ ANALYSIS_SYSTEM_PROMPT = (
     "no preamble, and do not repeat the response.\n\n"
     "Required JSON structure:\n"
     "{\n"
-    '  "asset_id": "<id>",\n'
+    '  "host_name": "<hostname>",\n'
     '  "tenable":  {"risk_score": <0-10 float>, "priority_level": "<Critical|High|Medium|Low>", "remediation": "<concise action>"},\n'
     '  "splunk":   {"risk_score": <0-10 float>, "priority_level": "<Critical|High|Medium|Low>", "remediation": "<concise action>"},\n'
-    '  "defender": {"risk_score": <0-10 float>, "priority_level": "<Critical|High|Medium|Low>", "remediation": "<concise action>"},\n'
     '  "overall_risk_score": <0-10 float>,\n'
     '  "overall_priority_level": "<Critical|High|Medium|Low>",\n'
     '  "ai_summary": "<2-3 sentence executive summary of the asset security posture and recommended next steps>"\n'
@@ -193,42 +192,26 @@ class DGXSparkServerClient:
         return max(0.0, min(normalized, 10.0))
 
     def _build_asset_payload(self, record: dict) -> dict:
-        def compact_entry(mapping: dict[str, Any]) -> list[dict[str, Any]]:
-            cleaned = {key: value for key, value in mapping.items() if value not in (None, "", [])}
-            return [cleaned] if cleaned else []
-
-        issue_status = str(record.get("issue_status") or "").strip()
+        tenable_data = record.get("tenable_raw", [])
+        splunk_data = record.get("splunk_raw", [])
+        
+        if isinstance(tenable_data, str):
+            try:
+                tenable_data = json.loads(tenable_data)
+            except Exception:
+                tenable_data = []
+        if isinstance(splunk_data, str):
+            try:
+                splunk_data = json.loads(splunk_data)
+            except Exception:
+                splunk_data = []
+                
         payload = {
-            "asset_id": str(record.get("asset_id") or record.get("asset_name") or "").strip(),
+            "host_name": record.get("asset_name"),
             "sources": {
-                "tenable": compact_entry({
-                    "CVE": "",
-                    "Severity": record.get("vuln_severity"),
-                    "CVSS": "",
-                    "Name": record.get("vuln_name"),
-                    "State": issue_status,
-                    "Solution": record.get("vuln_fix"),
-                    "Description": record.get("vuln_description"),
-                }),
-                "splunk": compact_entry({
-                    "CVE": "",
-                    "Severity": "",
-                    "Risk Score": record.get("source_anomaly_score"),
-                    "Rule Name": record.get("anomaly_event"),
-                    "Status": issue_status,
-                    "Recommendation": record.get("anomaly_explanation"),
-                }),
-                "defender": compact_entry({
-                    "CVE": "",
-                    "Severity": record.get("threat_impact"),
-                    "CVSS": "",
-                    "Title": record.get("threat_alert"),
-                    "Status": issue_status,
-                    "Remediation": record.get("threat_fix"),
-                    "Process": record.get("threat_process"),
-                    "File Path": record.get("threat_file_path"),
-                }),
-            },
+                "tenable": tenable_data,
+                "splunk": splunk_data
+            }
         }
         return payload
 
@@ -462,8 +445,6 @@ class DGXSparkServerClient:
         raise ValueError("No parseable JSON found in model output")
 
     def _normalize_analysis_result(self, *, record: dict, result: dict) -> dict:
-        # Map model output directly to dashboard fields without inferring or
-        # synthesizing defaults. Preserve None/empty values returned by the model.
         def get_src_score(src_key: str):
             src = result.get(src_key) or {}
             return self._normalize_score(src.get("risk_score"))
@@ -490,7 +471,7 @@ class DGXSparkServerClient:
 
         normalized = {
             "asset_name": str(record.get("asset_name") or record.get("asset_id") or "").strip(),
-            "asset_id": str(get_value("asset_id") or record.get("asset_id") or "").strip(),
+            "asset_id": str(record.get("asset_id") or "").strip(),
             "threat_status": overall_priority,
             "severity_validation": None,
             "priority": overall_priority,
@@ -500,16 +481,13 @@ class DGXSparkServerClient:
             "overall_priority_level": overall_priority,
             "anomaly_score": get_src_score("splunk"),
             "ai_reason": ai_summary,
-            "remediation": get_value("remediation"),
+            "remediation": (result.get("tenable") or {}).get("remediation") or (result.get("splunk") or {}).get("remediation") or get_value("remediation"),
             "tenable_remediation": (result.get("tenable") or {}).get("remediation"),
-            "defender_remediation": (result.get("defender") or {}).get("remediation"),
             "splunk_remediation": (result.get("splunk") or {}).get("remediation"),
             "tenable_risk_score": get_src_score("tenable"),
             "tenable_priority_level": (result.get("tenable") or {}).get("priority_level"),
             "splunk_risk_score": get_src_score("splunk"),
             "splunk_priority_level": (result.get("splunk") or {}).get("priority_level"),
-            "defender_risk_score": get_src_score("defender"),
-            "defender_priority_level": (result.get("defender") or {}).get("priority_level"),
             "ai_analysis_source": "dgx_spark_server",
         }
         return normalized

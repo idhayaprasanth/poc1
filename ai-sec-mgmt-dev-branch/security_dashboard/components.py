@@ -127,13 +127,17 @@ def build_asset_table(table_id: str, df: pd.DataFrame) -> dash_table.DataTable:
         Dash DataTable component
     """
     cols_display = [
-        "asset_id", "asset_name", "vuln_name", "threat_alert",
-        "risk_score", "risk_level", "issue_status",
+        "asset_id", "asset_name", "risk_score", "risk_level", "ai_reason", "remediation", "issue_status",
     ]
 
     col_names = {
-        "asset_id": "Asset ID", "asset_name": "Hostname", "vuln_name": "Vulnerability",
-        "threat_alert": "Threat", "risk_score": "Risk Score", "risk_level": "Level", "issue_status": "Issue Status",
+        "asset_id": "Asset ID",
+        "asset_name": "Hostname",
+        "risk_score": "Risk Score",
+        "risk_level": "Level",
+        "ai_reason": "AI Summary",
+        "remediation": "Remediation",
+        "issue_status": "Issue Status",
     }
 
     # Filter to existing columns only

@@ -199,7 +199,8 @@ def register_analysis_callbacks(app, ai_analysis_batch_size: int) -> None:
     def trigger_rerun(n_clicks, json_data):
         if not n_clicks:
             return no_update
-        df = pd.read_json(io.StringIO(json_data), orient="split")
+        from security_dashboard.data.datasets import build_merged_dataset
+        df = build_merged_dataset()
         df = clear_ai_analysis_columns(df)
         return df.to_json(date_format="iso", orient="split")
 
