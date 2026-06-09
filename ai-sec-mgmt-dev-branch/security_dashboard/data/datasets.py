@@ -277,6 +277,19 @@ def sanitize_and_compact_record(record: dict) -> dict:
     return cleaned
 
 
+def deduplicate_records(records: list[dict], keys_to_compare: list[str]) -> list[dict]:
+    seen = set()
+    unique_records = []
+    for r in records:
+        sig = tuple(str(r.get(k, "")).strip().lower() for k in keys_to_compare)
+        if all(val == "" for val in sig):
+            sig = tuple(str(v).strip().lower() for k, v in r.items() if k.lower() not in ("_time", "systemtime", "time", "date", "eventrecordid", "recordnumber"))
+        if sig not in seen:
+            seen.add(sig)
+            unique_records.append(r)
+    return unique_records
+
+
 def build_merged_dataset() -> pd.DataFrame:
     """Load Tenable and Splunk raw CSV data, group by hostname, and merge."""
     tenable_dfs, splunk_dfs = load_dynamic_datasets()
@@ -319,6 +332,14 @@ def build_merged_dataset() -> pd.DataFrame:
     for idx, host in enumerate(sorted(all_hosts)):
         t_rows = tenable_by_host.get(host, [])
         s_rows = splunk_by_host.get(host, [])
+        
+        # De-duplicate logs to reduce prompt size and avoid context window limitations
+        t_rows = deduplicate_records(t_rows, ["Plugin", "Plugin Name", "Severity", "Port"])
+        s_rows = deduplicate_records(s_rows, ["EventID", "EventCode", "CommandLine", "Message", "signature"])
+        
+        # Limit to top 25 records each to be safe
+        t_rows = t_rows[:25]
+        s_rows = s_rows[:25]
         
         scan_date = get_latest_date(t_rows + s_rows)
         
