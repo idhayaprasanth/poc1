@@ -207,6 +207,7 @@ class DGXSparkServerClient:
                 splunk_data = []
                 
         payload = {
+            "asset_id": record.get("asset_id"),
             "host_name": record.get("asset_name"),
             "sources": {
                 "tenable": tenable_data,
@@ -218,8 +219,8 @@ class DGXSparkServerClient:
     @staticmethod
     def _build_analysis_prompt(payload: dict) -> str:
         return (
-            f"Analyse the vulnerability data for asset '{payload['asset_id']}' "
-            f"collected from four security tools:\n\n"
+            f"Analyse the vulnerability and log data for asset '{payload.get('host_name') or payload.get('asset_id')}' "
+            f"collected from security tools:\n\n"
             f"{json.dumps(payload, indent=2)}\n\n"
             "Return ONLY the JSON object once. No markdown fences, no repetition, no extra text."
         )
