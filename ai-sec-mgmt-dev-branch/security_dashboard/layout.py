@@ -445,6 +445,81 @@ def create_layout(df_base, analysis_status_initial=None):
                             ),
                         ],
                     ),
+                    # Raw Data Modal Popup
+                    html.Div(
+                        id="raw-data-modal",
+                        style={"display": "none"},
+                        children=[
+                            html.Div(
+                                id="raw-data-modal-backdrop",
+                                style={
+                                    "position": "fixed",
+                                    "top": 0,
+                                    "left": 0,
+                                    "right": 0,
+                                    "bottom": 0,
+                                    "background": "rgba(0,0,0,0.5)",
+                                    "zIndex": 9999,
+                                }
+                            ),
+                            html.Div(
+                                style={
+                                    "position": "fixed",
+                                    "top": "50%",
+                                    "left": "50%",
+                                    "transform": "translate(-50%, -50%)",
+                                    "background": "white",
+                                    "borderRadius": "8px",
+                                    "boxShadow": "0 10px 25px rgba(0,0,0,0.2)",
+                                    "width": "90%",
+                                    "maxWidth": "1000px",
+                                    "maxHeight": "85vh",
+                                    "display": "flex",
+                                    "flexDirection": "column",
+                                    "zIndex": 10000,
+                                    "overflow": "hidden",
+                                },
+                                children=[
+                                    html.Div(
+                                        style={
+                                            "display": "flex",
+                                            "justifyContent": "space-between",
+                                            "alignItems": "center",
+                                            "padding": "16px 24px",
+                                            "borderBottom": f"1px solid {COLORS['border']}",
+                                            "background": COLORS["bg"],
+                                        },
+                                        children=[
+                                            html.H3(
+                                                id="raw-data-modal-title", 
+                                                style={"margin": 0, "fontSize": "18px", "fontWeight": "700", "color": COLORS["text"]}
+                                            ),
+                                            html.Button(
+                                                "✕",
+                                                id="raw-data-modal-close",
+                                                n_clicks=0,
+                                                style={
+                                                    "background": "transparent",
+                                                    "border": "none",
+                                                    "fontSize": "20px",
+                                                    "cursor": "pointer",
+                                                    "color": COLORS["text_muted"],
+                                                }
+                                            ),
+                                        ]
+                                    ),
+                                    html.Div(
+                                        id="raw-data-modal-body",
+                                        style={
+                                            "padding": "24px",
+                                            "overflowY": "auto",
+                                            "flex": "1",
+                                        }
+                                    )
+                                ]
+                            )
+                        ]
+                    ),
                     dcc.Download(id="download-csv"),
                 ],
             ),

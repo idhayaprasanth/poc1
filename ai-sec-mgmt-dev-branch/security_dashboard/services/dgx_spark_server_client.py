@@ -59,12 +59,61 @@ ANALYSIS_SYSTEM_PROMPT = (
     "Required JSON structure:\n"
     "{\n"
     '  "host_name": "<hostname>",\n'
-    '  "tenable":  {"risk_score": <0-10 float>, "priority_level": "<Critical|High|Medium|Low>", "remediation": "<concise action>"},\n'
-    '  "splunk":   {"risk_score": <0-10 float>, "priority_level": "<Critical|High|Medium|Low>", "remediation": "<concise action>"},\n'
+    '  "tenable":  {\n'
+    '     "risk_score": <0-10 float>,\n'
+    '     "priority_level": "<Critical|High|Medium|Low>",\n'
+    '     "remediation": "<concise action>",\n'
+    '     "vulnerabilities": "<concise description of vulnerabilities found>"\n'
+    '  },\n'
+    '  "splunk":   {\n'
+    '     "risk_score": <0-10 float>,\n'
+    '     "priority_level": "<Critical|High|Medium|Low>",\n'
+    '     "remediation": "<concise action>",\n'
+    '     "log_type": "<type of logs>",\n'
+    '     "is_vulnerable": <true|false>,\n'
+    '     "evidence_for_tenable": "<evidence details or null if none>"\n'
+    '  },\n'
     '  "overall_risk_score": <0-10 float>,\n'
     '  "overall_priority_level": "<Critical|High|Medium|Low>",\n'
-    '  "ai_summary": "<4 -5 sentence clear executive summary of the asset security posture and recommended next steps>"\n'
-    "}"
+    '  "ai_summary": "<Detailed, highly structured Markdown analysis. Must strictly follow this template layout:\n\n'
+    '### ⚠ NEEDS PATCHING (or ✓ NO PATCHING NEEDED)\n'
+    'ACR <ACR score> / 10 — <High/Medium/Low> Value Asset\n'
+    '<Operating System, e.g. Windows Server 2019>\n'
+    '<hostname> · <IP address>\n'
+    'Domain: <domain>  |  Repository: <repository>  |  Analysis window: <start-end dates>\n\n'
+    '🔴 Yes — this asset is vulnerable. Patch immediately (P1). (or 🟢 No — no critical vulnerabilities found.)\n'
+    '<2-3 sentence overview of missing patches, exposed ports, config gaps, and log analysis results.>\n\n'
+    '- **<num>** Real patch missing\n'
+    '- **<num>** Config gaps (High)\n'
+    '- **<num>** Config gaps (Medium)\n'
+    '- **<num>** Active attacks found\n'
+    '- **<score>** VPR score (patch)\n'
+    '- **<port>** Exposed port\n\n'
+    '#### Finding 1 of <total> — <Severity>: <Vulnerability Name>\n'
+    '- **<Priority>** — <Remediation timeline>\n'
+    '- **VPR <score>**\n'
+    '- **AES <score>** — <Exploitation status>\n'
+    '- **Port <port>**\n'
+    '- **<Patch ID>** — <Patch details>\n'
+    '<Detailed description of the vulnerability, port usage, exploitation risks, and target value.>\n\n'
+    '**What happens if you don\'t patch:**\n'
+    '- <Impact bullet 1>\n'
+    '- <Impact bullet 2>\n'
+    '- <Impact bullet 3>\n\n'
+    '**Fix:**\n'
+    '<Remediation commands, KB articles, verification commands, e.g. Install KB... Verify: Get-HotFix...>\n\n'
+    '#### Splunk log analysis — is there an active hacker?\n'
+    '✓ (or ✗) <Attack status in logs>\n'
+    '<num> events analysed\n'
+    'Analysis window: <dates>\n'
+    '<Conclusion about process activity, e.g. All Splunk process activity is legitimate software>\n\n'
+    '**What the logs show:**\n'
+    '- <Log detail bullet 1 with event counts and process details>\n'
+    '- <Log detail bullet 2 with event counts and process details>\n'
+    '- <Log detail bullet 3 with event counts and process details>\n\n'
+    '**Important note:** <Disclaimer about analysis window, logs covered, and scope of security audit.>\n'
+    '>"\n'
+    '}'
 )
 SECURITY_KEYWORDS = tuple(
     keyword.lower()
@@ -522,6 +571,10 @@ class DGXSparkServerClient:
             "splunk_risk_score": get_src_score("splunk"),
             "splunk_priority_level": (result.get("splunk") or {}).get("priority_level"),
             "ai_analysis_source": "dgx_spark_server",
+            "tenable_vulnerabilities": (result.get("tenable") or {}).get("vulnerabilities"),
+            "splunk_log_type": (result.get("splunk") or {}).get("log_type"),
+            "splunk_is_vulnerable": (result.get("splunk") or {}).get("is_vulnerable"),
+            "splunk_evidence_for_tenable": (result.get("splunk") or {}).get("evidence_for_tenable"),
         }
         return normalized
 

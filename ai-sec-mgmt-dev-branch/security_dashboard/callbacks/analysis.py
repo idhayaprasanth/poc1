@@ -201,7 +201,6 @@ def register_analysis_callbacks(app, ai_analysis_batch_size: int) -> None:
             return no_update
         from security_dashboard.data.datasets import build_merged_dataset
         df = build_merged_dataset()
-        df = clear_ai_analysis_columns(df)
         return df.to_json(date_format="iso", orient="split")
 
     @app.callback(

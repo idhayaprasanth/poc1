@@ -59,7 +59,36 @@ class DetailPanelRenderer:
         children = [self._render_risk_header(risk_score_text, risk_level_text, risk_style)]
         
         if pd.notna(row.get("ai_reason")):
-            children.append(self._section("AI Summary", {"Summary": row.get("ai_reason", "—")}))
+            from dash import dcc
+            children.append(
+                html.Div(
+                    style={"marginBottom": "24px"},
+                    children=[
+                        html.Span("AI Summary", style={
+                            "fontSize": "15px",
+                            "fontWeight": "700",
+                            "color": self.colors["text"],
+                            "display": "block",
+                            "marginBottom": "12px"
+                        }),
+                        html.Div(
+                            dcc.Markdown(
+                                row.get("ai_reason", "—"),
+                                style={
+                                    "fontSize": "14px",
+                                    "lineHeight": "1.6",
+                                    "color": self.colors["text"],
+                                    "padding": "16px",
+                                    "background": self.colors["bg"],
+                                    "border": f"1px solid {self.colors['border']}",
+                                    "borderRadius": "4px",
+                                }
+                            ),
+                            style={"marginLeft": "0"}
+                        )
+                    ]
+                )
+            )
 
         children.extend(self._render_source_sections(row))
 
@@ -123,89 +152,114 @@ class DetailPanelRenderer:
 
     def _render_source_sections(self, row: pd.Series) -> list:
         """Render sections for Tenable and Splunk raw data."""
-        import json
         def score_text(value):
             return f"{float(value):.1f}/10" if pd.notna(value) else "—"
 
-        tenable_raw = row.get("tenable_raw", [])
-        if isinstance(tenable_raw, str):
-            try:
-                tenable_raw = json.loads(tenable_raw)
-            except Exception:
-                tenable_raw = []
-
-        splunk_raw = row.get("splunk_raw", [])
-        if isinstance(splunk_raw, str):
-            try:
-                splunk_raw = json.loads(splunk_raw)
-            except Exception:
-                splunk_raw = []
-
-        tenable_records = []
-        for idx, r in enumerate(tenable_raw):
-            fields = []
-            for k, v in r.items():
-                if pd.notna(v) and str(v).strip() != "":
-                    fields.append(html.Div([
-                        html.Span(f"{k}: ", style={"fontWeight": "600", "color": self.colors["text_muted"]}),
-                        html.Span(str(v))
-                    ], style={"fontSize": "13px", "marginBottom": "2px"}))
-            tenable_records.append(html.Div(fields, style={
-                "padding": "10px", "border": f"1px solid {self.colors['border']}",
-                "borderRadius": "4px", "marginBottom": "8px", "background": self.colors["bg"]
-            }))
-
-        splunk_records = []
-        for idx, r in enumerate(splunk_raw):
-            fields = []
-            for k, v in r.items():
-                if pd.notna(v) and str(v).strip() != "":
-                    fields.append(html.Div([
-                        html.Span(f"{k}: ", style={"fontWeight": "600", "color": self.colors["text_muted"]}),
-                        html.Span(str(v))
-                    ], style={"fontSize": "13px", "marginBottom": "2px"}))
-            splunk_records.append(html.Div(fields, style={
-                "padding": "10px", "border": f"1px solid {self.colors['border']}",
-                "borderRadius": "4px", "marginBottom": "8px", "background": self.colors["bg"]
-            }))
-
         return [
-            html.Div(style={"marginBottom": "20px"}, children=[
-                html.Span("Vulnerability (Tenable.io)", style={"fontSize": "14px", "fontWeight": "700", "color": self.colors["text"], "display": "block", "marginBottom": "8px"}),
-                html.Div([
+            # Tenable Section
+            html.Div(style={"marginBottom": "24px"}, children=[
+                html.Span("Vulnerability (Tenable.io)", style={
+                    "fontSize": "15px", "fontWeight": "700", "color": self.colors["text"], "display": "block", "marginBottom": "12px"
+                }),
+                html.Div(style={
+                    "padding": "16px", "border": f"1px solid {self.colors['border']}",
+                    "borderRadius": "4px", "background": self.colors["bg"],
+                    "display": "flex", "flexDirection": "column", "gap": "8px"
+                }, children=[
                     html.Div([
                         html.Span("Model Risk Score: ", style={"fontWeight": "600", "color": self.colors["text_muted"]}),
                         html.Span(score_text(row.get("tenable_risk_score")))
-                    ], style={"fontSize": "13px", "marginBottom": "4px"}),
+                    ], style={"fontSize": "14px"}),
                     html.Div([
                         html.Span("Model Priority: ", style={"fontWeight": "600", "color": self.colors["text_muted"]}),
                         html.Span(row.get("tenable_priority_level", "—"))
-                    ], style={"fontSize": "13px", "marginBottom": "4px"}),
+                    ], style={"fontSize": "14px"}),
                     html.Div([
                         html.Span("Model Remediation: ", style={"fontWeight": "600", "color": self.colors["text_muted"]}),
                         html.Span(row.get("tenable_remediation", "—"))
-                    ], style={"fontSize": "13px", "marginBottom": "12px"}),
-                ], style={"marginLeft": "12px"}),
-                html.Div(tenable_records if tenable_records else "No Tenable records found for this host.", style={"marginLeft": "12px"})
-            ]),
-            html.Div(style={"marginBottom": "20px"}, children=[
-                html.Span("Logs & Anomaly (Splunk)", style={"fontSize": "14px", "fontWeight": "700", "color": self.colors["text"], "display": "block", "marginBottom": "8px"}),
-                html.Div([
+                    ], style={"fontSize": "14px"}),
                     html.Div([
-                        html.Span("Model Risk Score: ", style={"fontWeight": "600", "color": self.colors["text_muted"]}),
-                        html.Span(score_text(row.get("splunk_risk_score")))
-                    ], style={"fontSize": "13px", "marginBottom": "4px"}),
+                        html.Span("Vulnerabilities: ", style={"fontWeight": "600", "color": self.colors["text_muted"]}),
+                        html.Span(row.get("tenable_vulnerabilities", "—"))
+                    ], style={"fontSize": "14px"}),
+                ])
+            ]),
+            # Splunk Section
+            html.Div(style={"marginBottom": "24px"}, children=[
+                html.Span("Logs & Anomaly (Splunk)", style={
+                    "fontSize": "15px", "fontWeight": "700", "color": self.colors["text"], "display": "block", "marginBottom": "12px"
+                }),
+                html.Div(style={
+                    "padding": "16px", "border": f"1px solid {self.colors['border']}",
+                    "borderRadius": "4px", "background": self.colors["bg"],
+                    "display": "flex", "flexDirection": "column", "gap": "8px"
+                }, children=[
                     html.Div([
                         html.Span("Model Priority: ", style={"fontWeight": "600", "color": self.colors["text_muted"]}),
                         html.Span(row.get("splunk_priority_level", "—"))
-                    ], style={"fontSize": "13px", "marginBottom": "4px"}),
+                    ], style={"fontSize": "14px"}),
                     html.Div([
                         html.Span("Model Remediation: ", style={"fontWeight": "600", "color": self.colors["text_muted"]}),
                         html.Span(row.get("splunk_remediation", "—"))
-                    ], style={"fontSize": "13px", "marginBottom": "12px"}),
-                ], style={"marginLeft": "12px"}),
-                html.Div(splunk_records if splunk_records else "No Splunk logs found for this host.", style={"marginLeft": "12px"})
-            ])
+                    ], style={"fontSize": "14px"}),
+                    html.Div([
+                        html.Span("Log Type: ", style={"fontWeight": "600", "color": self.colors["text_muted"]}),
+                        html.Span(row.get("splunk_log_type", "—"))
+                    ], style={"fontSize": "14px"}),
+                    html.Div([
+                        html.Span("Is Vulnerable: ", style={"fontWeight": "600", "color": self.colors["text_muted"]}),
+                        html.Span("Yes" if row.get("splunk_is_vulnerable") is True else "No" if row.get("splunk_is_vulnerable") is False else str(row.get("splunk_is_vulnerable", "—")))
+                    ], style={"fontSize": "14px"}),
+                    html.Div([
+                        html.Span("Evidence for Tenable: ", style={"fontWeight": "600", "color": self.colors["text_muted"]}),
+                        html.Span(row.get("splunk_evidence_for_tenable", "—"))
+                    ], style={"fontSize": "14px"}),
+                ])
+            ]),
+            # Raw Data Buttons Section
+            html.Div(
+                style={
+                    "display": "flex",
+                    "gap": "12px",
+                    "marginTop": "24px",
+                    "marginBottom": "24px",
+                    "justifyContent": "flex-start",
+                },
+                children=[
+                    html.Button(
+                        "View Raw Data - Tenable",
+                        id="view-tenable-raw-btn",
+                        n_clicks=0,
+                        style={
+                            "background": self.colors["primary"],
+                            "color": "white",
+                            "border": "none",
+                            "borderRadius": "4px",
+                            "padding": "12px 18px",
+                            "cursor": "pointer",
+                            "fontSize": "14px",
+                            "fontWeight": "700",
+                            "fontFamily": "inherit",
+                        }
+                    ),
+                    html.Button(
+                        "View Raw Data - Splunk",
+                        id="view-splunk-raw-btn",
+                        n_clicks=0,
+                        style={
+                            "background": self.colors["primary"],
+                            "color": "white",
+                            "border": "none",
+                            "borderRadius": "4px",
+                            "padding": "12px 18px",
+                            "cursor": "pointer",
+                            "fontSize": "14px",
+                            "fontWeight": "700",
+                            "fontFamily": "inherit",
+                        }
+                    ),
+                ]
+            )
         ]
 
     def _section(self, title: str, fields: dict) -> html.Div:

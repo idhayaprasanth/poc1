@@ -159,7 +159,7 @@ def build_asset_table(table_id: str, df: pd.DataFrame) -> dash_table.DataTable:
 
     return dash_table.DataTable(
         id=table_id,
-        columns=[{"name": col_names.get(c, c), "id": c} for c in existing_cols],
+        columns=[{"name": col_names.get(c, c), "id": c} for c in existing_cols if c != "asset_id"],
         data=table_data,
         row_selectable="single",
         style_table={"overflowX": "auto"},

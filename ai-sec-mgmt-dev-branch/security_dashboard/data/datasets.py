@@ -37,6 +37,10 @@ AI_ANALYSIS_COLUMNS = [
     "splunk_risk_score",
     "splunk_priority_level",
     "ai_analysis_source",
+    "tenable_vulnerabilities",
+    "splunk_log_type",
+    "splunk_is_vulnerable",
+    "splunk_evidence_for_tenable",
 ]
 
 FLOAT_AI_ANALYSIS_COLUMNS = {
@@ -116,18 +120,24 @@ def ensure_ai_analysis_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+import threading
+CACHE_LOCK = threading.Lock()
+
+
 def load_ai_analysis_cache() -> dict[str, dict]:
-    if not CACHE_FILE.exists():
-        return {}
-    try:
-        cache = json.loads(CACHE_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        return {}
-    return cache if isinstance(cache, dict) else {}
+    with CACHE_LOCK:
+        if not CACHE_FILE.exists():
+            return {}
+        try:
+            cache = json.loads(CACHE_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+        return cache if isinstance(cache, dict) else {}
 
 
 def save_ai_analysis_cache(cache: dict[str, dict]) -> None:
-    CACHE_FILE.write_text(json.dumps(cache, ensure_ascii=True, indent=2), encoding="utf-8")
+    with CACHE_LOCK:
+        CACHE_FILE.write_text(json.dumps(cache, ensure_ascii=True, indent=2), encoding="utf-8")
 
 
 def persist_ai_analysis_result(row: dict | pd.Series, analysis_result: dict) -> None:
