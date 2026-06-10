@@ -300,6 +300,48 @@ def deduplicate_records(records: list[dict], keys_to_compare: list[str]) -> list
     return unique_records
 
 
+def get_asset_ip(t_rows: list[dict], s_rows: list[dict]) -> str:
+    # Try to find IP in tenable rows first
+    for r in t_rows:
+        for key in ["IP Address", "ip_address", "ip", "IPAddress", "IP"]:
+            val = r.get(key)
+            if pd.notna(val) and str(val).strip():
+                return str(val).strip()
+    # Try splunk rows
+    for r in s_rows:
+        for key in ["ip", "ip_address", "ipAddress", "IPAddress", "IP", "dest_ip", "src_ip", "host_ip"]:
+            val = r.get(key)
+            if pd.notna(val) and str(val).strip():
+                return str(val).strip()
+    return "—"
+
+
+def get_ip_facing(ip_str: str) -> str:
+    import ipaddress
+    if not ip_str or ip_str == "—":
+        return "Internal" # default fallback
+    try:
+        clean_ip = ip_str.split(":")[0].strip()
+        ip_obj = ipaddress.ip_address(clean_ip)
+        if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local:
+            return "Internal"
+        else:
+            return "External"
+    except Exception:
+        # Fallback patterns if ipaddress parsing fails
+        clean_ip = ip_str.split(":")[0].strip()
+        if any(clean_ip.startswith(prefix) for prefix in ["10.", "192.168.", "127.", "169.254."]):
+            return "Internal"
+        if clean_ip.startswith("172."):
+            try:
+                parts = clean_ip.split(".")
+                if len(parts) >= 2 and 16 <= int(parts[1]) <= 31:
+                    return "Internal"
+            except Exception:
+                pass
+        return "External"
+
+
 def build_merged_dataset() -> pd.DataFrame:
     """Load Tenable and Splunk raw CSV data, group by hostname, and merge."""
     tenable_dfs, splunk_dfs = load_dynamic_datasets()
@@ -352,10 +394,14 @@ def build_merged_dataset() -> pd.DataFrame:
         s_rows = s_rows[:25]
         
         scan_date = get_latest_date(t_rows + s_rows)
+        ip_addr = get_asset_ip(t_rows, s_rows)
+        facing = get_ip_facing(ip_addr)
         
         records.append({
             "asset_id": f"ASSET-{str(idx + 1).zfill(3)}",
             "asset_name": host,
+            "ip_address": ip_addr,
+            "facing": facing,
             "tenable_raw": json.dumps(t_rows),
             "splunk_raw": json.dumps(s_rows),
             "scan_date": scan_date,
@@ -363,7 +409,7 @@ def build_merged_dataset() -> pd.DataFrame:
         })
 
     if not records:
-        df = pd.DataFrame(columns=["asset_id", "asset_name", "tenable_raw", "splunk_raw", "scan_date", "issue_status"])
+        df = pd.DataFrame(columns=["asset_id", "asset_name", "ip_address", "facing", "tenable_raw", "splunk_raw", "scan_date", "issue_status"])
     else:
         df = pd.DataFrame(records)
 

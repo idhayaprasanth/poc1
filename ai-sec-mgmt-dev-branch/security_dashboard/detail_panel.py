@@ -227,8 +227,8 @@ class DetailPanelRenderer:
                 },
                 children=[
                     html.Button(
-                        "View Raw Data - Tenable",
-                        id="view-tenable-raw-btn",
+                        "Download CSV - Tenable",
+                        id="download-tenable-raw-btn",
                         n_clicks=0,
                         style={
                             "background": self.colors["primary"],
@@ -243,8 +243,8 @@ class DetailPanelRenderer:
                         }
                     ),
                     html.Button(
-                        "View Raw Data - Splunk",
-                        id="view-splunk-raw-btn",
+                        "Download CSV - Splunk",
+                        id="download-splunk-raw-btn",
                         n_clicks=0,
                         style={
                             "background": self.colors["primary"],

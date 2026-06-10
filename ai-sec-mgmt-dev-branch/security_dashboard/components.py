@@ -127,15 +127,16 @@ def build_asset_table(table_id: str, df: pd.DataFrame) -> dash_table.DataTable:
         Dash DataTable component
     """
     cols_display = [
-        "asset_id", "asset_name", "risk_score", "risk_level", "ai_reason", "remediation", "issue_status",
+        "asset_id", "asset_name", "ip_address", "facing", "risk_score", "risk_level", "remediation", "issue_status",
     ]
 
     col_names = {
         "asset_id": "Asset ID",
         "asset_name": "Hostname",
+        "ip_address": "IP Address",
+        "facing": "Facing",
         "risk_score": "Risk Score",
         "risk_level": "Level",
-        "ai_reason": "AI Summary",
         "remediation": "Remediation",
         "issue_status": "Issue Status",
     }

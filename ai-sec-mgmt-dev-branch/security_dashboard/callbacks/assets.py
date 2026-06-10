@@ -240,127 +240,61 @@ def register_asset_callbacks(app) -> None:
         return dcc.send_data_frame(df.to_csv, f"security-report-{datetime.now().strftime('%Y-%m-%d')}.csv", index=False)
 
     @app.callback(
-        Output("raw-data-modal", "style"),
-        Output("raw-data-modal-title", "children"),
-        Output("raw-data-modal-body", "children"),
-        Input("view-tenable-raw-btn", "n_clicks"),
-        Input("view-splunk-raw-btn", "n_clicks"),
-        Input("raw-data-modal-close", "n_clicks"),
-        Input("raw-data-modal-backdrop", "n_clicks"),
+        Output("download-raw-tenable", "data"),
+        Input("download-tenable-raw-btn", "n_clicks"),
         State("selected-asset-store", "data"),
         State("merged-data-store", "data"),
         prevent_initial_call=True,
     )
-    def handle_raw_data_modal(tenable_clicks, splunk_clicks, close_clicks, backdrop_clicks, selected_asset, json_data):
-        triggered = ctx.triggered_id
-        if not triggered or triggered in ["raw-data-modal-close", "raw-data-modal-backdrop"]:
-            return {"display": "none"}, "", []
-
-        if not selected_asset or not json_data:
-            return {"display": "none"}, "", []
-
+    def download_tenable_raw(n_clicks, selected_asset, json_data):
+        if not n_clicks or not selected_asset or not json_data:
+            return no_update
         df = pd.read_json(io.StringIO(json_data), orient="split")
         asset_id = selected_asset.get("asset_id")
         if not asset_id or "asset_id" not in df.columns or not (df["asset_id"] == asset_id).any():
-            return {"display": "none"}, "", []
-
+            return no_update
         row = df[df["asset_id"] == asset_id].iloc[0]
         asset_name = row.get("asset_name", asset_id)
-
-        import json
-        if triggered == "view-tenable-raw-btn":
-            raw_data = row.get("tenable_raw", [])
-            if isinstance(raw_data, str):
-                try:
-                    raw_data = json.loads(raw_data)
-                except Exception:
-                    raw_data = []
-            title = f"Raw Tenable Vulnerabilities - {asset_name}"
-            body = build_raw_logs_table(raw_data, "tenable")
-            return {
-                "display": "flex",
-                "position": "fixed",
-                "top": 0,
-                "left": 0,
-                "right": 0,
-                "bottom": 0,
-                "alignItems": "center",
-                "justifyContent": "center",
-                "zIndex": 9999
-            }, title, body
-
-        elif triggered == "view-splunk-raw-btn":
-            raw_data = row.get("splunk_raw", [])
-            if isinstance(raw_data, str):
-                try:
-                    raw_data = json.loads(raw_data)
-                except Exception:
-                    raw_data = []
-            title = f"Raw Splunk Logs - {asset_name}"
-            body = build_raw_logs_table(raw_data, "splunk")
-            return {
-                "display": "flex",
-                "position": "fixed",
-                "top": 0,
-                "left": 0,
-                "right": 0,
-                "bottom": 0,
-                "alignItems": "center",
-                "justifyContent": "center",
-                "zIndex": 9999
-            }, title, body
-
-        return {"display": "none"}, "", []
-
-
-def build_raw_logs_table(records: list[dict], log_type: str) -> dash_table.DataTable:
-    if not records:
-        return html.Div("No records found.", style={"color": COLORS["text_muted"]})
-    
-    # Get all unique keys present in the records
-    keys = []
-    for r in records:
-        for k in r.keys():
-            if k not in keys:
-                keys.append(k)
-                
-    # Order keys logically
-    important_cols = []
-    if log_type == "tenable":
-        order = ["Plugin", "Plugin Name", "Severity", "Port", "VPR", "ACR", "AES", "IP Address"]
-    else:
-        order = ["_time", "EventCode", "EventID", "CommandLine", "Message", "signature", "host"]
         
-    for col in order:
-        if col in keys:
-            important_cols.append(col)
-    for col in keys:
-        if col not in important_cols:
-            important_cols.append(col)
-            
-    # Create DataTable
-    return dash_table.DataTable(
-        columns=[{"name": col, "id": col} for col in important_cols],
-        data=records,
-        style_table={"overflowX": "auto"},
-        style_header={
-            "backgroundColor": COLORS["bg"],
-            "fontWeight": "700",
-            "fontSize": "12px",
-            "textTransform": "uppercase",
-            "color": COLORS["text_muted"],
-            "borderBottom": f"2px solid {COLORS['border']}",
-            "padding": "8px 12px",
-        },
-        style_cell={
-            "fontSize": "14px",
-            "padding": "8px 12px",
-            "borderBottom": f"1px solid {COLORS['border']}",
-            "textAlign": "left",
-            "maxWidth": "300px",
-            "overflow": "hidden",
-            "textOverflow": "ellipsis",
-            "whiteSpace": "normal",
-        },
-        page_size=10,
+        import json
+        raw_data = row.get("tenable_raw", [])
+        if isinstance(raw_data, str):
+            try:
+                raw_data = json.loads(raw_data)
+            except Exception:
+                raw_data = []
+        if not raw_data:
+            return no_update
+        
+        raw_df = pd.DataFrame(raw_data)
+        return dcc.send_data_frame(raw_df.to_csv, f"tenable-raw-{asset_name}.csv", index=False)
+
+    @app.callback(
+        Output("download-raw-splunk", "data"),
+        Input("download-splunk-raw-btn", "n_clicks"),
+        State("selected-asset-store", "data"),
+        State("merged-data-store", "data"),
+        prevent_initial_call=True,
     )
+    def download_splunk_raw(n_clicks, selected_asset, json_data):
+        if not n_clicks or not selected_asset or not json_data:
+            return no_update
+        df = pd.read_json(io.StringIO(json_data), orient="split")
+        asset_id = selected_asset.get("asset_id")
+        if not asset_id or "asset_id" not in df.columns or not (df["asset_id"] == asset_id).any():
+            return no_update
+        row = df[df["asset_id"] == asset_id].iloc[0]
+        asset_name = row.get("asset_name", asset_id)
+        
+        import json
+        raw_data = row.get("splunk_raw", [])
+        if isinstance(raw_data, str):
+            try:
+                raw_data = json.loads(raw_data)
+            except Exception:
+                raw_data = []
+        if not raw_data:
+            return no_update
+        
+        raw_df = pd.DataFrame(raw_data)
+        return dcc.send_data_frame(raw_df.to_csv, f"splunk-raw-{asset_name}.csv", index=False)
