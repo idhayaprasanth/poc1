@@ -1,0 +1,276 @@
+2026-06-12 10:03:22,993 - INFO - ======================================================================
+2026-06-12 10:03:22,993 - INFO - TUI Dashboard Started
+2026-06-12 10:03:22,993 - INFO - Total assets loaded: 108
+2026-06-12 10:03:22,993 - INFO - ======================================================================
+2026-06-12 10:11:49,264 - INFO - ======================================================================
+2026-06-12 10:11:49,264 - INFO - Starting AI analysis for 108 assets
+2026-06-12 10:11:49,264 - INFO - Assets: lll-bigfix-inv2, lll-lx-lforms-elastic-b, lll-lx-ubuntu2204-gold, lll-mac-guptak1, lll-mac-santan1, lll-mac-wangj47, lll-mac-wangye, lll-nexus-02, lll-pubmed, lll-win-akandur, lll-win-edward1, lll-win-golnari, lll-win-loaner3, lll-win-mgalla1, lllem2, mmm22142227cas, mmm22205846pcm, mmm22205847pcm, mmm22205850coll, mmm22205882mms, mmm22205903pcm, mmm22250003cas, mmm22250009occs, mmm22250037oams, mmm22250057occs, mmm22250110occs, mmm22250731oet, mmm22250754oet, mmm22250758mms, mmm22250766hmd, mmm22250768indx, mmm22250769ab, mmm22250787ep, mmm22250790ep, mmm22250791ep, mmm22250793ep, mmm22250898odoa, mmm22250899doa, mmm22250909ias, mmm22250918occs, mmm22250919occs, mmm22250935stb, mmm22250942oam, mmm22250963indx, mmm22250991mms, mmm22281603pcm, mmm22281697stb, mmm22281699pcm, mmm22281775hmd, mmm22281796odoa, mmm22281801ref, mmm22281802sis, mmm22281808mms, mmm22281821lab, mmm22281855hmd, mmm22281860eng, mmm22281874cas, mmm22281908occs, mmm22281932stb, mmm22324005stb, mmm22324015oams, mmm22324059stb, mmm22324071stb, mmm22324081stb, mmm22324083stb, mmm22324167occs, mmm22324205stb, mmm22324210stb, mmm22324220stb, mmm22324602stb, mmm22324629od, mmm22324632disc, mmm22324637disc, mmm22324652disc, mmm22324659coll, mmm22324671hds, mmm22324675od, mmm22324699ab, mmm22324710ab, mmm22324771mlb, mmm22324772stb, mmm22324775odao, mmm22457337stb, mmm22457339stb, mmmdvwbsp, mmmxddc02, pppppwbaddc01, pppppwbaddc03, pppppwbbackup, pppppwbdsview01, pppppwbdw04, pppppwbdw05, pppppwbsniff01, pppppwbswnode01, pppppwbswnode03, pppppwbswnode04, pppppwbswnode05, pppppwbvda01, pppppwbvda05, pppppwbvda06, pppppwcsniff02, ppppvwbdb01, ppppvwbgss01, ppppvwbhpnps, ppppvwbiptv, ppppvwbnnm, ppppvwbopm, ppppvwbsf01
+2026-06-12 10:11:49,265 - INFO - ======================================================================
+2026-06-12 10:11:49,301 - INFO - Starting AI analysis batch 1 for 1 row(s) in parallel: lll-bigfix-inv2
+2026-06-12 10:12:08,971 - INFO - AI analysis completed successfully for lll-bigfix-inv2
+2026-06-12 10:12:08,978 - INFO - Completed AI analysis batch 1. Success=1, Failed=0.
+2026-06-12 10:12:08,980 - INFO - Starting AI analysis batch 2 for 1 row(s) in parallel: lll-lx-lforms-elastic-b
+2026-06-12 10:12:09,072 - INFO - ✓ Completed: lll-bigfix-inv2 - Risk: High (7.4)
+2026-06-12 10:12:09,081 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:12:28,326 - INFO - AI analysis completed successfully for lll-lx-lforms-elastic-b
+2026-06-12 10:12:28,331 - INFO - Completed AI analysis batch 2. Success=2, Failed=0.
+2026-06-12 10:12:28,333 - INFO - Starting AI analysis batch 3 for 1 row(s) in parallel: lll-lx-ubuntu2204-gold
+2026-06-12 10:12:28,458 - INFO - ✓ Completed: lll-lx-lforms-elastic-b - Risk: Medium (2.9)
+2026-06-12 10:12:28,464 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:12:44,580 - INFO - AI analysis completed successfully for lll-lx-ubuntu2204-gold
+2026-06-12 10:12:44,585 - INFO - Completed AI analysis batch 3. Success=3, Failed=0.
+2026-06-12 10:12:44,587 - INFO - Starting AI analysis batch 4 for 1 row(s) in parallel: lll-mac-guptak1
+2026-06-12 10:12:44,668 - INFO - ✓ Completed: lll-lx-ubuntu2204-gold - Risk: Medium (6.0)
+2026-06-12 10:12:44,673 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:13:01,817 - INFO - AI analysis completed successfully for lll-mac-guptak1
+2026-06-12 10:13:01,823 - INFO - Completed AI analysis batch 4. Success=4, Failed=0.
+2026-06-12 10:13:01,824 - INFO - Starting AI analysis batch 5 for 1 row(s) in parallel: lll-mac-santan1
+2026-06-12 10:13:01,947 - INFO - ✓ Completed: lll-mac-guptak1 - Risk: High (8.0)
+2026-06-12 10:13:01,952 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:13:26,490 - INFO - AI analysis completed successfully for lll-mac-santan1
+2026-06-12 10:13:26,495 - INFO - Completed AI analysis batch 5. Success=5, Failed=0.
+2026-06-12 10:13:26,496 - INFO - Starting AI analysis batch 6 for 1 row(s) in parallel: lll-mac-wangj47
+2026-06-12 10:13:26,531 - INFO - ✓ Completed: lll-mac-santan1 - Risk: High (8.7)
+2026-06-12 10:13:26,537 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:13:42,180 - INFO - AI analysis completed successfully for lll-mac-wangj47
+2026-06-12 10:13:42,185 - INFO - Completed AI analysis batch 6. Success=6, Failed=0.
+2026-06-12 10:13:42,187 - INFO - Starting AI analysis batch 7 for 1 row(s) in parallel: lll-mac-wangye
+2026-06-12 10:13:42,302 - INFO - ✓ Completed: lll-mac-wangj47 - Risk: Critical (9.0)
+2026-06-12 10:13:42,307 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:13:57,149 - INFO - AI analysis completed successfully for lll-mac-wangye
+2026-06-12 10:13:57,154 - INFO - Completed AI analysis batch 7. Success=7, Failed=0.
+2026-06-12 10:13:57,155 - INFO - Starting AI analysis batch 8 for 1 row(s) in parallel: lll-nexus-02
+2026-06-12 10:13:57,197 - INFO - ✓ Completed: lll-mac-wangye - Risk: High (8.0)
+2026-06-12 10:13:57,203 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:14:19,519 - INFO - AI analysis completed successfully for lll-nexus-02
+2026-06-12 10:14:19,524 - INFO - Completed AI analysis batch 8. Success=8, Failed=0.
+2026-06-12 10:14:19,525 - INFO - Starting AI analysis batch 9 for 1 row(s) in parallel: lll-pubmed
+2026-06-12 10:14:19,560 - INFO - ✓ Completed: lll-nexus-02 - Risk: Medium (2.9)
+2026-06-12 10:14:19,566 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:14:34,280 - INFO - AI analysis completed successfully for lll-pubmed
+2026-06-12 10:14:34,285 - INFO - Completed AI analysis batch 9. Success=9, Failed=0.
+2026-06-12 10:14:34,286 - INFO - Starting AI analysis batch 10 for 1 row(s) in parallel: lll-win-akandur
+2026-06-12 10:14:34,322 - INFO - ✓ Completed: lll-pubmed - Risk: Critical (8.1)
+2026-06-12 10:14:34,328 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:14:48,567 - INFO - AI analysis completed successfully for lll-win-akandur
+2026-06-12 10:14:48,572 - INFO - Completed AI analysis batch 10. Success=10, Failed=0.
+2026-06-12 10:14:48,574 - INFO - Starting AI analysis batch 11 for 1 row(s) in parallel: lll-win-edward1
+2026-06-12 10:14:48,701 - INFO - ✓ Completed: lll-win-akandur - Risk: High (8.0)
+2026-06-12 10:14:48,706 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:15:02,070 - INFO - AI analysis completed successfully for lll-win-edward1
+2026-06-12 10:15:02,075 - INFO - Completed AI analysis batch 11. Success=11, Failed=0.
+2026-06-12 10:15:02,076 - INFO - Starting AI analysis batch 12 for 1 row(s) in parallel: lll-win-golnari
+2026-06-12 10:15:02,182 - INFO - ✓ Completed: lll-win-edward1 - Risk: High (8.0)
+2026-06-12 10:15:02,187 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:15:17,381 - INFO - AI analysis completed successfully for lll-win-golnari
+2026-06-12 10:15:17,386 - INFO - Completed AI analysis batch 12. Success=12, Failed=0.
+2026-06-12 10:15:17,388 - INFO - Starting AI analysis batch 13 for 1 row(s) in parallel: lll-win-loaner3
+2026-06-12 10:15:17,506 - INFO - ✓ Completed: lll-win-golnari - Risk: High (7.0)
+2026-06-12 10:15:17,512 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:15:34,320 - INFO - AI analysis completed successfully for lll-win-loaner3
+2026-06-12 10:15:34,325 - INFO - Completed AI analysis batch 13. Success=13, Failed=0.
+2026-06-12 10:15:34,327 - INFO - Starting AI analysis batch 14 for 1 row(s) in parallel: lll-win-mgalla1
+2026-06-12 10:15:34,453 - INFO - ✓ Completed: lll-win-loaner3 - Risk: High (8.0)
+2026-06-12 10:15:34,459 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:15:48,889 - INFO - AI analysis completed successfully for lll-win-mgalla1
+2026-06-12 10:15:48,894 - INFO - Completed AI analysis batch 14. Success=14, Failed=0.
+2026-06-12 10:15:48,896 - INFO - Starting AI analysis batch 15 for 1 row(s) in parallel: lllem2
+2026-06-12 10:15:48,971 - INFO - ✓ Completed: lll-win-mgalla1 - Risk: High (8.5)
+2026-06-12 10:15:48,978 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:16:01,969 - INFO - AI analysis completed successfully for lllem2
+2026-06-12 10:16:01,974 - INFO - Completed AI analysis batch 15. Success=15, Failed=0.
+2026-06-12 10:16:01,976 - INFO - Starting AI analysis batch 16 for 1 row(s) in parallel: mmm22142227cas
+2026-06-12 10:16:02,100 - INFO - ✓ Completed: lllem2 - Risk: High (7.0)
+2026-06-12 10:16:02,105 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:16:15,451 - INFO - AI analysis completed successfully for mmm22142227cas
+2026-06-12 10:16:15,456 - INFO - Completed AI analysis batch 16. Success=16, Failed=0.
+2026-06-12 10:16:15,458 - INFO - Starting AI analysis batch 17 for 1 row(s) in parallel: mmm22205846pcm
+2026-06-12 10:16:15,573 - INFO - ✓ Completed: mmm22142227cas - Risk: High (8.0)
+2026-06-12 10:16:15,580 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:16:29,530 - INFO - AI analysis completed successfully for mmm22205846pcm
+2026-06-12 10:16:29,535 - INFO - Completed AI analysis batch 17. Success=17, Failed=0.
+2026-06-12 10:16:29,537 - INFO - Starting AI analysis batch 18 for 1 row(s) in parallel: mmm22205847pcm
+2026-06-12 10:16:29,609 - INFO - ✓ Completed: mmm22205846pcm - Risk: Medium (4.0)
+2026-06-12 10:16:29,614 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:16:44,412 - INFO - AI analysis completed successfully for mmm22205847pcm
+2026-06-12 10:16:44,418 - INFO - Completed AI analysis batch 18. Success=18, Failed=0.
+2026-06-12 10:16:44,419 - INFO - Starting AI analysis batch 19 for 1 row(s) in parallel: mmm22205850coll
+2026-06-12 10:16:44,494 - INFO - ✓ Completed: mmm22205847pcm - Risk: Medium (4.0)
+2026-06-12 10:16:44,499 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:16:57,259 - INFO - AI analysis completed successfully for mmm22205850coll
+2026-06-12 10:16:57,264 - INFO - Completed AI analysis batch 19. Success=19, Failed=0.
+2026-06-12 10:16:57,265 - INFO - Starting AI analysis batch 20 for 1 row(s) in parallel: mmm22205882mms
+2026-06-12 10:16:57,297 - INFO - ✓ Completed: mmm22205850coll - Risk: High (8.0)
+2026-06-12 10:16:57,302 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:17:10,849 - INFO - AI analysis completed successfully for mmm22205882mms
+2026-06-12 10:17:10,853 - INFO - Completed AI analysis batch 20. Success=20, Failed=0.
+2026-06-12 10:17:10,855 - INFO - Starting AI analysis batch 21 for 1 row(s) in parallel: mmm22205903pcm
+2026-06-12 10:17:10,917 - INFO - ✓ Completed: mmm22205882mms - Risk: High (8.0)
+2026-06-12 10:17:10,922 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:17:24,839 - INFO - AI analysis completed successfully for mmm22205903pcm
+2026-06-12 10:17:24,846 - INFO - Completed AI analysis batch 21. Success=21, Failed=0.
+2026-06-12 10:17:24,848 - INFO - Starting AI analysis batch 22 for 1 row(s) in parallel: mmm22250003cas
+2026-06-12 10:17:24,963 - INFO - ✓ Completed: mmm22205903pcm - Risk: High (8.0)
+2026-06-12 10:17:24,969 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:17:38,432 - INFO - AI analysis completed successfully for mmm22250003cas
+2026-06-12 10:17:38,440 - INFO - Completed AI analysis batch 22. Success=22, Failed=0.
+2026-06-12 10:17:38,442 - INFO - Starting AI analysis batch 23 for 1 row(s) in parallel: mmm22250009occs
+2026-06-12 10:17:38,458 - INFO - ✓ Completed: mmm22250003cas - Risk: High (8.0)
+2026-06-12 10:17:38,466 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:17:53,499 - INFO - AI analysis completed successfully for mmm22250009occs
+2026-06-12 10:17:53,504 - INFO - Completed AI analysis batch 23. Success=23, Failed=0.
+2026-06-12 10:17:53,505 - INFO - Starting AI analysis batch 24 for 1 row(s) in parallel: mmm22250037oams
+2026-06-12 10:17:53,623 - INFO - ✓ Completed: mmm22250009occs - Risk: Medium (4.0)
+2026-06-12 10:17:53,630 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:18:08,586 - INFO - AI analysis completed successfully for mmm22250037oams
+2026-06-12 10:18:08,592 - INFO - Completed AI analysis batch 24. Success=24, Failed=0.
+2026-06-12 10:18:08,593 - INFO - Starting AI analysis batch 25 for 1 row(s) in parallel: mmm22250057occs
+2026-06-12 10:18:08,649 - INFO - ✓ Completed: mmm22250037oams - Risk: High (8.0)
+2026-06-12 10:18:08,654 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:18:24,279 - INFO - AI analysis completed successfully for mmm22250057occs
+2026-06-12 10:18:24,285 - INFO - Completed AI analysis batch 25. Success=25, Failed=0.
+2026-06-12 10:18:24,286 - INFO - Starting AI analysis batch 26 for 1 row(s) in parallel: mmm22250110occs
+2026-06-12 10:18:24,403 - INFO - ✓ Completed: mmm22250057occs - Risk: High (8.0)
+2026-06-12 10:18:24,408 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:18:39,979 - INFO - AI analysis completed successfully for mmm22250110occs
+2026-06-12 10:18:39,984 - INFO - Completed AI analysis batch 26. Success=26, Failed=0.
+2026-06-12 10:18:39,986 - INFO - Starting AI analysis batch 27 for 1 row(s) in parallel: mmm22250731oet
+2026-06-12 10:18:40,001 - INFO - ✓ Completed: mmm22250110occs - Risk: Medium (4.0)
+2026-06-12 10:18:40,006 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:18:54,620 - INFO - AI analysis completed successfully for mmm22250731oet
+2026-06-12 10:18:54,625 - INFO - Completed AI analysis batch 27. Success=27, Failed=0.
+2026-06-12 10:18:54,626 - INFO - Starting AI analysis batch 28 for 1 row(s) in parallel: mmm22250754oet
+2026-06-12 10:18:54,677 - INFO - ✓ Completed: mmm22250731oet - Risk: High (8.0)
+2026-06-12 10:18:54,682 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:19:09,670 - INFO - AI analysis completed successfully for mmm22250754oet
+2026-06-12 10:19:09,678 - INFO - Completed AI analysis batch 28. Success=28, Failed=0.
+2026-06-12 10:19:09,680 - INFO - Starting AI analysis batch 29 for 1 row(s) in parallel: mmm22250758mms
+2026-06-12 10:19:09,766 - INFO - ✓ Completed: mmm22250754oet - Risk: High (8.0)
+2026-06-12 10:19:09,773 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:19:23,612 - INFO - AI analysis completed successfully for mmm22250758mms
+2026-06-12 10:19:23,620 - INFO - Completed AI analysis batch 29. Success=29, Failed=0.
+2026-06-12 10:19:23,622 - INFO - Starting AI analysis batch 30 for 1 row(s) in parallel: mmm22250766hmd
+2026-06-12 10:19:23,733 - INFO - ✓ Completed: mmm22250758mms - Risk: High (8.0)
+2026-06-12 10:19:23,739 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:19:36,948 - INFO - AI analysis completed successfully for mmm22250766hmd
+2026-06-12 10:19:36,953 - INFO - Completed AI analysis batch 30. Success=30, Failed=0.
+2026-06-12 10:19:36,954 - INFO - Starting AI analysis batch 31 for 1 row(s) in parallel: mmm22250768indx
+2026-06-12 10:19:37,082 - INFO - ✓ Completed: mmm22250766hmd - Risk: High (8.0)
+2026-06-12 10:19:37,087 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:19:50,830 - INFO - AI analysis completed successfully for mmm22250768indx
+2026-06-12 10:19:50,834 - INFO - Completed AI analysis batch 31. Success=31, Failed=0.
+2026-06-12 10:19:50,836 - INFO - Starting AI analysis batch 32 for 1 row(s) in parallel: mmm22250769ab
+2026-06-12 10:19:50,864 - INFO - ✓ Completed: mmm22250768indx - Risk: High (8.0)
+2026-06-12 10:19:50,867 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:20:06,256 - INFO - AI analysis completed successfully for mmm22250769ab
+2026-06-12 10:20:06,261 - INFO - Completed AI analysis batch 32. Success=32, Failed=0.
+2026-06-12 10:20:06,262 - INFO - Starting AI analysis batch 33 for 1 row(s) in parallel: mmm22250787ep
+2026-06-12 10:20:06,351 - INFO - ✓ Completed: mmm22250769ab - Risk: Medium (4.0)
+2026-06-12 10:20:06,354 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:20:21,111 - INFO - AI analysis completed successfully for mmm22250787ep
+2026-06-12 10:20:21,115 - INFO - Completed AI analysis batch 33. Success=33, Failed=0.
+2026-06-12 10:20:21,117 - INFO - Starting AI analysis batch 34 for 1 row(s) in parallel: mmm22250790ep
+2026-06-12 10:20:21,246 - INFO - ✓ Completed: mmm22250787ep - Risk: Medium (4.0)
+2026-06-12 10:20:21,250 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:20:36,378 - INFO - AI analysis completed successfully for mmm22250790ep
+2026-06-12 10:20:36,386 - INFO - Completed AI analysis batch 34. Success=34, Failed=0.
+2026-06-12 10:20:36,388 - INFO - Starting AI analysis batch 35 for 1 row(s) in parallel: mmm22250791ep
+2026-06-12 10:20:36,455 - INFO - ✓ Completed: mmm22250790ep - Risk: High (8.0)
+2026-06-12 10:20:36,462 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:20:49,961 - INFO - AI analysis completed successfully for mmm22250791ep
+2026-06-12 10:20:49,968 - INFO - Completed AI analysis batch 35. Success=35, Failed=0.
+2026-06-12 10:20:49,970 - INFO - Starting AI analysis batch 36 for 1 row(s) in parallel: mmm22250793ep
+2026-06-12 10:20:50,092 - INFO - ✓ Completed: mmm22250791ep - Risk: High (8.0)
+2026-06-12 10:20:50,099 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:21:03,613 - INFO - AI analysis completed successfully for mmm22250793ep
+2026-06-12 10:21:03,621 - INFO - Completed AI analysis batch 36. Success=36, Failed=0.
+2026-06-12 10:21:03,624 - INFO - Starting AI analysis batch 37 for 1 row(s) in parallel: mmm22250898odoa
+2026-06-12 10:21:03,687 - INFO - ✓ Completed: mmm22250793ep - Risk: High (8.0)
+2026-06-12 10:21:03,693 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:21:19,178 - INFO - AI analysis completed successfully for mmm22250898odoa
+2026-06-12 10:21:19,185 - INFO - Completed AI analysis batch 37. Success=37, Failed=0.
+2026-06-12 10:21:19,187 - INFO - Starting AI analysis batch 38 for 1 row(s) in parallel: mmm22250899doa
+2026-06-12 10:21:19,307 - INFO - ✓ Completed: mmm22250898odoa - Risk: High (8.0)
+2026-06-12 10:21:19,313 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:21:34,477 - INFO - AI analysis completed successfully for mmm22250899doa
+2026-06-12 10:21:34,485 - INFO - Completed AI analysis batch 38. Success=38, Failed=0.
+2026-06-12 10:21:34,487 - INFO - Starting AI analysis batch 39 for 1 row(s) in parallel: mmm22250909ias
+2026-06-12 10:21:34,595 - INFO - ✓ Completed: mmm22250899doa - Risk: Medium (4.0)
+2026-06-12 10:21:34,601 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:21:50,170 - INFO - AI analysis completed successfully for mmm22250909ias
+2026-06-12 10:21:50,179 - INFO - Completed AI analysis batch 39. Success=39, Failed=0.
+2026-06-12 10:21:50,181 - INFO - Starting AI analysis batch 40 for 1 row(s) in parallel: mmm22250918occs
+2026-06-12 10:21:50,287 - INFO - ✓ Completed: mmm22250909ias - Risk: High (8.0)
+2026-06-12 10:21:50,293 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:22:03,936 - INFO - AI analysis completed successfully for mmm22250918occs
+2026-06-12 10:22:03,942 - INFO - Completed AI analysis batch 40. Success=40, Failed=0.
+2026-06-12 10:22:03,944 - INFO - Starting AI analysis batch 41 for 1 row(s) in parallel: mmm22250919occs
+2026-06-12 10:22:04,060 - INFO - ✓ Completed: mmm22250918occs - Risk: High (8.0)
+2026-06-12 10:22:04,066 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:22:17,153 - INFO - AI analysis completed successfully for mmm22250919occs
+2026-06-12 10:22:17,158 - INFO - Completed AI analysis batch 41. Success=41, Failed=0.
+2026-06-12 10:22:17,159 - INFO - Starting AI analysis batch 42 for 1 row(s) in parallel: mmm22250935stb
+2026-06-12 10:22:17,285 - INFO - ✓ Completed: mmm22250919occs - Risk: High (8.0)
+2026-06-12 10:22:17,289 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:22:33,468 - INFO - AI analysis completed successfully for mmm22250935stb
+2026-06-12 10:22:33,474 - INFO - Completed AI analysis batch 42. Success=42, Failed=0.
+2026-06-12 10:22:33,475 - INFO - Starting AI analysis batch 43 for 1 row(s) in parallel: mmm22250942oam
+2026-06-12 10:22:33,581 - INFO - ✓ Completed: mmm22250935stb - Risk: Medium (4.0)
+2026-06-12 10:22:33,586 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:22:48,256 - INFO - AI analysis completed successfully for mmm22250942oam
+2026-06-12 10:22:48,262 - INFO - Completed AI analysis batch 43. Success=43, Failed=0.
+2026-06-12 10:22:48,264 - INFO - Starting AI analysis batch 44 for 1 row(s) in parallel: mmm22250963indx
+2026-06-12 10:22:48,319 - INFO - ✓ Completed: mmm22250942oam - Risk: High (8.0)
+2026-06-12 10:22:48,324 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:23:03,906 - INFO - AI analysis completed successfully for mmm22250963indx
+2026-06-12 10:23:03,911 - INFO - Completed AI analysis batch 44. Success=44, Failed=0.
+2026-06-12 10:23:03,913 - INFO - Starting AI analysis batch 45 for 1 row(s) in parallel: mmm22250991mms
+2026-06-12 10:23:04,037 - INFO - ✓ Completed: mmm22250963indx - Risk: High (8.0)
+2026-06-12 10:23:04,041 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:23:19,557 - INFO - AI analysis completed successfully for mmm22250991mms
+2026-06-12 10:23:19,562 - INFO - Completed AI analysis batch 45. Success=45, Failed=0.
+2026-06-12 10:23:19,563 - INFO - Starting AI analysis batch 46 for 1 row(s) in parallel: mmm22281603pcm
+2026-06-12 10:23:19,628 - INFO - ✓ Completed: mmm22250991mms - Risk: High (8.0)
+2026-06-12 10:23:19,632 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:23:34,385 - INFO - AI analysis completed successfully for mmm22281603pcm
+2026-06-12 10:23:34,390 - INFO - Completed AI analysis batch 46. Success=46, Failed=0.
+2026-06-12 10:23:34,392 - INFO - Starting AI analysis batch 47 for 1 row(s) in parallel: mmm22281697stb
+2026-06-12 10:23:34,511 - INFO - ✓ Completed: mmm22281603pcm - Risk: High (8.0)
+2026-06-12 10:23:34,516 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:23:50,226 - INFO - AI analysis completed successfully for mmm22281697stb
+2026-06-12 10:23:50,231 - INFO - Completed AI analysis batch 47. Success=47, Failed=0.
+2026-06-12 10:23:50,232 - INFO - Starting AI analysis batch 48 for 1 row(s) in parallel: mmm22281699pcm
+2026-06-12 10:23:50,264 - INFO - ✓ Completed: mmm22281697stb - Risk: Medium (4.0)
+2026-06-12 10:23:50,268 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:24:05,496 - INFO - AI analysis completed successfully for mmm22281699pcm
+2026-06-12 10:24:05,501 - INFO - Completed AI analysis batch 48. Success=48, Failed=0.
+2026-06-12 10:24:05,502 - INFO - Starting AI analysis batch 49 for 1 row(s) in parallel: mmm22281775hmd
+2026-06-12 10:24:05,519 - INFO - ✓ Completed: mmm22281699pcm - Risk: High (8.0)
+2026-06-12 10:24:05,522 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:24:19,526 - INFO - AI analysis completed successfully for mmm22281775hmd
+2026-06-12 10:24:19,532 - INFO - Completed AI analysis batch 49. Success=49, Failed=0.
+2026-06-12 10:24:19,533 - INFO - Starting AI analysis batch 50 for 1 row(s) in parallel: mmm22281796odoa
+2026-06-12 10:24:19,557 - INFO - ✓ Completed: mmm22281775hmd - Risk: Medium (4.0)
+2026-06-12 10:24:19,562 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:24:33,518 - INFO - AI analysis completed successfully for mmm22281796odoa
+2026-06-12 10:24:33,523 - INFO - Completed AI analysis batch 50. Success=50, Failed=0.
+2026-06-12 10:24:33,525 - INFO - Starting AI analysis batch 51 for 1 row(s) in parallel: mmm22281801ref
+2026-06-12 10:24:33,602 - INFO - ✓ Completed: mmm22281796odoa - Risk: High (8.0)
+2026-06-12 10:24:33,606 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:24:47,126 - INFO - AI analysis completed successfully for mmm22281801ref
+2026-06-12 10:24:47,132 - INFO - Completed AI analysis batch 51. Success=51, Failed=0.
+2026-06-12 10:24:47,133 - INFO - Starting AI analysis batch 52 for 1 row(s) in parallel: mmm22281802sis
+2026-06-12 10:24:47,249 - INFO - ✓ Completed: mmm22281801ref - Risk: High (8.0)
+2026-06-12 10:24:47,253 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:25:02,366 - INFO - AI analysis completed successfully for mmm22281802sis
+2026-06-12 10:25:02,371 - INFO - Completed AI analysis batch 52. Success=52, Failed=0.
+2026-06-12 10:25:02,372 - INFO - Starting AI analysis batch 53 for 1 row(s) in parallel: mmm22281808mms
+2026-06-12 10:25:02,498 - INFO - ✓ Completed: mmm22281802sis - Risk: High (8.0)
+2026-06-12 10:25:02,502 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:25:17,076 - INFO - AI analysis completed successfully for mmm22281808mms
+2026-06-12 10:25:17,081 - INFO - Completed AI analysis batch 53. Success=53, Failed=0.
+2026-06-12 10:25:17,083 - INFO - Starting AI analysis batch 54 for 1 row(s) in parallel: mmm22281821lab
+2026-06-12 10:25:17,131 - INFO - ✓ Completed: mmm22281808mms - Risk: High (8.0)
+2026-06-12 10:25:17,134 - INFO - TUI updated: 1 asset(s) completed
+2026-06-12 10:25:24,592 - INFO - Dashboard closed.
+2026-06-12 10:25:31,678 - INFO - AI analysis completed successfully for mmm22281821lab

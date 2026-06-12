@@ -1,0 +1,201 @@
+Plugin,Plugin Name,Family,Severity,VPR,IP Address,ACR,AES,NetBIOS Name,DNS Name,MAC Address,Port,Protocol,Repository
+1187734,"2.2.23 (L1) Ensure 'Generate security audits' is set to 'LOCAL SERVICE, NETWORK SERVICE'",N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1187735,"2.2.24 (L1) Ensure 'Impersonate a client after authentication' is set to 'Administrators, LOCAL SERVICE, NETWORK SERVICE, SERVICE'",N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207269,18.10.18.4 (L1) Ensure 'Enable App Installer Local Archive Malware Scan Override' is set to 'Disabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207314,18.10.58.2 (L1) Ensure 'Turn on Basic feed authentication over HTTP' is set to 'Disabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207349,18.6.4.1 (L1) Ensure 'Configure multicast DNS (mDNS) protocol' is set to 'Disabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207676,18.10.18.5 (L1) Ensure 'Enable App Installer Microsoft Store Source Certificate Validation Bypass' is set to 'Disabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207678,18.10.29.4 (L1) Ensure 'Do not apply the Mark of the Web tag to files copied from insecure sources' is set to 'Disabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207681,18.10.4.2 (L1) Ensure 'Not allow per-user unsigned packages to install by default (requires explicitly allow per install)' is set to 'Enabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207709,18.6.7.1 (L1) Ensure 'Audit client does not support encryption' is set to 'Enabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207710,18.6.7.2 (L1) Ensure 'Audit client does not support signing' is set to 'Enabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207711,18.6.7.3 (L1) Ensure 'Audit insecure guest logon' is set to 'Enabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207712,18.6.7.4 (L1) Ensure 'Enable authentication rate limiter' is set to 'Enabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207713,18.6.7.5 (L1) Ensure 'Enable remote mailslots' is set to 'Disabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207714,18.6.7.6 (L1) Ensure 'Mandate the minimum version of SMB' is set to 'Enabled: 3.1.1',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207715,18.6.7.7 (L1) Ensure 'Set authentication rate limiter delay (milliseconds)' is set to 'Enabled: 2000' or more,N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207716,18.6.8.1 (L1) Ensure 'Audit insecure guest logon' is set to 'Enabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207717,18.6.8.2 (L1) Ensure 'Audit server does not support encryption' is set to 'Enabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207718,18.6.8.3 (L1) Ensure 'Audit server does not support signing' is set to 'Enabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207720,18.6.8.5 (L1) Ensure 'Enable remote mailslots' is set to 'Disabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207721,18.6.8.6 (L1) Ensure 'Mandate the minimum version of SMB' is set to 'Enabled: 3.1.1',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207722,18.6.8.7 (L1) Ensure 'Require Encryption' is set to 'Enabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207727,18.9.30.1.1 (L1) Ensure 'Block NetBIOS-based discovery for domain controller location' is set to 'Enabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207728,18.9.39.1 (L1) Ensure 'Configure SAM change password RPC methods policy' is set to 'Enabled: Block all change password RPC methods',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207729,18.9.52 (L1) Ensure 'Configure the behavior of the sudo command' is set to 'Enabled: Disabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207730,19.7.40.1 (L1) Ensure 'Turn off Windows Copilot' is set to 'Enabled',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207929,17.7.2 (L1) Ensure 'Audit Authentication Policy Change' is set to include 'Success and Failure',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207930,17.7.3 (L1) Ensure 'Audit Authorization Policy Change' is set to include 'Success and Failure',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207931,17.7.5 (L1) Ensure 'Audit Other Policy Change Events' is set to include 'Success and Failure',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207932,17.9.3 (L1) Ensure 'Audit Security State Change' is set to include 'Success and Failure',N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207937,"2.2.16 (L1) Ensure 'Deny access to this computer from the network' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207938,"2.2.17 (L1) Ensure 'Deny log on as a batch job' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207939,"2.2.18 (L1) Ensure 'Deny log on as a service' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207940,"2.2.2 (L1) Ensure 'Access this computer from the network' is set to 'Administrators, Remote Desktop Users, MDISVC$, and mdiservice'",N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207941,"2.2.20 (L1) Ensure 'Deny log on through Remote Desktop Services' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207942,"2.3.10.10 (L1) Ensure 'Network access: Restrict clients allowed to make remote calls to SAM' is set to 'Administrators, MDISVC$, and mdiservice': Remote Access: Allow'",N/A,High,,192.168.182.198,8,0,mmm.hhh.ggg\lll-WIN-EDWARD1,lll-win-edward1.mmm.hhh.ggg,,0,TCP,lll Agent
+35453,Microsoft Windows Update Reboot Required,Windows,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1187734,"2.2.23 (L1) Ensure 'Generate security audits' is set to 'LOCAL SERVICE, NETWORK SERVICE'",N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1187735,"2.2.24 (L1) Ensure 'Impersonate a client after authentication' is set to 'Administrators, LOCAL SERVICE, NETWORK SERVICE, SERVICE'",N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207269,18.10.18.4 (L1) Ensure 'Enable App Installer Local Archive Malware Scan Override' is set to 'Disabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207314,18.10.58.2 (L1) Ensure 'Turn on Basic feed authentication over HTTP' is set to 'Disabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207349,18.6.4.1 (L1) Ensure 'Configure multicast DNS (mDNS) protocol' is set to 'Disabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207676,18.10.18.5 (L1) Ensure 'Enable App Installer Microsoft Store Source Certificate Validation Bypass' is set to 'Disabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207678,18.10.29.4 (L1) Ensure 'Do not apply the Mark of the Web tag to files copied from insecure sources' is set to 'Disabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207681,18.10.4.2 (L1) Ensure 'Not allow per-user unsigned packages to install by default (requires explicitly allow per install)' is set to 'Enabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207709,18.6.7.1 (L1) Ensure 'Audit client does not support encryption' is set to 'Enabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207710,18.6.7.2 (L1) Ensure 'Audit client does not support signing' is set to 'Enabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207711,18.6.7.3 (L1) Ensure 'Audit insecure guest logon' is set to 'Enabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207712,18.6.7.4 (L1) Ensure 'Enable authentication rate limiter' is set to 'Enabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207713,18.6.7.5 (L1) Ensure 'Enable remote mailslots' is set to 'Disabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207714,18.6.7.6 (L1) Ensure 'Mandate the minimum version of SMB' is set to 'Enabled: 3.1.1',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207715,18.6.7.7 (L1) Ensure 'Set authentication rate limiter delay (milliseconds)' is set to 'Enabled: 2000' or more,N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207716,18.6.8.1 (L1) Ensure 'Audit insecure guest logon' is set to 'Enabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207717,18.6.8.2 (L1) Ensure 'Audit server does not support encryption' is set to 'Enabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207718,18.6.8.3 (L1) Ensure 'Audit server does not support signing' is set to 'Enabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207720,18.6.8.5 (L1) Ensure 'Enable remote mailslots' is set to 'Disabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207721,18.6.8.6 (L1) Ensure 'Mandate the minimum version of SMB' is set to 'Enabled: 3.1.1',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207722,18.6.8.7 (L1) Ensure 'Require Encryption' is set to 'Enabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207727,18.9.30.1.1 (L1) Ensure 'Block NetBIOS-based discovery for domain controller location' is set to 'Enabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207728,18.9.39.1 (L1) Ensure 'Configure SAM change password RPC methods policy' is set to 'Enabled: Block all change password RPC methods',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207729,18.9.52 (L1) Ensure 'Configure the behavior of the sudo command' is set to 'Enabled: Disabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207730,19.7.40.1 (L1) Ensure 'Turn off Windows Copilot' is set to 'Enabled',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207925,17.2.2 (L1) Ensure 'Audit Security Group Management' is set to include 'Success and Failure',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207928,17.7.1 (L1) Ensure 'Audit Audit Policy Change' is set to include 'Success and Failure',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207929,17.7.2 (L1) Ensure 'Audit Authentication Policy Change' is set to include 'Success and Failure',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207930,17.7.3 (L1) Ensure 'Audit Authorization Policy Change' is set to include 'Success and Failure',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207931,17.7.5 (L1) Ensure 'Audit Other Policy Change Events' is set to include 'Success and Failure',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207932,17.9.3 (L1) Ensure 'Audit Security State Change' is set to include 'Success and Failure',N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207937,"2.2.16 (L1) Ensure 'Deny access to this computer from the network' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207938,"2.2.17 (L1) Ensure 'Deny log on as a batch job' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207939,"2.2.18 (L1) Ensure 'Deny log on as a service' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207940,"2.2.2 (L1) Ensure 'Access this computer from the network' is set to 'Administrators, Remote Desktop Users, MDISVC$, and mdiservice'",N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207941,"2.2.20 (L1) Ensure 'Deny log on through Remote Desktop Services' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+1207942,"2.3.10.10 (L1) Ensure 'Network access: Restrict clients allowed to make remote calls to SAM' is set to 'Administrators, MDISVC$, and mdiservice': Remote Access: Allow'",N/A,High,,33.44.91.87,8,0,mmm.hhh.ggg\lll-WIN-AKANDUR,lll-win-akandur.mmm.hhh.ggg,,0,TCP,lll Agent
+314172,macOS 26.x < 26.5 Multiple Vulnerabilities (127115),MacOS X Local Security Checks,High,7.3,192.168.86.114,6,582,UNKNOWN\lll-MAC-SANTAN1,lll-mac-santan1.mmm.hhh.ggg,,0,TCP,lll Agent
+314356,Security Updates for Microsoft Office Products (May 2026) (macOS),MacOS X Local Security Checks,High,9,192.168.86.114,6,582,UNKNOWN\lll-MAC-SANTAN1,lll-mac-santan1.mmm.hhh.ggg,,0,TCP,lll Agent
+1202599,5.1.1 Ensure Home Folders Are Secure,N/A,High,,192.168.86.114,6,582,UNKNOWN\lll-MAC-SANTAN1,lll-mac-santan1.mmm.hhh.ggg,,0,TCP,lll Agent
+1204640,2.3.1.1 Ensure AirDrop Is Disabled When Not Actively Transferring Files,N/A,High,,192.168.86.114,6,582,UNKNOWN\lll-MAC-SANTAN1,lll-mac-santan1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207822,2.5.1.1 Ensure External Intelligence Extensions Is Disabled,N/A,High,,192.168.86.114,6,582,UNKNOWN\lll-MAC-SANTAN1,lll-mac-santan1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207825,2.3.3.5 Ensure Remote Management Is Disabled,N/A,High,,192.168.86.114,6,582,UNKNOWN\lll-MAC-SANTAN1,lll-mac-santan1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207838,2.11.4 Ensure Login Window Displays as Name and Password Is Enabled,N/A,High,,192.168.86.114,6,582,UNKNOWN\lll-MAC-SANTAN1,lll-mac-santan1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207840,2.11.2 Ensure Require Password After Screen Saver Begins or Display Is Turned Off Is Enabled for 5 Seconds or Immediately,N/A,High,,192.168.86.114,6,582,UNKNOWN\lll-MAC-SANTAN1,lll-mac-santan1.mmm.hhh.ggg,,0,TCP,lll Agent
+218384,Ubuntu 20.04 LTS / 22.04 LTS / 24.04 LTS / 24.10 : cmark-gfm vulnerabilities (USN-7319-1),Ubuntu Local Security Checks,High,4.4,10.198.17.85,4,428,,lll-pubmed.lllaws-dev.mmm.hhh.ggg,,0,TCP,lll Agent
+306778,"Splunk Universal Forwarder 9.3.0 < 9.3.11, 9.4.0 < 9.4.10, 10.0.0 < 10.0.4, 10.2.0 < 10.2.1 (SVD-2026-0404)",CGI abuses,Medium,2.9,10.198.17.85,4,428,,lll-pubmed.lllaws-dev.mmm.hhh.ggg,,0,TCP,lll Agent
+307354,Python Library Tornado < 6.5.5 Cookie Attribute Injection,Misc.,Medium,2.2,10.198.17.85,4,428,,lll-pubmed.lllaws-dev.mmm.hhh.ggg,,0,TCP,lll Agent
+313225,Jupyterlab Python Library < 4.5.7 (CVE-2026-42557),Misc.,Critical,8.1,10.198.17.85,4,428,,lll-pubmed.lllaws-dev.mmm.hhh.ggg,,0,TCP,lll Agent
+313226,Jupyter Notebook Python Library 7.0.0 < 7.5.6 (CVE-2026-42557),Misc.,Critical,8.1,10.198.17.85,4,428,,lll-pubmed.lllaws-dev.mmm.hhh.ggg,,0,TCP,lll Agent
+1205773,1.1.1.1 Ensure cramfs kernel module is not available,N/A,High,,10.198.17.85,4,428,,lll-pubmed.lllaws-dev.mmm.hhh.ggg,,0,TCP,lll Agent
+270711,Security Update for Microsoft .NET Core (October 2025),Misc.,Medium,3.6,33.44.91.159,8,709,mmm.hhh.ggg\lll-WIN-GOLNARI,lll-win-golnari.mmm.hhh.ggg,,445,TCP,lll Agent
+297850,Symantec Endpoint Protection Client < 14.3 RU8 Patch 3 / 14.3 RU9 Patch 2 / 14.3 RU10 Patch 1 Multiple Vulnerabilities (36774),Windows,Medium,5.9,33.44.91.159,8,709,mmm.hhh.ggg\lll-WIN-GOLNARI,lll-win-golnari.mmm.hhh.ggg,,445,TCP,lll Agent
+298547,Security Update for Microsoft .NET Core (February 2026),Windows,High,3.6,33.44.91.159,8,709,mmm.hhh.ggg\lll-WIN-GOLNARI,lll-win-golnari.mmm.hhh.ggg,,445,TCP,lll Agent
+302122,Security Update for Microsoft .NET Core (March 2026),Windows,High,6.7,33.44.91.159,8,709,mmm.hhh.ggg\lll-WIN-GOLNARI,lll-win-golnari.mmm.hhh.ggg,,445,TCP,lll Agent
+307353,Microsoft .NET Core (April 2026),Windows,High,4.4,33.44.91.159,8,709,mmm.hhh.ggg\lll-WIN-GOLNARI,lll-win-golnari.mmm.hhh.ggg,,445,TCP,lll Agent
+310144,Tenable Nessus Agent < 11.1.3 Arbitrary File Deletion (TNS-2026-12),Windows,High,7.3,33.44.91.159,8,709,mmm.hhh.ggg\lll-WIN-GOLNARI,lll-win-golnari.mmm.hhh.ggg,,445,TCP,lll Agent
+313047,Mozilla Firefox < 150.0.2,Windows,High,6.7,33.44.91.159,8,709,mmm.hhh.ggg\lll-WIN-GOLNARI,lll-win-golnari.mmm.hhh.ggg,,445,TCP,lll Agent
+314317,Mozilla Firefox < 150.0.3,Windows,Critical,6.7,33.44.91.159,8,709,mmm.hhh.ggg\lll-WIN-GOLNARI,lll-win-golnari.mmm.hhh.ggg,,445,TCP,lll Agent
+314357,Microsoft Edge (Chromium) < 148.0.3967.55 Multiple Vulnerabilities,Windows,High,8.4,33.44.91.159,8,709,mmm.hhh.ggg\lll-WIN-GOLNARI,lll-win-golnari.mmm.hhh.ggg,,445,TCP,lll Agent
+314172,macOS 26.x < 26.5 Multiple Vulnerabilities (127115),MacOS X Local Security Checks,High,7.3,10.172.106.68,N/A,582,UNKNOWN\lll-MAC-WANGJ47,lll-mac-wangj47.mmm.hhh.ggg,,0,TCP,lll Agent
+314356,Security Updates for Microsoft Office Products (May 2026) (macOS),MacOS X Local Security Checks,High,9,10.172.106.68,N/A,582,UNKNOWN\lll-MAC-WANGJ47,lll-mac-wangj47.mmm.hhh.ggg,,0,TCP,lll Agent
+1202599,5.1.1 Ensure Home Folders Are Secure,N/A,High,,10.172.106.68,N/A,582,UNKNOWN\lll-MAC-WANGJ47,lll-mac-wangj47.mmm.hhh.ggg,,0,TCP,lll Agent
+1204640,2.3.1.1 Ensure AirDrop Is Disabled When Not Actively Transferring Files,N/A,High,,10.172.106.68,N/A,582,UNKNOWN\lll-MAC-WANGJ47,lll-mac-wangj47.mmm.hhh.ggg,,0,TCP,lll Agent
+1207822,2.5.1.1 Ensure External Intelligence Extensions Is Disabled,N/A,High,,10.172.106.68,N/A,582,UNKNOWN\lll-MAC-WANGJ47,lll-mac-wangj47.mmm.hhh.ggg,,0,TCP,lll Agent
+1207834,2.13.1 Ensure Guest Account Is Disabled,N/A,High,,10.172.106.68,N/A,582,UNKNOWN\lll-MAC-WANGJ47,lll-mac-wangj47.mmm.hhh.ggg,,0,TCP,lll Agent
+1207841,2.11.1 Ensure an Inactivity Interval of 15 Minutes Or Less for the Screen Saver Is Enabled,N/A,High,,10.172.106.68,N/A,582,UNKNOWN\lll-MAC-WANGJ47,lll-mac-wangj47.mmm.hhh.ggg,,0,TCP,lll Agent
+1207834,2.13.1 Ensure Guest Account Is Disabled,N/A,High,,33.44.111.50,8,0,UNKNOWN\lll-MAC-WANGYE,lll-mac-wangye.mmm.hhh.ggg,,0,TCP,lll Agent
+1207838,2.11.4 Ensure Login Window Displays as Name and Password Is Enabled,N/A,High,,33.44.111.50,8,0,UNKNOWN\lll-MAC-WANGYE,lll-mac-wangye.mmm.hhh.ggg,,0,TCP,lll Agent
+314346,KB5087538: Windows 10 version 1809 / Windows Server 2019 Security Update (May 2026),Windows : Microsoft Bulletins,High,7.4,10.198.18.71,5,433,nih.gov\lll-BIGFIX-INV2,lll-bigfix-inv2.nih.gov,,445,TCP,lll Agent
+314668,Security Updates for Microsoft SQL Server (May 2026),Windows : Microsoft Bulletins,High,7.4,10.198.18.71,5,433,nih.gov\lll-BIGFIX-INV2,lll-bigfix-inv2.nih.gov,,445,TCP,lll Agent
+1204640,2.3.1.1 Ensure AirDrop Is Disabled When Not Actively Transferring Files,N/A,High,,10.0.0.203,N/A,0,UNKNOWN\lll-MAC-GUPTAK1,lll-mac-guptak1.mmm.hhh.ggg,,0,TCP,lll Agent
+1204646,2.6.8 Ensure an Administrator Password Is Required to Access System-Wide Preferences,N/A,High,,10.0.0.203,N/A,0,UNKNOWN\lll-MAC-GUPTAK1,lll-mac-guptak1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207822,2.5.1.1 Ensure External Intelligence Extensions Is Disabled,N/A,High,,10.0.0.203,N/A,0,UNKNOWN\lll-MAC-GUPTAK1,lll-mac-guptak1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207838,2.11.4 Ensure Login Window Displays as Name and Password Is Enabled,N/A,High,,10.0.0.203,N/A,0,UNKNOWN\lll-MAC-GUPTAK1,lll-mac-guptak1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207840,2.11.2 Ensure Require Password After Screen Saver Begins or Display Is Turned Off Is Enabled for 5 Seconds or Immediately,N/A,High,,10.0.0.203,N/A,0,UNKNOWN\lll-MAC-GUPTAK1,lll-mac-guptak1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207841,2.11.1 Ensure an Inactivity Interval of 15 Minutes Or Less for the Screen Saver Is Enabled,N/A,High,,10.0.0.203,N/A,0,UNKNOWN\lll-MAC-GUPTAK1,lll-mac-guptak1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207911,2.18.1 Ensure On-Device Dictation Is Enabled on Apple Silicon Macs,N/A,High,,10.0.0.203,N/A,0,UNKNOWN\lll-MAC-GUPTAK1,lll-mac-guptak1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207269,18.10.18.4 (L1) Ensure 'Enable App Installer Local Archive Malware Scan Override' is set to 'Disabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207314,18.10.58.2 (L1) Ensure 'Turn on Basic feed authentication over HTTP' is set to 'Disabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207349,18.6.4.1 (L1) Ensure 'Configure multicast DNS (mDNS) protocol' is set to 'Disabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207676,18.10.18.5 (L1) Ensure 'Enable App Installer Microsoft Store Source Certificate Validation Bypass' is set to 'Disabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207678,18.10.29.4 (L1) Ensure 'Do not apply the Mark of the Web tag to files copied from insecure sources' is set to 'Disabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207681,18.10.4.2 (L1) Ensure 'Not allow per-user unsigned packages to install by default (requires explicitly allow per install)' is set to 'Enabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207709,18.6.7.1 (L1) Ensure 'Audit client does not support encryption' is set to 'Enabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207710,18.6.7.2 (L1) Ensure 'Audit client does not support signing' is set to 'Enabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207711,18.6.7.3 (L1) Ensure 'Audit insecure guest logon' is set to 'Enabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207712,18.6.7.4 (L1) Ensure 'Enable authentication rate limiter' is set to 'Enabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207713,18.6.7.5 (L1) Ensure 'Enable remote mailslots' is set to 'Disabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207714,18.6.7.6 (L1) Ensure 'Mandate the minimum version of SMB' is set to 'Enabled: 3.1.1',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207715,18.6.7.7 (L1) Ensure 'Set authentication rate limiter delay (milliseconds)' is set to 'Enabled: 2000' or more,N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207716,18.6.8.1 (L1) Ensure 'Audit insecure guest logon' is set to 'Enabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207717,18.6.8.2 (L1) Ensure 'Audit server does not support encryption' is set to 'Enabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207718,18.6.8.3 (L1) Ensure 'Audit server does not support signing' is set to 'Enabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207720,18.6.8.5 (L1) Ensure 'Enable remote mailslots' is set to 'Disabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207721,18.6.8.6 (L1) Ensure 'Mandate the minimum version of SMB' is set to 'Enabled: 3.1.1',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207722,18.6.8.7 (L1) Ensure 'Require Encryption' is set to 'Enabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207727,18.9.30.1.1 (L1) Ensure 'Block NetBIOS-based discovery for domain controller location' is set to 'Enabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207728,18.9.39.1 (L1) Ensure 'Configure SAM change password RPC methods policy' is set to 'Enabled: Block all change password RPC methods',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207729,18.9.52 (L1) Ensure 'Configure the behavior of the sudo command' is set to 'Enabled: Disabled',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207925,17.2.2 (L1) Ensure 'Audit Security Group Management' is set to include 'Success and Failure',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207928,17.7.1 (L1) Ensure 'Audit Audit Policy Change' is set to include 'Success and Failure',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207929,17.7.2 (L1) Ensure 'Audit Authentication Policy Change' is set to include 'Success and Failure',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207930,17.7.3 (L1) Ensure 'Audit Authorization Policy Change' is set to include 'Success and Failure',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207931,17.7.5 (L1) Ensure 'Audit Other Policy Change Events' is set to include 'Success and Failure',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207932,17.9.3 (L1) Ensure 'Audit Security State Change' is set to include 'Success and Failure',N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207937,"2.2.16 (L1) Ensure 'Deny access to this computer from the network' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207938,"2.2.17 (L1) Ensure 'Deny log on as a batch job' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207939,"2.2.18 (L1) Ensure 'Deny log on as a service' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207940,"2.2.2 (L1) Ensure 'Access this computer from the network' is set to 'Administrators, Remote Desktop Users, MDISVC$, and mdiservice'",N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207941,"2.2.20 (L1) Ensure 'Deny log on through Remote Desktop Services' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+1207942,"2.3.10.10 (L1) Ensure 'Network access: Restrict clients allowed to make remote calls to SAM' is set to 'Administrators, MDISVC$, and mdiservice': Remote Access: Allow'",N/A,High,,33.44.90.156,8,0,mmm.hhh.ggg\lll-WIN-LOANER3,lll-win-loaner3.mmm.hhh.ggg,,0,TCP,lll Agent
+103569,Windows Defender Antimalware/Antivirus Signature Definition Check,Windows,High,,10.198.18.80,5,343,nih.gov\lllEM2,lllem2.nih.gov,,445,TCP,lll Agent
+305751,HCL BigFix Server 11.0.x < 11.0.6 Insufficient Authentication (KB0129906),Misc.,Low,2.2,10.198.18.80,5,343,nih.gov\lllEM2,lllem2.nih.gov,,445,TCP,lll Agent
+314346,KB5087538: Windows 10 version 1809 / Windows Server 2019 Security Update (May 2026),Windows : Microsoft Bulletins,High,7.4,10.198.18.80,5,343,nih.gov\lllEM2,lllem2.nih.gov,,445,TCP,lll Agent
+306778,"Splunk Universal Forwarder 9.3.0 < 9.3.11, 9.4.0 < 9.4.10, 10.0.0 < 10.0.4, 10.2.0 < 10.2.1 (SVD-2026-0404)",CGI abuses,Medium,2.9,10.198.18.161,4,258,,lll-nexus-02.lllaws-prod.mmm.hhh.ggg,,0,TCP,lll Agent
+314674,Security Updates for Microsoft Word Products C2R (May 2026),Windows,High,9,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,445,TCP,lll Agent
+314675,Security Updates for Microsoft Office Products C2R (May 2026),Windows,High,8.1,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,445,TCP,lll Agent
+314676,Security Updates for Microsoft Excel Products C2R (May 2026),Windows,High,7.4,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,445,TCP,lll Agent
+1187734,"2.2.23 (L1) Ensure 'Generate security audits' is set to 'LOCAL SERVICE, NETWORK SERVICE'",N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1187735,"2.2.24 (L1) Ensure 'Impersonate a client after authentication' is set to 'Administrators, LOCAL SERVICE, NETWORK SERVICE, SERVICE'",N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207269,18.10.18.4 (L1) Ensure 'Enable App Installer Local Archive Malware Scan Override' is set to 'Disabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207314,18.10.58.2 (L1) Ensure 'Turn on Basic feed authentication over HTTP' is set to 'Disabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207349,18.6.4.1 (L1) Ensure 'Configure multicast DNS (mDNS) protocol' is set to 'Disabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207676,18.10.18.5 (L1) Ensure 'Enable App Installer Microsoft Store Source Certificate Validation Bypass' is set to 'Disabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207678,18.10.29.4 (L1) Ensure 'Do not apply the Mark of the Web tag to files copied from insecure sources' is set to 'Disabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207681,18.10.4.2 (L1) Ensure 'Not allow per-user unsigned packages to install by default (requires explicitly allow per install)' is set to 'Enabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207709,18.6.7.1 (L1) Ensure 'Audit client does not support encryption' is set to 'Enabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207710,18.6.7.2 (L1) Ensure 'Audit client does not support signing' is set to 'Enabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207711,18.6.7.3 (L1) Ensure 'Audit insecure guest logon' is set to 'Enabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207712,18.6.7.4 (L1) Ensure 'Enable authentication rate limiter' is set to 'Enabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207713,18.6.7.5 (L1) Ensure 'Enable remote mailslots' is set to 'Disabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207714,18.6.7.6 (L1) Ensure 'Mandate the minimum version of SMB' is set to 'Enabled: 3.1.1',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207715,18.6.7.7 (L1) Ensure 'Set authentication rate limiter delay (milliseconds)' is set to 'Enabled: 2000' or more,N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207716,18.6.8.1 (L1) Ensure 'Audit insecure guest logon' is set to 'Enabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207717,18.6.8.2 (L1) Ensure 'Audit server does not support encryption' is set to 'Enabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207718,18.6.8.3 (L1) Ensure 'Audit server does not support signing' is set to 'Enabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207720,18.6.8.5 (L1) Ensure 'Enable remote mailslots' is set to 'Disabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207721,18.6.8.6 (L1) Ensure 'Mandate the minimum version of SMB' is set to 'Enabled: 3.1.1',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207722,18.6.8.7 (L1) Ensure 'Require Encryption' is set to 'Enabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207727,18.9.30.1.1 (L1) Ensure 'Block NetBIOS-based discovery for domain controller location' is set to 'Enabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207728,18.9.39.1 (L1) Ensure 'Configure SAM change password RPC methods policy' is set to 'Enabled: Block all change password RPC methods',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207729,18.9.52 (L1) Ensure 'Configure the behavior of the sudo command' is set to 'Enabled: Disabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207730,19.7.40.1 (L1) Ensure 'Turn off Windows Copilot' is set to 'Enabled',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207929,17.7.2 (L1) Ensure 'Audit Authentication Policy Change' is set to include 'Success and Failure',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207930,17.7.3 (L1) Ensure 'Audit Authorization Policy Change' is set to include 'Success and Failure',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207931,17.7.5 (L1) Ensure 'Audit Other Policy Change Events' is set to include 'Success and Failure',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207932,17.9.3 (L1) Ensure 'Audit Security State Change' is set to include 'Success and Failure',N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207937,"2.2.16 (L1) Ensure 'Deny access to this computer from the network' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207938,"2.2.17 (L1) Ensure 'Deny log on as a batch job' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207939,"2.2.18 (L1) Ensure 'Deny log on as a service' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207940,"2.2.2 (L1) Ensure 'Access this computer from the network' is set to 'Administrators, Remote Desktop Users, MDISVC$, and mdiservice'",N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207941,"2.2.20 (L1) Ensure 'Deny log on through Remote Desktop Services' to include 'Guests, Local account, and member of Administrators group'",N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+1207942,"2.3.10.10 (L1) Ensure 'Network access: Restrict clients allowed to make remote calls to SAM' is set to 'Administrators, MDISVC$, and mdiservice': Remote Access: Allow'",N/A,High,,192.168.1.85,8,701,mmm.hhh.ggg\lll-WIN-MGALLA1,lll-win-mgalla1.mmm.hhh.ggg,,0,TCP,lll Agent
+306778,"Splunk Universal Forwarder 9.3.0 < 9.3.11, 9.4.0 < 9.4.10, 10.0.0 < 10.0.4, 10.2.0 < 10.2.1 (SVD-2026-0404)",CGI abuses,Medium,2.9,10.198.107.208,4,258,,lll-lx-lforms-elastic-b.lllaws-prod-pub.mmm.hhh.ggg,,0,TCP,lll Agent
+1205919,3.3.11 Ensure ipv6 router advertisements are not accepted,N/A,High,,10.198.107.208,4,258,,lll-lx-lforms-elastic-b.lllaws-prod-pub.mmm.hhh.ggg,,0,TCP,lll Agent
+1206572,1.4.2 Ensure access to bootloader config is configured,N/A,High,,10.198.107.208,4,258,,lll-lx-lforms-elastic-b.lllaws-prod-pub.mmm.hhh.ggg,,0,TCP,lll Agent
+282519,Apache Log4j 2.0-beta9 < 2.25.3 MitM,Misc.,Medium,3.3,10.198.18.124,4,291,,lll-lx-ubuntu2204-gold.lllaws-prod.mmm.hhh.ggg,,0,TCP,lll Agent
+306548,Apache Log4j 2.21.0 < 2.25.4 Rfc5424Layout Log Injection (CVE-2026-34478),Misc.,High,4.4,10.198.18.124,4,291,,lll-lx-ubuntu2204-gold.lllaws-prod.mmm.hhh.ggg,,0,TCP,lll Agent
+306549,Apache Log4j 2.0-alpha1 < 2.25.4 XmlLayout Invalid XML Output (CVE-2026-34480),Misc.,High,4.4,10.198.18.124,4,291,,lll-lx-ubuntu2204-gold.lllaws-prod.mmm.hhh.ggg,,0,TCP,lll Agent
+306550,Apache Log4j 2.12.0 < 2.25.4 SSL Hostname Verification Bypass (CVE-2026-34477),Misc.,Medium,4.4,10.198.18.124,4,291,,lll-lx-ubuntu2204-gold.lllaws-prod.mmm.hhh.ggg,,0,TCP,lll Agent
+306778,"Splunk Universal Forwarder 9.3.0 < 9.3.11, 9.4.0 < 9.4.10, 10.0.0 < 10.0.4, 10.2.0 < 10.2.1 (SVD-2026-0404)",CGI abuses,Medium,2.9,10.198.18.124,4,291,,lll-lx-ubuntu2204-gold.lllaws-prod.mmm.hhh.ggg,,0,TCP,lll Agent
+1205919,3.3.11 Ensure ipv6 router advertisements are not accepted,N/A,High,,10.198.18.124,4,291,,lll-lx-ubuntu2204-gold.lllaws-prod.mmm.hhh.ggg,,0,TCP,lll Agent
+1206572,1.4.2 Ensure access to bootloader config is configured,N/A,High,,10.198.18.124,4,291,,lll-lx-ubuntu2204-gold.lllaws-prod.mmm.hhh.ggg,,0,TCP,lll Agent
