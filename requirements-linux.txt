@@ -1,0 +1,3 @@
+requests
+pandas
+# windows-curses is intentionally excluded — Linux has ncurses built into Python

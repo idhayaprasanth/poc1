@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.env
+tui_ai_analysis.log
+*.log
+.git/
+.gitignore
+tests/

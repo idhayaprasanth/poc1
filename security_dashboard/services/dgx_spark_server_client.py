@@ -333,14 +333,11 @@ class DGXSparkServerClient:
     def _print_result(self, *, asset_id: str, result: dict) -> None:
         overall_score = self._safe_score({"risk_score": result.get("overall_risk_score")})
         overall_priority = str(result.get("overall_priority_level") or "Low")
-        print(f"\n  {BOLD}{'-' * 68}{RESET}")
-        print(f"  {BOLD}ASSET    :{RESET} {CYAN}{asset_id}{RESET}")
-        print(f"  {BOLD}MODEL    :{RESET} {CYAN}{self.endpoint_label}{RESET}")
-        print(
-            f"  {BOLD}OVERALL  :{RESET} Risk Score {BOLD}{overall_score}{RESET}   "
-            f"Priority {self._priority_text(overall_priority)}"
-        )
-        print(f"  {'-' * 68}")
+        logger.info("%s", "-" * 68)
+        logger.info("ASSET    : %s", asset_id)
+        logger.info("MODEL    : %s", self.endpoint_label)
+        logger.info("OVERALL  : Risk Score %s   Priority %s", overall_score, overall_priority)
+        logger.info("%s", "-" * 68)
 
         for source in SOURCES:
             src_result = result.get(source) or {}
@@ -349,35 +346,31 @@ class DGXSparkServerClient:
             score = self._safe_score(src_result)
             priority = str(src_result.get("priority_level") or "N/A")
             remediation = str(src_result.get("remediation") or "N/A")
-            print(
-                f"  {YELLOW}{source.upper():<10}{RESET}  "
-                f"Score: {BOLD}{score:<5}{RESET}  "
-                f"Priority: {self._priority_text(priority)}"
-            )
-            print(self._wrap_text(remediation, width=72, indent="    -> "))
-            print()
+            logger.info("%s  Score: %s  Priority: %s", source.upper(), score, priority)
+            logger.info("%s", self._wrap_text(remediation, width=72, indent="    -> "))
+            logger.info("")
 
-        print(f"  {BOLD}AI SUMMARY{RESET}")
-        print(self._wrap_text(str(result.get('ai_summary') or ""), width=72, indent="  "))
+        logger.info("AI SUMMARY")
+        logger.info("%s", self._wrap_text(str(result.get('ai_summary') or ""), width=72, indent="  "))
 
     def _print_asset_start(self, asset_id: str) -> None:
         width = 72
-        print(f"\n\n{'#' * width}")
-        print(f"  ASSET: {BOLD}{CYAN}{asset_id}{RESET}")
-        print(f"{'#' * width}")
+        logger.info("%s", "#" * width)
+        logger.info("ASSET: %s", asset_id)
+        logger.info("%s", "#" * width)
 
     def _print_query_start(self) -> None:
-        print(f"\n  Querying {CYAN}{self.endpoint_label}{RESET}...", end="", flush=True)
+        logger.info("Querying %s...", self.endpoint_label)
 
     @staticmethod
     def _print_query_success() -> None:
-        print(f"  {GREEN}OK{RESET}")
+        logger.info("OK")
 
     @staticmethod
     def _print_query_error(label: str, message: str) -> None:
-        print(f"  {RED}{label}{RESET}")
+        logger.error("%s", label)
         if message:
-            print(f"  {message}")
+            logger.error("%s", message)
 
     @staticmethod
     def _estimate_token_count(text: str) -> int:
@@ -460,7 +453,7 @@ class DGXSparkServerClient:
         if not raw:
             raise DGXSparkServerInvocationError("DGX Spark Server returned an empty response.")
 
-        print(raw)
+        logger.info("DGX response received for endpoint %s", self.endpoint_label)
 
         try:
             parsed = json.loads(raw)

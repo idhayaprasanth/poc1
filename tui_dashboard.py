@@ -12,14 +12,32 @@
     Home/End   Jump to first/last asset
     Q  /  Esc  Quit
 =============================================================================
+  COLOR SCHEME - Dark Cyberpunk Theme:
+    - Background: BLACK throughout entire dashboard
+    - Stats Panel: Stats boxes with colorful neon borders (green/red/yellow/cyan/magenta)
+    - Asset List Section: CYAN neon borders (left panel)
+    - Detail Panel Section: MAGENTA neon borders (right panel)
+    - Title Bar: CYAN text on BLACK with line decoration
+    - Filter Tabs: Active=white bg, Inactive=black bg with colored text
+    - Risk Levels: RED=Critical, YELLOW=High, CYAN=Medium, GREEN=Low
+    - Status: MAGENTA=Pending/Analyzing
+    - Selected Item: WHITE text on BLUE highlight
+=============================================================================
 """
 import curses
 import sys
+import os
+import platform
 import threading
 import time
 import logging
 from datetime import datetime
 from pathlib import Path
+
+# On Windows, windows-curses provides the curses module; on Linux it is built-in.
+# No code change needed — just ensure windows-curses is installed on Windows only.
+_PLATFORM = sys.platform          # "win32" | "linux" | "darwin"
+_IS_WINDOWS = _PLATFORM == "win32"
 
 try:
     import pandas as pd
@@ -51,6 +69,20 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ──────────────────────────────────────────────────────────────────────────────
+#  DEBUG: Log platform/environment at module import time
+# ──────────────────────────────────────────────────────────────────────────────
+logger.info("[DEBUG] ===== STARTUP ENVIRONMENT =====")
+logger.info(f"[DEBUG] Python   : {sys.version}")
+logger.info(f"[DEBUG] Platform : {platform.platform()}")
+logger.info(f"[DEBUG] sys.platform: {sys.platform}")
+logger.info(f"[DEBUG] TERM     : {os.environ.get('TERM', '<not set>')}")
+logger.info(f"[DEBUG] COLORTERM: {os.environ.get('COLORTERM', '<not set>')}")
+logger.info(f"[DEBUG] LANG     : {os.environ.get('LANG', '<not set>')}")
+logger.info(f"[DEBUG] LC_ALL   : {os.environ.get('LC_ALL', '<not set>')}")
+logger.info(f"[DEBUG] curses   : {curses.version if hasattr(curses, 'version') else 'unknown'}")
+logger.info("[DEBUG] ==================================")
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  COLOR PAIRS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -75,6 +107,22 @@ PAIR_STAT_PINK = 18
 PAIR_STAT_YELLOW = 19
 PAIR_STAT_RED = 20
 PAIR_STAT_GREEN = 21
+PAIR_NAVY_BG = 22  # Navy blue background for entire dashboard
+PAIR_STATS_SECTION = 23  # Color for stats panel section
+PAIR_FILTER_SECTION = 24  # Color for filter bar section
+PAIR_LIST_SECTION = 25  # Color for asset list section
+PAIR_DETAIL_SECTION = 26  # Color for detail panel section
+PAIR_TABLE_HEADER = 27  # Color for table column headers
+PAIR_DETAIL_BG = 28  # Forest green background for detail panel
+PAIR_DETAIL_WHITE = 29  # White text on forest green for detail panel
+PAIR_DETAIL_DIM = 30  # Dim text on forest green for detail panel
+PAIR_DETAIL_HEADER = 31  # Header text on forest green for detail panel
+PAIR_DETAIL_CRIT = 32  # Critical text on forest green
+PAIR_DETAIL_HIGH = 33  # High text on forest green
+PAIR_DETAIL_MED = 34  # Medium text on forest green
+PAIR_DETAIL_LOW = 35  # Low text on forest green
+PAIR_DETAIL_PENDING = 36  # Pending text on forest green
+PAIR_DETAIL_WARN = 37  # Warning text on forest green
 
 LEVEL_PAIR = {
     "Critical": PAIR_CRIT,
@@ -88,134 +136,96 @@ FILTERS = ["All", "Critical", "High", "Medium", "Low", "Pending", "No Tenable Da
 
 
 def init_colors():
-    """Initialize color pairs for the TUI."""
+    """
+    Initialize color pairs for the TUI with navy blue background theme.
+    
+    ==========================================================================
+    CUSTOMIZATION GUIDE - Change colors here to customize the UI:
+    ==========================================================================
+    
+    BACKGROUND COLOR:
+    - Change BG_COLOR to any curses.COLOR_* (BLACK, RED, GREEN, YELLOW, 
+      BLUE, MAGENTA, CYAN, WHITE) to change the overall background
+    
+    SECTION BORDERS:
+    - PAIR_LIST_SECTION: Left panel (Asset List) border color - CYAN neon
+    - PAIR_DETAIL_SECTION: Right panel (Detail) border color - MAGENTA neon
+    - PAIR_BORDER: General border lines - CYAN neon
+    
+    RISK LEVELS:
+    - PAIR_CRIT: Critical risk (default: RED)
+    - PAIR_HIGH: High risk (default: YELLOW)
+    - PAIR_MED: Medium risk (default: CYAN)
+    - PAIR_LOW: Low risk (default: GREEN)
+    
+    OTHER UI ELEMENTS:
+    - PAIR_HEADER: Title bar text (default: CYAN text on BLACK)
+    - PAIR_SEL: Selected item highlight (default: WHITE on BLUE)
+    - PAIR_PENDING: Pending analysis status (default: MAGENTA)
+    - PAIR_TABLE_HEADER: Table column headers (default: WHITE on BLACK)
+    
+    ==========================================================================
+    """
     curses.start_color()
     curses.use_default_colors()
 
-    neon_enabled = bool(
-        hasattr(curses, "can_change_color")
-        and hasattr(curses, "init_color")
-        and curses.can_change_color()
-        and getattr(curses, "COLORS", 0) >= 256
-    )
+    # DEBUG: log terminal color capabilities
+    logger.info(f"[DEBUG] init_colors: COLORS={curses.COLORS} COLOR_PAIRS={curses.COLOR_PAIRS}")
+    logger.info(f"[DEBUG] init_colors: has_colors={curses.has_colors()} can_change_color={curses.can_change_color()}")
 
-    if neon_enabled:
-        neon_palette = {
-            "CYAN": (0, 217, 255),
-            "BLUE": (59, 130, 246),
-            "PURPLE": (168, 85, 247),
-            "PINK": (236, 72, 153),
-            "RED": (255, 77, 77),
-            "ORANGE": (255, 152, 0),
-            "YELLOW": (255, 213, 79),
-            "GREEN": (34, 197, 94),
-            "TEAL": (6, 182, 212),
-            "TEXT": (229, 231, 235),
-            "MUTED": (148, 163, 184),
-            "BLACK": (8, 10, 24),
-            "WHITE": (248, 250, 252),
-        }
-
-        def rgb_to_curses(red, green, blue):
-            return tuple(int(round(value * 1000 / 255)) for value in (red, green, blue))
-
-        color_slots = {
-            curses.COLOR_BLACK: "BLACK",
-            curses.COLOR_RED: "RED",
-            curses.COLOR_GREEN: "GREEN",
-            curses.COLOR_YELLOW: "YELLOW",
-            curses.COLOR_BLUE: "BLUE",
-            curses.COLOR_MAGENTA: "PURPLE",
-            curses.COLOR_CYAN: "CYAN",
-            curses.COLOR_WHITE: "WHITE",
-        }
-        for color_number, color_name in color_slots.items():
-            try:
-                curses.init_color(color_number, *rgb_to_curses(*neon_palette[color_name]))
-            except curses.error:
-                pass
-
-        try:
-            extra_colors = {
-                8: "ORANGE",
-                9: "PINK",
-                10: "TEAL",
-                11: "TEXT",
-                12: "MUTED",
-            }
-            for color_number, color_name in extra_colors.items():
-                if color_number < curses.COLORS:
-                    try:
-                        curses.init_color(color_number, *rgb_to_curses(*neon_palette[color_name]))
-                    except curses.error:
-                        pass
-        except Exception:
-            pass
-
-        neon_black = curses.COLOR_BLACK
-        neon_text = 11
-        neon_muted = 12
-        neon_orange = 8
-        neon_pink = 9
-        neon_teal = 10
-
-        pair_colors = {
-            PAIR_CRIT: curses.COLOR_RED,
-            PAIR_HIGH: neon_orange,
-            PAIR_MED: neon_teal,
-            PAIR_LOW: curses.COLOR_GREEN,
-            PAIR_DIM: neon_muted,
-            PAIR_HEADER: neon_teal,
-            PAIR_SEL: neon_black,
-            PAIR_TABA: neon_black,
-            PAIR_TABI: neon_text,
-            PAIR_BORDER: curses.COLOR_BLUE,
-            PAIR_LABEL: neon_text,
-            PAIR_WARN: neon_orange,
-            PAIR_BAR: curses.COLOR_GREEN,
-            PAIR_WHITE: neon_text,
-            PAIR_PENDING: neon_pink,
-            PAIR_STAT_BLUE: curses.COLOR_BLUE,
-            PAIR_STAT_PURPLE: curses.COLOR_MAGENTA,
-            PAIR_STAT_PINK: neon_pink,
-            PAIR_STAT_YELLOW: curses.COLOR_YELLOW,
-            PAIR_STAT_RED: curses.COLOR_RED,
-            PAIR_STAT_GREEN: curses.COLOR_GREEN,
-        }
-
-        for pair_id, fg_color in pair_colors.items():
-            bg_color = -1
-            if pair_id == PAIR_HEADER:
-                bg_color = neon_black
-            elif pair_id in (PAIR_SEL, PAIR_TABA):
-                fg_color, bg_color = neon_black, curses.COLOR_CYAN if pair_id == PAIR_SEL else curses.COLOR_WHITE
-            try:
-                curses.init_pair(pair_id, fg_color, bg_color)
-            except curses.error:
-                pass
-        return
-
-    curses.init_pair(PAIR_CRIT, curses.COLOR_RED, -1)
-    curses.init_pair(PAIR_HIGH, curses.COLOR_YELLOW, -1)
-    curses.init_pair(PAIR_MED, curses.COLOR_CYAN, -1)
-    curses.init_pair(PAIR_LOW, curses.COLOR_GREEN, -1)
-    curses.init_pair(PAIR_DIM, curses.COLOR_WHITE, -1)
-    curses.init_pair(PAIR_HEADER, curses.COLOR_BLACK, curses.COLOR_WHITE)
-    curses.init_pair(PAIR_SEL, curses.COLOR_BLACK, curses.COLOR_CYAN)
-    curses.init_pair(PAIR_TABA, curses.COLOR_BLACK, curses.COLOR_WHITE)
-    curses.init_pair(PAIR_TABI, curses.COLOR_WHITE, -1)
-    curses.init_pair(PAIR_BORDER, curses.COLOR_BLUE, -1)
-    curses.init_pair(PAIR_LABEL, curses.COLOR_WHITE, -1)
-    curses.init_pair(PAIR_WARN, curses.COLOR_RED, -1)
-    curses.init_pair(PAIR_BAR, curses.COLOR_GREEN, -1)
-    curses.init_pair(PAIR_WHITE, curses.COLOR_WHITE, -1)
-    curses.init_pair(PAIR_PENDING, curses.COLOR_MAGENTA, -1)
-    curses.init_pair(PAIR_STAT_BLUE, curses.COLOR_BLUE, -1)
-    curses.init_pair(PAIR_STAT_PURPLE, curses.COLOR_MAGENTA, -1)
-    curses.init_pair(PAIR_STAT_PINK, curses.COLOR_MAGENTA, -1)
-    curses.init_pair(PAIR_STAT_YELLOW, curses.COLOR_YELLOW, -1)
-    curses.init_pair(PAIR_STAT_RED, curses.COLOR_RED, -1)
-    curses.init_pair(PAIR_STAT_GREEN, curses.COLOR_GREEN, -1)
+    # ===== MAIN BACKGROUND COLOR - BLACK for dark cyberpunk aesthetic =====
+    BG_COLOR = 17  # BLACK background for dark terminal look
+    
+    # ===== RISK LEVEL COLORS - Used for asset risk level display =====
+    curses.init_pair(PAIR_CRIT, curses.COLOR_RED, BG_COLOR)  # Critical risk level (RED text)
+    curses.init_pair(PAIR_HIGH, curses.COLOR_YELLOW, BG_COLOR)  # High risk level (YELLOW text)
+    curses.init_pair(PAIR_MED, curses.COLOR_CYAN, BG_COLOR)  # Medium risk level (CYAN text)
+    curses.init_pair(PAIR_LOW, curses.COLOR_GREEN, BG_COLOR)  # Low risk level (GREEN text)
+    
+    # ===== GENERAL UI COLORS =====
+    curses.init_pair(PAIR_DIM, curses.COLOR_WHITE, BG_COLOR)  # Dimmed/secondary text
+    curses.init_pair(PAIR_HEADER, curses.COLOR_CYAN, BG_COLOR)  # Title bar text (CYAN on BLACK - cyberpunk style)
+    curses.init_pair(PAIR_SEL, curses.COLOR_WHITE, curses.COLOR_BLUE)  # Selected item in asset list (WHITE on BLUE highlight)
+    curses.init_pair(PAIR_TABA, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Active filter tab (WHITE background)
+    curses.init_pair(PAIR_TABI, curses.COLOR_WHITE, BG_COLOR)  # Inactive filter tabs
+    curses.init_pair(PAIR_BORDER, curses.COLOR_CYAN, BG_COLOR)  # Generic border lines (CYAN neon)
+    curses.init_pair(PAIR_LABEL, curses.COLOR_WHITE, 17)  # Labels in detail panel - forest green background
+    curses.init_pair(PAIR_WARN, curses.COLOR_RED, BG_COLOR)  # Warning/error messages (RED text)
+    curses.init_pair(PAIR_BAR, curses.COLOR_GREEN, BG_COLOR)  # Progress bars
+    curses.init_pair(PAIR_WHITE, curses.COLOR_WHITE, BG_COLOR)  # White text on black background
+    curses.init_pair(PAIR_PENDING, curses.COLOR_MAGENTA, BG_COLOR)  # Pending analysis status (MAGENTA text)
+    
+    # ===== STATS PANEL BOX COLORS - Top row stat boxes with neon borders =====
+    curses.init_pair(PAIR_STAT_BLUE, curses.COLOR_BLUE, BG_COLOR)  # Blue accent (unused currently)
+    curses.init_pair(PAIR_STAT_PURPLE, curses.COLOR_MAGENTA, BG_COLOR)  # Purple/Magenta - "Analyzed" count box
+    curses.init_pair(PAIR_STAT_PINK, curses.COLOR_MAGENTA, BG_COLOR)  # Pink/Magenta accent
+    curses.init_pair(PAIR_STAT_YELLOW, curses.COLOR_YELLOW, BG_COLOR)  # Yellow accent (unused currently)
+    curses.init_pair(PAIR_STAT_RED, curses.COLOR_RED, BG_COLOR)  # Red - "Critical" count box
+    curses.init_pair(PAIR_STAT_GREEN, curses.COLOR_GREEN, BG_COLOR)  # Green - "Total Assets" and "Low" count boxes
+    
+    # ===== BLACK BACKGROUND =====
+    curses.init_pair(PAIR_NAVY_BG, curses.COLOR_WHITE, BG_COLOR)  # Black background with white text
+    
+    # ===== SECTION-SPECIFIC BORDER COLORS - Neon borders for cyberpunk look =====
+    curses.init_pair(PAIR_STATS_SECTION, curses.COLOR_CYAN, BG_COLOR)  # Stats panel section (currently unused)
+    curses.init_pair(PAIR_FILTER_SECTION, curses.COLOR_YELLOW, BG_COLOR)  # Filter bar section (currently unused)
+    curses.init_pair(PAIR_LIST_SECTION, curses.COLOR_CYAN, BG_COLOR)  # LEFT PANEL: Asset list borders (CYAN neon)
+    curses.init_pair(PAIR_DETAIL_SECTION, curses.COLOR_MAGENTA, BG_COLOR)  # RIGHT PANEL: Detail panel borders (MAGENTA neon)
+    
+    # ===== TABLE COLUMN HEADERS =====
+    curses.init_pair(PAIR_TABLE_HEADER, curses.COLOR_WHITE, BG_COLOR)  # Table column headers (WHITE on BLACK)
+    
+    # ===== DETAIL PANEL BACKGROUND AND TEXT COLORS =====
+    curses.init_pair(PAIR_DETAIL_BG, curses.COLOR_WHITE, 17)  # Forest green background for detail panel
+    curses.init_pair(PAIR_DETAIL_WHITE, curses.COLOR_WHITE, 17)  # White text on forest green
+    curses.init_pair(PAIR_DETAIL_DIM, curses.COLOR_WHITE, 17)  # Dim/secondary text on forest green
+    curses.init_pair(PAIR_DETAIL_HEADER, curses.COLOR_CYAN, 17)  # Cyan headers on forest green
+    curses.init_pair(PAIR_DETAIL_CRIT, curses.COLOR_RED, 17)  # Critical (red) on forest green
+    curses.init_pair(PAIR_DETAIL_HIGH, curses.COLOR_YELLOW, 17)  # High (yellow) on forest green
+    curses.init_pair(PAIR_DETAIL_MED, curses.COLOR_CYAN, 17)  # Medium (cyan) on forest green
+    curses.init_pair(PAIR_DETAIL_LOW, curses.COLOR_GREEN, 17)  # Low (green) on forest green
+    curses.init_pair(PAIR_DETAIL_PENDING, curses.COLOR_MAGENTA, 17)  # Pending (magenta) on forest green
+    curses.init_pair(PAIR_DETAIL_WARN, curses.COLOR_RED, 17)  # Warning (red) on forest green
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -248,69 +258,15 @@ def draw_box(win, title="", color_pair=PAIR_BORDER):
         win.attron(attr)
         win.border(0, 0, 0, 0, 0, 0, 0, 0)
         win.attroff(attr)
-    except curses.error:
-        pass
+    except curses.error as _exc:
+        logger.error(
+            f"[DEBUG] draw_box border FAILED — {_exc!r} | "
+            f"win=({h},{w}) title={title!r} color_pair={color_pair}"
+        )
     if title:
         t = f" {title} "
         x = max(1, (w - len(t)) // 2)
-        safe_addstr(win, 0, x, t, curses.color_pair(PAIR_HEADER) | curses.A_BOLD)
-
-
-def draw_neon_box(win, title, border_pair, title_pair):
-    """Draw a terminal-safe Unicode box with a colored border and title."""
-    h, w = win.getmaxyx()
-    if h <= 0 or w <= 0:
-        return
-
-    border_attr = curses.color_pair(border_pair)
-    title_attr = curses.color_pair(title_pair) | curses.A_BOLD
-
-    def safe_addch(y, x, ch, attr=0):
-        if y < 0 or x < 0 or y >= h or x >= w:
-            return
-        try:
-            win.addch(y, x, ch, attr)
-        except curses.error:
-            pass
-
-    def safe_addstr_local(y, x, text, attr=0):
-        if y < 0 or x < 0 or y >= h or x >= w:
-            return
-        try:
-            available = w - x
-            if available <= 0:
-                return
-            win.addstr(y, x, str(text)[:available], attr)
-        except curses.error:
-            pass
-
-    if h == 1 or w == 1:
-        safe_addstr_local(0, 0, str(title)[:w], title_attr)
-        return
-
-    tl, tr, bl, br = "┌", "┐", "└", "┘"
-    hz, vt = "─", "│"
-
-    for x in range(1, w - 1):
-        safe_addch(0, x, hz, border_attr)
-        safe_addch(h - 1, x, hz, border_attr)
-
-    for y in range(1, h - 1):
-        safe_addch(y, 0, vt, border_attr)
-        safe_addch(y, w - 1, vt, border_attr)
-
-    safe_addch(0, 0, tl, border_attr)
-    safe_addch(0, w - 1, tr, border_attr)
-    safe_addch(h - 1, 0, bl, border_attr)
-    safe_addch(h - 1, w - 1, br, border_attr)
-
-    title_text = f" {str(title).strip()} " if title is not None else " "
-    available = max(0, w - 2)
-    if available > 0:
-        if len(title_text) > available:
-            title_text = title_text[:available]
-        title_x = max(1, (w - len(title_text)) // 2)
-        safe_addstr_local(0, title_x, title_text, title_attr)
+        safe_addstr(win, 0, x, t, curses.color_pair(PAIR_LABEL) | curses.A_BOLD)
 
 
 def score_bar(score, width=10):
@@ -329,95 +285,74 @@ def draw_stat_box(win, y, x, w, value, label, pair, label_color=None):
         label_color = PAIR_DIM
     try:
         sub = win.derwin(h, w, y, x)
-    except curses.error:
+    except curses.error as _exc:
+        logger.error(
+            f"[DEBUG] draw_stat_box derwin FAILED — {_exc!r} | "
+            f"derwin(h={h},w={w},y={y},x={x}) label={label!r}"
+        )
         return
     sub.erase()
-    border_attr = curses.color_pair(pair)
-    bg_attr = curses.color_pair(PAIR_BORDER)
-    value_attr = curses.color_pair(pair) | curses.A_BOLD
-    label_attr = curses.color_pair(label_color) | curses.A_DIM
-
+    attr = curses.color_pair(pair)
     try:
-        sub.bkgd(" ", curses.color_pair(PAIR_BORDER))
+        sub.attron(attr)
+        sub.border(0, 0, 0, 0, 0, 0, 0, 0)
+        sub.attroff(attr)
     except curses.error:
         pass
-
+    # left vertical accent bar
     try:
-        sub.attron(bg_attr)
-        sub.addstr(0, 0, "┌" + ("─" * max(0, w - 2)) + "┐")
-        for row in range(1, h - 1):
-            sub.addstr(row, 0, "│")
-            if w > 1:
-                sub.addstr(row, w - 1, "│")
-        sub.addstr(h - 1, 0, "└" + ("─" * max(0, w - 2)) + "┘")
-        sub.attroff(bg_attr)
+        sub.attron(attr | curses.A_BOLD)
+        sub.addstr(1, 1, "│")
+        sub.addstr(2, 1, "│")
+        sub.attroff(attr | curses.A_BOLD)
     except curses.error:
         pass
-
-    try:
-        if w > 1:
-            sub.attron(border_attr)
-            sub.addstr(0, 0, "┌")
-            if w > 2:
-                sub.addstr(0, 1, "─" * (w - 2))
-            if w > 1:
-                sub.addstr(0, w - 1, "┐")
-            for row in range(1, h - 1):
-                sub.addstr(row, 0, "│")
-                if w > 1:
-                    sub.addstr(row, w - 1, "│")
-            sub.addstr(h - 1, 0, "└")
-            if w > 2:
-                sub.addstr(h - 1, 1, "─" * (w - 2))
-            if w > 1:
-                sub.addstr(h - 1, w - 1, "┘")
-            sub.attroff(border_attr)
-    except curses.error:
-        pass
-
-    icon = "◉"
-    inner_x = 2
-    safe_addstr(sub, 1, inner_x, icon, curses.color_pair(pair) | curses.A_BOLD)
-    safe_addstr(sub, 1, inner_x + 2, str(value), value_attr)
-    safe_addstr(sub, 2, inner_x + 2, label[: max(0, w - inner_x - 4)], label_attr)
+    safe_addstr(sub, 1, 3, str(value), curses.A_BOLD)
+    safe_addstr(sub, 2, 3, label[: w - 5], curses.color_pair(label_color) | curses.A_DIM)
     sub.noutrefresh()
 
 
 def stats_panel_layout(W, n_boxes=8):
-    """Return (box_w, per_row, n_rows) for the stats panel."""
-    box_w = max(18, min(24, (W - 6) // 4))
+    """Return (box_w, per_row, n_rows) for the stats panel - FORCE SINGLE ROW."""
+    # Calculate box width to fit all boxes in a single row
     gap = 1
-    per_row = max(1, (W - 1) // (box_w + gap))
-    n_rows = max(1, -(-n_boxes // per_row))
+    # Available width minus some margin
+    available_width = W - 4
+    # Calculate box width to fit all boxes in one row
+    box_w = max(15, (available_width - (n_boxes - 1) * gap) // n_boxes)
+    
+    # Force single row layout
+    per_row = n_boxes  # All boxes in one row
+    n_rows = 1  # Single row only
+    
     return box_w, per_row, n_rows
 
 
 def draw_stats_panel(stdscr, stats, start_row=0):
-    """Draw the top stats panel."""
+    """Draw the top stats panel - ALL BOXES IN SINGLE ROW."""
     H, W = stdscr.getmaxyx()
 
+    # Stats boxes configuration (removed correlated/uncorrelated cards)
+    # Colors indicate: GREEN=Total, RED=Critical, YELLOW=High, CYAN=Medium, GREEN=Low, MAGENTA=Pending, PURPLE=Analyzed
     boxes = [
-        (str(stats["n_total"]), "Total Assets", PAIR_STAT_GREEN),
-        # (str(stats["n_correlated"]), "Correlated", PAIR_STAT_BLUE),
-        # (str(stats["n_non_correlated"]), "Non-Correlated", PAIR_STAT_YELLOW),
-        (str(stats["n_critical"]), "Critical", PAIR_CRIT),
-        (str(stats["n_high"]), "High", PAIR_HIGH),
-        (str(stats["n_medium"]), "Medium", PAIR_MED),
-        (str(stats["n_low"]), "Low", PAIR_LOW),
-        (str(stats["n_pending"]), "Pending", PAIR_PENDING),
-        (str(stats["n_complete"]), "Analyzed", PAIR_STAT_PURPLE),
+        (str(stats["n_total"]), "Total Assets", PAIR_STAT_GREEN),  # Total count - green
+        (str(stats["n_critical"]), "Critical", PAIR_CRIT),  # Critical risk - red
+        (str(stats["n_high"]), "High", PAIR_HIGH),  # High risk - yellow
+        (str(stats["n_medium"]), "Medium", PAIR_MED),  # Medium risk - cyan
+        (str(stats["n_low"]), "Low", PAIR_LOW),  # Low risk - green
+        (str(stats["n_pending"]), "Pending", PAIR_PENDING),  # Pending analysis - magenta
+        (str(stats["n_complete"]), "Analyzed", PAIR_STAT_PURPLE),  # Completed analysis - purple
     ]
 
     box_w, per_row, n_rows = stats_panel_layout(W, len(boxes))
     gap = 1
-    x = 1
+    x = 2  # Start with small margin
     y = start_row
+    
+    # Draw all boxes in single row
     for i, (value, label, pair) in enumerate(boxes):
-        if i > 0 and i % per_row == 0:
-            x = 1
-            y += 4
-        if x + box_w >= W:
-            continue
+        if x + box_w >= W - 2:  # Check if box fits
+            break
         draw_stat_box(stdscr, y, x, box_w, value, label, pair)
         x += box_w + gap
 
@@ -480,25 +415,27 @@ def draw_filter_bar(stdscr, active_idx, assets_all, row):
 #  ASSET LIST
 # ══════════════════════════════════════════════════════════════════════════════
 def draw_asset_list(win, assets, sel_idx, scroll_off):
-    """Render the asset list in the left window."""
+    """Render the asset list in the left window - ASSET LIST SECTION (cyan neon borders)."""
+    logger.info(
+        "[DEBUG] draw_asset_list ENTER assets=%s sel_idx=%s scroll_off=%s",
+        len(assets),
+        sel_idx,
+        scroll_off,
+    )
     win.erase()
     h, w = win.getmaxyx()
-    try:
-        win.bkgd(" ", curses.color_pair(PAIR_HEADER))
-    except curses.error:
-        pass
+    # Set black background for asset list panel
+    win.bkgd(' ', curses.color_pair(PAIR_NAVY_BG))
+    draw_box(win, "Assets", PAIR_LIST_SECTION)  # Cyan neon borders for asset list section
 
-    draw_neon_box(win, "Assets", PAIR_MED, PAIR_MED)
+    # DEBUG: temporary diagnostic text — confirms this window is rendered on screen
+    _dbg_text = "ASSET PANEL WORKING"
+    safe_addstr(win, 0, max(1, w - len(_dbg_text) - 2), _dbg_text,
+                curses.color_pair(PAIR_WARN) | curses.A_BOLD)
 
     # Column header
     hdr = f"{'#':>3}  {'Hostname':<15}  {'Score':>5}  {'Risk Level':<10} IP Address"
-    if w > 2:
-        header_attr = curses.color_pair(PAIR_BORDER) | curses.A_BOLD
-        try:
-            safe_addstr(win, 1, 1, " " * (w - 2), curses.color_pair(PAIR_HEADER))
-            safe_addstr(win, 1, 1, hdr[: w - 2], header_attr)
-        except curses.error:
-            pass
+    safe_addstr(win, 1, 1, hdr[: w - 2], curses.color_pair(PAIR_TABLE_HEADER) | curses.A_BOLD)
 
     list_h = h - 3
     visible = assets[scroll_off : scroll_off + list_h]
@@ -550,17 +487,10 @@ def draw_asset_list(win, assets, sel_idx, scroll_off):
 
             safe_addstr(win, y, x, ip, white_attr)
 
-    # Scrollbar indicator
+    # Scrollbar indicator - cyan to match asset list section
     if len(assets) > list_h:
-        scroll_track_attr = curses.color_pair(PAIR_DIM)
-        scroll_thumb_attr = curses.color_pair(PAIR_MED) | curses.A_BOLD
-        for row in range(2, h - 1):
-            safe_addstr(win, row, w - 1, "░", scroll_track_attr)
-        bar_h = max(1, int(list_h * list_h / max(1, len(assets))))
-        max_scroll = max(1, len(assets) - list_h)
-        bar_top = int((scroll_off / max_scroll) * max(1, list_h - bar_h))
-        for i in range(bar_h):
-            safe_addstr(win, 2 + bar_top + i, w - 1, "█", scroll_thumb_attr)
+        bar_top = int(scroll_off / max(1, len(assets)) * list_h)
+        safe_addstr(win, bar_top + 2, w - 1, "█", curses.color_pair(PAIR_LIST_SECTION))
 
     win.noutrefresh()
 
@@ -569,17 +499,31 @@ def draw_asset_list(win, assets, sel_idx, scroll_off):
 #  DETAIL PANEL
 # ══════════════════════════════════════════════════════════════════════════════
 def draw_detail(win, asset, scroll=0, focused=False):
-    """Render the detailed info panel for the selected asset."""
+    """Render the detailed info panel for the selected asset - DETAIL SECTION (magenta neon borders)."""
+    logger.info(
+        "[DEBUG] draw_detail ENTER asset=%s scroll=%s focused=%s",
+        "None" if asset is None else asset.get("asset_name", "?"),
+        scroll,
+        focused,
+    )
     win.erase()
     h, w = win.getmaxyx()
+    # Set forest green background for detail panel
+    win.bkgd(' ', curses.color_pair(PAIR_DETAIL_BG))
+
+    # DEBUG: temporary diagnostic text — confirms this window is rendered on screen
+    _dbg_text = "DETAIL PANEL WORKING"
+    safe_addstr(win, 0, max(1, w - len(_dbg_text) - 2), _dbg_text,
+                curses.color_pair(PAIR_WARN) | curses.A_BOLD)
+
     if asset is None:
-        draw_neon_box(win, "Detail", PAIR_BORDER, PAIR_STAT_PURPLE)
+        draw_box(win, "Detail", PAIR_DETAIL_SECTION)  # Magenta borders for detail section
         safe_addstr(
             win,
             h // 2,
             max(1, (w - 20) // 2),
             "← Select an asset",
-            curses.color_pair(PAIR_DIM) | curses.A_DIM,
+            curses.color_pair(PAIR_DETAIL_DIM) | curses.A_DIM,
         )
         win.noutrefresh()
         return 0
@@ -587,234 +531,167 @@ def draw_detail(win, asset, scroll=0, focused=False):
     a = asset
     status = a.get("status", "Unknown")
     if status == "Pending":
-        pair = PAIR_PENDING
+        pair = PAIR_DETAIL_PENDING
     elif status == "Analyzing":
-        pair = PAIR_PENDING
+        pair = PAIR_DETAIL_PENDING
     else:
-        pair = LEVEL_PAIR.get(a.get("risk_level", "Low"), PAIR_LOW)
+        # Map regular pairs to detail pairs
+        risk_level = a.get("risk_level", "Low")
+        if risk_level == "Critical":
+            pair = PAIR_DETAIL_CRIT
+        elif risk_level == "High":
+            pair = PAIR_DETAIL_HIGH
+        elif risk_level == "Medium":
+            pair = PAIR_DETAIL_MED
+        else:
+            pair = PAIR_DETAIL_LOW
 
-    import json
-    import textwrap
+    # Estimate pad height
+    pad_h = 60 + len(str(a.get("ai_reason", "")).split("\n"))
+    pad_w = max(w, 1)
+    try:
+        pad = curses.newpad(pad_h, pad_w)
+        # Set forest green background for the pad content
+        pad.bkgd(' ', curses.color_pair(PAIR_DETAIL_BG))
+        logger.info("[DEBUG] draw_detail: newpad(%s,%s) OK", pad_h, pad_w)
+    except curses.error as _exc:
+        logger.error(
+            f"[DEBUG] draw_detail: newpad({pad_h},{pad_w}) FAILED — {_exc!r} — "
+            f"falling back to win ({h},{w})"
+        )
+        pad = win
 
-    def parse_raw_rows(value):
-        if isinstance(value, str):
-            try:
-                parsed = json.loads(value)
-                return parsed if isinstance(parsed, list) else []
-            except Exception:
-                return []
-        return value if isinstance(value, list) else []
+    def lbl(y, label, value, vpair=PAIR_DETAIL_DIM):
+        lw = 18
+        safe_addstr(
+            pad, y, 2, f"{label:<{lw}}", curses.color_pair(PAIR_DETAIL_WHITE) | curses.A_BOLD
+        )
+        safe_addstr(pad, y, 2 + lw, str(value)[: w - lw - 4], curses.color_pair(vpair))
 
-    def wrap_lines(text, width):
-        text = str(text or "").strip()
-        if not text:
-            return [""]
-        lines = []
-        for paragraph in text.splitlines() or [""]:
-            chunk = paragraph.strip()
-            if not chunk:
-                lines.append("")
-            else:
-                lines.extend(textwrap.wrap(chunk, width=width, break_long_words=True, break_on_hyphens=False) or [""])
-        return lines or [""]
+    def lbl_white(y, label, value):
+        lw = 18
+        safe_addstr(
+            pad, y, 2, f"{label:<{lw}}", curses.color_pair(PAIR_DETAIL_WHITE) | curses.A_BOLD
+        )
+        safe_addstr(
+            pad,
+            y,
+            2 + lw,
+            str(value)[: w - lw - 4],
+            curses.color_pair(PAIR_DETAIL_WHITE) | curses.A_BOLD,
+        )
 
-    def card_height(lines):
-        return 3 + max(1, len(lines))
+    def sep(y):
+        # Separator line in detail panel - magenta to match detail section
+        safe_addstr(pad, y, 1, "─" * (w - 2), curses.color_pair(PAIR_DETAIL_SECTION))
 
-    def draw_card(start_row, title, border_pair, title_pair, lines):
-        inner_left = 2
-        inner_width = max(10, w - 4)
-        top_width = max(2, inner_width)
-        title_text = f" {title} "
-        title_slice = title_text[: max(0, top_width - 2)]
-        border_attr = curses.color_pair(border_pair)
-        title_attr = curses.color_pair(title_pair) | curses.A_BOLD
-        body_attr = curses.color_pair(PAIR_DIM)
+    row = 1
 
-        safe_addstr(pad, start_row, inner_left, "┌" + ("─" * max(0, top_width - 2)) + "┐", border_attr)
-        if title_slice and top_width > 2:
-            title_x = inner_left + max(1, (top_width - len(title_slice)) // 2)
-            safe_addstr(pad, start_row, title_x, title_slice, title_attr)
-
-        content_row = start_row + 1
-        content_lines = lines or [""]
-        for line in content_lines:
-            safe_addstr(pad, content_row, inner_left, "│", border_attr)
-            safe_addstr(pad, content_row, inner_left + 1, f" {line}"[: max(0, top_width - 2)], body_attr)
-            safe_addstr(pad, content_row, inner_left + top_width - 1, "│", border_attr)
-            content_row += 1
-
-        safe_addstr(pad, content_row, inner_left, "└" + ("─" * max(0, top_width - 2)) + "┘", border_attr)
-        return content_row + 1
-
-    def kv_lines(items, label_width=16):
-        rendered = []
-        for label, value, value_pair in items:
-            rendered.append((f"{label:<{label_width}} {value}", value_pair))
-        return rendered
-
-    def draw_kv_card(start_row, title, border_pair, title_pair, items):
-        lines = []
-        for label, value, value_pair in items:
-            wrapped = wrap_lines(str(value), max(10, w - 24))
-            if not wrapped:
-                wrapped = [""]
-            first_line = f"{label:<16} {wrapped[0]}"
-            lines.append((first_line, value_pair))
-            for extra in wrapped[1:]:
-                lines.append((f"{'':<16} {extra}", value_pair))
-
-        inner_left = 2
-        inner_width = max(10, w - 4)
-        top_width = max(2, inner_width)
-        title_text = f" {title} "
-        title_slice = title_text[: max(0, top_width - 2)]
-        border_attr = curses.color_pair(border_pair)
-        title_attr = curses.color_pair(title_pair) | curses.A_BOLD
-        body_label_attr = curses.color_pair(PAIR_LABEL) | curses.A_BOLD
-
-        safe_addstr(pad, start_row, inner_left, "┌" + ("─" * max(0, top_width - 2)) + "┐", border_attr)
-        if title_slice and top_width > 2:
-            title_x = inner_left + max(1, (top_width - len(title_slice)) // 2)
-            safe_addstr(pad, start_row, title_x, title_slice, title_attr)
-
-        content_row = start_row + 1
-        for line, value_pair in lines or [("", PAIR_DIM)]:
-            safe_addstr(pad, content_row, inner_left, "│", border_attr)
-            label_part = line[:16]
-            value_part = line[17:] if len(line) > 17 else ""
-            safe_addstr(pad, content_row, inner_left + 1, f" {label_part:<16}", body_label_attr)
-            safe_addstr(pad, content_row, inner_left + 18, value_part[: max(0, top_width - 20)], curses.color_pair(value_pair))
-            safe_addstr(pad, content_row, inner_left + top_width - 1, "│", border_attr)
-            content_row += 1
-
-        safe_addstr(pad, content_row, inner_left, "└" + ("─" * max(0, top_width - 2)) + "┘", border_attr)
-        return content_row + 1
-
-    tenable_rows = parse_raw_rows(a.get("tenable_raw", []))
-    splunk_rows = parse_raw_rows(a.get("splunk_raw", []))
-    port_lines = []
-    seen_ports = set()
-    for source_rows in (tenable_rows, splunk_rows):
-        for record in source_rows:
-            if not isinstance(record, dict):
-                continue
-            port = record.get("Port") or record.get("port") or record.get("DestinationPort") or record.get("destination_port")
-            protocol = record.get("Protocol") or record.get("protocol")
-            service = record.get("Service") or record.get("service") or record.get("Plugin Name") or record.get("signature")
-            if port in (None, "", "None"):
-                continue
-            key = (str(port), str(protocol or ""), str(service or ""))
-            if key in seen_ports:
-                continue
-            seen_ports.add(key)
-            port_text = str(port)
-            if protocol:
-                port_text = f"{port_text}/{protocol}"
-            if service:
-                port_text = f"{port_text} — {service}"
-            port_lines.append(port_text)
-            if len(port_lines) >= 5:
-                break
-        if len(port_lines) >= 5:
-            break
-    if not port_lines:
-        port_lines = ["No open ports data available."]
-
+    # Identity
+    safe_addstr(
+        pad, row, 2, " IDENTITY ", curses.color_pair(PAIR_DETAIL_HEADER) | curses.A_BOLD
+    )
+    row += 1
+    lbl_white(row, "Asset ID", a.get("asset_id", ""))
+    row += 1
+    lbl_white(row, "Hostname", a.get("asset_name", ""))
+    row += 1
+    lbl(row, "IP Address", a.get("ip_address", "—"))
+    row += 1
+    lbl(row, "Facing", a.get("facing", "Unknown"))
+    row += 1
+    
+    # Correlation status
     has_tenable = a.get("has_tenable", False)
     has_splunk = a.get("has_splunk", False)
     if has_tenable and has_splunk:
         corr_status = "Correlated (Tenable + Splunk)"
-        corr_pair = PAIR_LOW
+        corr_pair = PAIR_DETAIL_LOW
     elif has_tenable and not has_splunk:
         corr_status = "No Splunk Data"
-        corr_pair = PAIR_WARN
+        corr_pair = PAIR_DETAIL_WARN
     elif has_splunk and not has_tenable:
         corr_status = "No Tenable Data"
-        corr_pair = PAIR_WARN
+        corr_pair = PAIR_DETAIL_WARN
     else:
         corr_status = "No Data"
-        corr_pair = PAIR_WARN
+        corr_pair = PAIR_DETAIL_WARN
+    lbl(row, "Data Status", corr_status, corr_pair)
+    row += 1
+    sep(row)
+    row += 1
 
-    score = a.get("risk_score", 0.0)
-    risk_level = a.get("risk_level", "Unknown")
-    priority = a.get("overall_priority_level", "Unknown")
-    if priority == "Critical":
-        priority_display = "P1 - Immediate (≤24h)"
-    elif priority == "High":
-        priority_display = "P2 - Urgent (≤7d)"
-    elif priority == "Medium":
-        priority_display = "P3 - Planned (≤30d)"
-    elif priority == "Low":
-        priority_display = "P4 - Monitor"
-    else:
-        priority_display = priority
-
-    ai_reason = str(a.get("ai_reason", "No analysis available"))
-    remediation = str(a.get("remediation", "No remediation provided"))
-
-    identity_items = [
-        ("Asset ID", a.get("asset_id", ""), PAIR_WHITE),
-        ("Hostname", a.get("asset_name", ""), PAIR_WHITE),
-        ("IP Address", a.get("ip_address", "—"), PAIR_DIM),
-        ("Facing", a.get("facing", "Unknown"), PAIR_DIM),
-    ]
-    status_items = [
-        ("Data Status", corr_status, corr_pair),
-        ("Tenable", "Available" if has_tenable else "Missing", PAIR_LOW if has_tenable else PAIR_WARN),
-        ("Splunk", "Available" if has_splunk else "Missing", PAIR_LOW if has_splunk else PAIR_WARN),
-    ]
-
-    risk_lines = []
-    if status in ("Pending", "Analyzing"):
-        risk_lines.append(f"Status            {status}")
-        if status == "Analyzing":
-            risk_lines.append("⏳ AI analysis in progress...")
-    else:
-        score_bar_width = min(30, max(8, w - 24))
-        bar_str = score_bar(score, score_bar_width) if score else ""
-        score_line = f"{score:4.1f}/10  {bar_str}" if score else "Not analyzed"
-        risk_lines.append(f"Risk Score        {score_line}")
-        risk_lines.append(f"Risk Level        {risk_level}")
-        risk_lines.append(f"Priority          {priority_display}")
-
-    ai_lines = wrap_lines(ai_reason, max(10, w - 6)) if status not in ("Pending", "Analyzing") else [f"AI analysis not available while {status.lower()}."]
-    remediation_lines = wrap_lines(remediation, max(10, w - 6))
-    open_ports_lines = wrap_lines("\n".join(port_lines), max(10, w - 6))
-
-    pad_h = (
-        2
-        + card_height([f"{k:<16} {v}" for k, v, _ in identity_items])
-        + 1
-        + card_height([f"{k:<16} {v}" for k, v, _ in status_items])
-        + 1
-        + card_height(risk_lines)
-        + 1
-        + card_height(ai_lines)
-        + 1
-        + card_height(remediation_lines)
-        + 1
-        + card_height(open_ports_lines)
-        + 4
+    # Risk Score
+    safe_addstr(
+        pad, row, 2, " RISK SCORE ", curses.color_pair(PAIR_DETAIL_HEADER) | curses.A_BOLD
     )
-    pad_w = max(w, 1)
-    try:
-        pad = curses.newpad(pad_h, pad_w)
-    except curses.error:
-        pad = win
+    row += 1
 
-    row = 1
-    row = draw_kv_card(row, "Identity", PAIR_MED, PAIR_MED, identity_items)
+    if status in ("Pending", "Analyzing"):
+        lbl(row, "Status", status, PAIR_DETAIL_PENDING)
+        row += 1
+        if status == "Analyzing":
+            safe_addstr(pad, row, 2, "⏳ AI analysis in progress...", curses.color_pair(PAIR_DETAIL_PENDING))
+            row += 1
+    else:
+        score = a.get("risk_score", 0.0)
+        bar_w = min(30, w - 24)
+        bar_str = score_bar(score, bar_w) if score else ""
+        score_line = f"{score:4.1f}/10  {bar_str}" if score else "Not analyzed"
+        safe_addstr(
+            pad, row, 2, "Risk Score        ", curses.color_pair(PAIR_DETAIL_WHITE) | curses.A_BOLD
+        )
+        safe_addstr(
+            pad, row, 20, score_line[: w - 22], curses.color_pair(pair) | curses.A_BOLD
+        )
+        row += 1
+        lbl(row, "Risk Level", a.get("risk_level", "Unknown"), pair)
+        row += 1
+        
+        # Priority with timeframe
+        priority = a.get("overall_priority_level", "Unknown")
+        if priority == "Critical":
+            priority_display = "P1 - Immediate (≤24h)"
+        elif priority == "High":
+            priority_display = "P2 - Urgent (≤7d)"
+        elif priority == "Medium":
+            priority_display = "P3 - Planned (≤30d)"
+        elif priority == "Low":
+            priority_display = "P4 - Monitor"
+        else:
+            priority_display = priority
+        lbl(row, "Priority", priority_display, pair)
+        row += 1
+
+    sep(row)
     row += 1
-    row = draw_kv_card(row, "Data Status", PAIR_STAT_PURPLE, PAIR_STAT_PURPLE, status_items)
-    row += 1
-    row = draw_card(row, "Risk Score", PAIR_CRIT, PAIR_CRIT, risk_lines)
-    row += 1
-    row = draw_card(row, "AI Analysis", PAIR_STAT_GREEN, PAIR_STAT_GREEN, ai_lines)
-    row += 1
-    row = draw_card(row, "Remediation", PAIR_STAT_PURPLE, PAIR_STAT_PURPLE, remediation_lines)
-    row += 1
-    row = draw_card(row, "Open Ports", PAIR_STAT_BLUE, PAIR_STAT_BLUE, open_ports_lines)
+
+    # AI Analysis
+    if status not in ("Pending", "Analyzing"):
+        safe_addstr(
+            pad, row, 2, " AI ANALYSIS ", curses.color_pair(PAIR_DETAIL_HEADER) | curses.A_BOLD
+        )
+        row += 1
+
+        ai_reason = str(a.get("ai_reason", "No analysis available"))
+        for line in ai_reason.split("\n"):
+            safe_addstr(pad, row, 2, line[: w - 4], curses.color_pair(PAIR_DETAIL_DIM))
+            row += 1
+
+        row += 1
+        sep(row)
+        row += 1
+
+        # Remediation
+        safe_addstr(
+            pad, row, 2, " REMEDIATION ", curses.color_pair(PAIR_DETAIL_HEADER) | curses.A_BOLD
+        )
+        row += 1
+
+        remediation = str(a.get("remediation", "No remediation provided"))
+        for line in remediation.split("\n"):
+            safe_addstr(pad, row, 2, line[: w - 4], curses.color_pair(PAIR_DETAIL_DIM))
+            row += 1
 
     content_h = row + 1
 
@@ -831,33 +708,47 @@ def draw_detail(win, asset, scroll=0, focused=False):
         else ("  [SCROLLING]" if focused else "")
     )
     title = f"  {a.get('asset_name', 'Asset')}  —  {a.get('risk_level', 'Unknown')}{title_suffix}{focus_tag}  "
-    draw_neon_box(win, title, pair, pair)
+    draw_box(win, title, PAIR_DETAIL_SECTION)  # Magenta borders for detail section
 
     # Copy visible slice of pad to window
     scroll = max(0, min(scroll, max_scroll))
     inner_h = h - 2
     inner_w = w - 2
     if pad is not win and inner_h > 0 and inner_w > 0:
+        _dst_min_row = 1
+        _dst_min_col = 1
+        _dst_max_row = min(1 + inner_h - 1, h - 2)
+        _dst_max_col = min(1 + inner_w - 1, w - 2)
+        logger.info(
+            f"[DEBUG] pad.overwrite: src_pad=({pad_h},{pad_w}) src_top_row={scroll} src_left_col=0 | "
+            f"dst_win=({h},{w}) dst=({_dst_min_row},{_dst_min_col})->({_dst_max_row},{_dst_max_col})"
+        )
         try:
             pad.overwrite(
                 win,
                 scroll,
                 0,
-                1,
-                1,
-                min(1 + inner_h - 1, h - 2),
-                min(1 + inner_w - 1, w - 2),
+                _dst_min_row,
+                _dst_min_col,
+                _dst_max_row,
+                _dst_max_col,
             )
-        except curses.error:
-            pass
+        except curses.error as _exc:
+            logger.error(
+                f"[DEBUG] pad.overwrite FAILED — {_exc!r} | "
+                f"src_pad=({pad_h},{pad_w}) scroll={scroll} | "
+                f"dst_win=({h},{w}) dst=({_dst_min_row},{_dst_min_col})->({_dst_max_row},{_dst_max_col}) | "
+                f"inner_h={inner_h} inner_w={inner_w} max_scroll={max_scroll} content_h={content_h}"
+            )
+            raise  # re-raise for visibility
 
-    # Scroll indicator
+    # Scroll indicator - magenta to match detail section
     if max_scroll > 0:
         bar_h = max(1, int(inner_h * inner_h / content_h))
         bar_pos = int(scroll / max_scroll * (inner_h - bar_h)) if max_scroll else 0
         for i in range(bar_h):
             safe_addstr(
-                win, 1 + bar_pos + i, w - 1, "█", curses.color_pair(PAIR_BORDER)
+                win, 1 + bar_pos + i, w - 1, "█", curses.color_pair(PAIR_DETAIL_SECTION)
             )
         hint = "↑↓ scroll"
         safe_addstr(
@@ -865,7 +756,7 @@ def draw_detail(win, asset, scroll=0, focused=False):
             h - 1,
             max(2, w - len(hint) - 2),
             hint,
-            curses.color_pair(PAIR_DIM) | curses.A_DIM,
+            curses.color_pair(PAIR_DETAIL_DIM) | curses.A_DIM,
         )
 
     win.noutrefresh()
@@ -898,38 +789,14 @@ def draw_status(stdscr, filtered_count, total_count, filt_name, analysis_msg, ro
     max_msg_len = W - 80  # Leave space for other info
     if len(analysis_msg) > max_msg_len:
         analysis_msg = analysis_msg[:max_msg_len - 3] + "..."
-
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    filter_text = f"Filter: {filt_name}"
-    showing_text = f"Showing: {filtered_count}/{total_count} assets"
-    status_text = analysis_msg
-    if status_text and not status_text.endswith(" "):
-        status_text += " "
-
-    try:
-        stdscr.addstr(row, 0, " " * W, curses.color_pair(PAIR_BAR))
-    except curses.error:
-        pass
-
-    x = 1
-    segments = [
-        (filter_text, curses.color_pair(PAIR_WHITE) | curses.A_BOLD),
-        (" | ", curses.color_pair(PAIR_WHITE) | curses.A_BOLD),
-        (showing_text, curses.color_pair(PAIR_WHITE) | curses.A_BOLD),
-        (" | ", curses.color_pair(PAIR_WHITE) | curses.A_BOLD),
-        (status_text, curses.color_pair(PAIR_WHITE)),
-        (" | ", curses.color_pair(PAIR_WHITE) | curses.A_BOLD),
-        (timestamp, curses.color_pair(PAIR_BAR) | curses.A_BOLD),
-    ]
-
-    for text, attr in segments:
-        if x >= W:
-            break
-        safe_addstr(stdscr, row, x, text, attr)
-        x += len(text)
-
-    if x < W:
-        safe_addstr(stdscr, row, x, " " * (W - x - 1), curses.color_pair(PAIR_BAR))
+    
+    status = (
+        f"  Filter: {filt_name}   Showing: {filtered_count}/{total_count} assets   "
+        f"{analysis_msg}   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  "
+    )
+    safe_addstr(
+        stdscr, row, 0, status.ljust(W)[:W], curses.color_pair(PAIR_HEADER)
+    )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1020,11 +887,14 @@ def compute_stats(assets):
 #  MAIN TUI LOOP
 # ══════════════════════════════════════════════════════════════════════════════
 def tui(stdscr, df_initial, assets_initial):
-    """Main TUI event loop."""
+    """Main TUI event loop with dark cyberpunk black background theme."""
     init_colors()
     curses.curs_set(0)
     stdscr.keypad(True)
     stdscr.timeout(100)  # 100ms refresh for faster updates during analysis
+    
+    # Set black background for entire screen (cyberpunk aesthetic)
+    stdscr.bkgd(' ', curses.color_pair(PAIR_NAVY_BG))
 
     # State
     df = df_initial
@@ -1201,7 +1071,11 @@ def tui(stdscr, df_initial, assets_initial):
             # Don't crash on update errors, just log and continue
             logger.error(f"Analysis update failed: {e}", exc_info=True)
 
+    # DEBUG: frame counter used to throttle repetitive log lines
+    _debug_frame = 0
+
     while True:
+        _debug_frame += 1
         H, W = stdscr.getmaxyx()
         if H < 30 or W < 70:
             stdscr.erase()
@@ -1235,9 +1109,9 @@ def tui(stdscr, df_initial, assets_initial):
         else:
             sel_idx = max(0, min(sel_idx, len(vis_assets) - 1))
 
-        # Layout
-        _, _, stats_n_rows = stats_panel_layout(W, 9)
-        stats_panel_h = stats_n_rows * 4
+        # Layout - stats panel is now always single row (4 lines height)
+        _, _, stats_n_rows = stats_panel_layout(W, 7)  # 7 boxes total (removed correlated/uncorrelated)
+        stats_panel_h = stats_n_rows * 4  # Should be 1 * 4 = 4 lines
 
         title_row = 0
         stats_row = 1
@@ -1250,32 +1124,58 @@ def tui(stdscr, df_initial, assets_initial):
 
         left_w = min(64, W // 2)
         right_w = W - left_w
+        # list_h defined early so the debug block below can reference it
+        list_h = pane_h
 
-        # Title bar
-        title_text = "VULNERABILITY RISK INTELLIGENCE DASHBOARD"
-        title_attr = curses.color_pair(PAIR_MED) | curses.A_BOLD
-        line_attr = curses.color_pair(PAIR_MED)
-        bg_attr = curses.color_pair(PAIR_HEADER)
-        try:
-            stdscr.addstr(title_row, 0, " " * W, bg_attr)
-        except curses.error:
-            pass
-        if W >= 2:
-            left_pad = 2
-            right_pad = 2
-            inner_width = max(0, W - left_pad - right_pad)
-            title_block = f" {title_text} "
-            if len(title_block) > inner_width:
-                title_block = title_block[:inner_width]
-            left_line = "─" * max(0, (inner_width - len(title_block)) // 2)
-            right_line = "─" * max(0, inner_width - len(left_line) - len(title_block))
-            safe_addstr(stdscr, title_row, 0, "╭", line_attr)
-            safe_addstr(stdscr, title_row, 1, left_line, line_attr)
-            safe_addstr(stdscr, title_row, 1 + len(left_line), title_block, title_attr)
-            safe_addstr(stdscr, title_row, 1 + len(left_line) + len(title_block), right_line, line_attr)
-            safe_addstr(stdscr, title_row, W - 1, "╮", line_attr)
-        else:
-            safe_addstr(stdscr, title_row, 0, title_text[:W], title_attr)
+        # DEBUG: log layout values on first frame and every 50 frames
+        if _debug_frame == 1 or _debug_frame % 50 == 0:
+            logger.info(
+                f"[DEBUG] LAYOUT frame={_debug_frame}: "
+                f"H={H} W={W} | "
+                f"title_row={title_row} stats_row={stats_row} "
+                f"stats_panel_h={stats_panel_h} filter_row={filter_row} | "
+                f"pane_top={pane_top} pane_h={pane_h} pane_bot={pane_bot} | "
+                f"left_w={left_w} right_w={right_w} list_h={list_h} | "
+                f"controls_row={controls_row} status_row={status_row}"
+            )
+            # DEBUG: dimension bounds checks
+            _errs = []
+            if pane_top + list_h > H:
+                _errs.append(f"LEFT_WIN y+h={pane_top}+{list_h}={pane_top+list_h} > H={H}")
+            if left_w > W:
+                _errs.append(f"LEFT_WIN x+w=0+{left_w}={left_w} > W={W}")
+            if pane_top + pane_h > H:
+                _errs.append(f"RIGHT_WIN y+h={pane_top}+{pane_h}={pane_top+pane_h} > H={H}")
+            if left_w + right_w > W:
+                _errs.append(f"RIGHT_WIN x+w={left_w}+{right_w}={left_w+right_w} > W={W}")
+            if pane_h <= 0:
+                _errs.append(f"pane_h={pane_h} is non-positive — window cannot be created")
+            if list_h <= 0:
+                _errs.append(f"list_h={list_h} is non-positive — window cannot be created")
+            if _errs:
+                for _e in _errs:
+                    logger.error(f"[DEBUG] BOUNDS VIOLATION: {_e}")
+            else:
+                logger.info(
+                    f"[DEBUG] BOUNDS OK: "
+                    f"left_win({list_h},{left_w},y={pane_top},x=0) "
+                    f"right_win({pane_h},{right_w},y={pane_top},x={left_w}) "
+                    f"fits in terminal ({H}x{W})"
+                )
+
+        # Title bar - cyberpunk style with line decoration
+        line = "═" * W
+        safe_addstr(stdscr, title_row, 0, line, curses.color_pair(PAIR_BORDER))
+        
+        title = " VULNERABILITY RISK INTELLIGENCE DASHBOARD "
+        x = max(0, (W - len(title)) // 2)
+        safe_addstr(
+            stdscr,
+            title_row,
+            x,
+            title,
+            curses.color_pair(PAIR_HEADER) | curses.A_BOLD
+        )
 
         # Stats panel - always recompute to reflect current state
         stats = compute_stats(assets_all)
@@ -1285,27 +1185,52 @@ def tui(stdscr, df_initial, assets_initial):
         draw_filter_bar(stdscr, filt_idx, assets_all, filter_row)
 
         # Left pane - asset list
-        list_h = pane_h
         if sel_idx < scroll:
             scroll = sel_idx
         elif sel_idx >= scroll + (list_h - 3):
             scroll = sel_idx - (list_h - 3) + 1
         scroll = max(0, scroll)
 
+        # DEBUG: log newwin args before creation
+        logger.info(
+            f"[DEBUG] Creating left_win: newwin(nlines={list_h}, ncols={left_w}, "
+            f"begin_y={pane_top}, begin_x=0) terminal=({H}x{W})"
+        )
         try:
             left_win = curses.newwin(list_h, left_w, pane_top, 0)
-        except curses.error:
-            stdscr.refresh()
-            continue
+        except curses.error as _exc:
+            logger.error(
+                f"[DEBUG] LEFT_WIN newwin FAILED — "
+                f"args: nlines={list_h}, ncols={left_w}, begin_y={pane_top}, begin_x=0 | "
+                f"terminal: H={H}, W={W} | error: {_exc!r}"
+            )
+            raise  # re-raise so the traceback is visible
 
+        logger.info(
+            "[DEBUG] Calling draw_asset_list: win_size=(%s,%s) assets=%s sel_idx=%s scroll=%s",
+            list_h,
+            left_w,
+            len(vis_assets),
+            sel_idx,
+            scroll,
+        )
         draw_asset_list(left_win, vis_assets, sel_idx, scroll)
+        logger.info("[DEBUG] draw_asset_list returned")
 
         # Right pane - detail
+        logger.info(
+            f"[DEBUG] Creating right_win: newwin(nlines={pane_h}, ncols={right_w}, "
+            f"begin_y={pane_top}, begin_x={left_w}) terminal=({H}x{W})"
+        )
         try:
             right_win = curses.newwin(pane_h, right_w, pane_top, left_w)
-        except curses.error:
-            stdscr.refresh()
-            continue
+        except curses.error as _exc:
+            logger.error(
+                f"[DEBUG] RIGHT_WIN newwin FAILED — "
+                f"args: nlines={pane_h}, ncols={right_w}, begin_y={pane_top}, begin_x={left_w} | "
+                f"terminal: H={H}, W={W} | error: {_exc!r}"
+            )
+            raise  # re-raise so the traceback is visible
 
         sel_asset = vis_assets[sel_idx] if vis_assets else None
 
@@ -1315,7 +1240,16 @@ def tui(stdscr, df_initial, assets_initial):
             detail_scroll = 0
             last_sel_key = sel_key
 
+        logger.info(
+            "[DEBUG] Calling draw_detail: win_size=(%s,%s) asset=%s scroll=%s focused=%s",
+            pane_h,
+            right_w,
+            "None" if sel_asset is None else sel_asset.get("asset_name", "?"),
+            detail_scroll,
+            focus == "detail",
+        )
         detail_content_h = draw_detail(right_win, sel_asset, detail_scroll, focus == "detail")
+        logger.info("[DEBUG] draw_detail returned content_h=%s", detail_content_h)
         detail_visible_h = pane_h - 2
         detail_max_scroll = max(0, detail_content_h - detail_visible_h)
         detail_scroll = max(0, min(detail_scroll, detail_max_scroll))

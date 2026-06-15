@@ -90003,3 +90003,2294 @@ STATUS      : OK
   "ai_summary": "Suspicious activity detected on mmm22281821lab. PowerShell and cmd.exe were run with elevated privileges, potentially indicating a vulnerability. Restrict access to C:\\* and monitor for further suspicious activity."
 }
 ================================================================================
+
+================================================================================
+ASSET       : ASSET-001
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:09:20 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-bigfix-inv2",
+  "tenable":  {
+     "risk_score": 7.4,
+     "priority_level": "High",
+     "remediation": "Apply Windows and SQL Server security updates",
+     "vulnerabilities": "KB5087538 and Security Updates for Microsoft SQL Server"
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "",
+     "log_type": "",
+     "is_vulnerable": false,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 7.4,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset 'lll-bigfix-inv2' has two high-risk vulnerabilities: KB5087538 and Security Updates for Microsoft SQL Server. These vulnerabilities are related to Windows and SQL Server security updates. Immediate remediation is required to prevent potential security breaches."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-002
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:09:40 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-lx-lforms-elastic-b",
+  "tenable":  {
+     "risk_score": 2.9,
+     "priority_level": "Medium",
+     "remediation": "Update Splunk Universal Forwarder to version 9.3.11 or later",
+     "vulnerabilities": "Splunk Universal Forwarder 9.3.0 < 9.3.11, 9.4.0 < 9.4.10, 10.0.0 < 10.0.4, 10.2.0 < 10.2.1 (SVD-2026-0404)"
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "",
+     "log_type": "",
+     "is_vulnerable": false,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 2.9,
+  "overall_priority_level": "Medium",
+  "ai_summary": "The asset 'lll-lx-lforms-elastic-b' has a medium risk score of 2.9 due to a single vulnerability in the Splunk Universal Forwarder. The vulnerability is rated as medium severity and requires updating the Splunk Universal Forwarder to version 9.3.11 or later to remediate. There are no Splunk logs indicating any vulnerabilities."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-003
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:09:57 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-lx-ubuntu2204-gold",
+  "tenable":  {
+     "risk_score": 6.0,
+     "priority_level": "Medium",
+     "remediation": "Update Apache Log4j to version 2.25.3 or higher",
+     "vulnerabilities": "Multiple vulnerabilities found in Apache Log4j, including Log Injection and SSL Hostname Verification Bypass"
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "None",
+     "log_type": "None",
+     "is_vulnerable": false,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 6.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "The asset 'lll-lx-ubuntu2204-gold' has multiple vulnerabilities in Apache Log4j, including Log Injection and SSL Hostname Verification Bypass. These vulnerabilities have a medium risk score and require remediation. No vulnerabilities were found in Splunk logs."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-004
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:10:13 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-mac-guptak1",
+  "tenable":  {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Implement security patches and configure system settings according to best practices.",
+     "vulnerabilities": "Multiple high-severity vulnerabilities found, including AirDrop being enabled when not actively transferring files, administrator password not required to access system-wide preferences, and other security misconfigurations."
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required, as no vulnerabilities were found in Splunk logs.",
+     "log_type": "null",
+     "is_vulnerable": false,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Multiple high-severity vulnerabilities found on lll-mac-guptak1, including AirDrop and administrator password misconfigurations. Remediation is required to ensure system security. No vulnerabilities found in Splunk logs."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-005
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:10:38 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-mac-santan1",
+  "tenable":  {
+     "risk_score": 8.65,
+     "priority_level": "High",
+     "remediation": "Update macOS to version 26.5 or later, disable AirDrop, External Intelligence Extensions, and Remote Management, and ensure Home Folders are secure.",
+     "vulnerabilities": "macOS 26.x < 26.5 Multiple Vulnerabilities, Security Updates for Microsoft Office Products (May 2026) (macOS), Ensure Home Folders Are Secure, Ensure AirDrop Is Disabled When Not Actively Transferring Files, Ensure External Intelligence Extensions Is Disabled, Ensure Remote Management Is Disabled"
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "log_type": "null",
+     "is_vulnerable": false,
+     "evidence_for_tenable": "null"
+  },
+  "overall_risk_score": 8.65,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset 'lll-mac-santan1' has multiple high-risk vulnerabilities in its macOS system. The most critical vulnerability is the macOS 26.x < 26.5 Multiple Vulnerabilities, which has a risk score of 9.0. Additionally, there are vulnerabilities in Security Updates for Microsoft Office Products (May 2026) (macOS), Ensure Home Folders Are Secure, Ensure AirDrop Is Disabled When Not Actively Transferring Files, Ensure External Intelligence Extensions Is Disabled, and Ensure Remote Management Is Disabled. However, there are no logs in Splunk that indicate any vulnerabilities."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-006
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:10:55 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-mac-wangj47",
+  "tenable":  {
+     "risk_score": 9.0,
+     "priority_level": "Critical",
+     "remediation": "Update macOS to version 26.5 or later",
+     "vulnerabilities": "macOS 26.x < 26.5 Multiple Vulnerabilities (127115) and Security Updates for Microsoft Office Products (May 2026) (macOS)"
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "log_type": "null",
+     "is_vulnerable": false,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 9.0,
+  "overall_priority_level": "Critical",
+  "ai_summary": "The asset 'lll-mac-wangj47' has a critical risk score of 9.0 due to high severity vulnerabilities in macOS and Microsoft Office. Remediation is required to update macOS to version 26.5 or later. No vulnerabilities were found in Splunk logs."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-007
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:11:09 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-mac-wangye",
+  "tenable":  {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Disable guest account and enable name and password login",
+     "vulnerabilities": "Guest account not disabled and login window does not display name and password"
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No action required",
+     "log_type": "null",
+     "is_vulnerable": false,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "High risk detected on lll-mac-wangye due to guest account not being disabled and login window not displaying name and password. Remediation is required to ensure security."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-008
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:11:28 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-nexus-02",
+  "tenable":  {
+     "risk_score": 2.9,
+     "priority_level": "Medium",
+     "remediation": "Update Splunk Universal Forwarder to version 9.3.11 or later",
+     "vulnerabilities": "Splunk Universal Forwarder 9.3.0 < 9.3.11, 9.4.0 < 9.4.10, 10.0.0 < 10.0.4, 10.2.0 < 10.2.1 (SVD-2026-0404)"
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "",
+     "log_type": "",
+     "is_vulnerable": false,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 2.9,
+  "overall_priority_level": "Medium",
+  "ai_summary": "The Splunk Universal Forwarder on lll-nexus-02 has a medium risk vulnerability (VPR: 2.9) due to an outdated version. No Splunk logs were found. No evidence of vulnerability was found in Splunk logs."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-009
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:11:45 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-pubmed",
+  "tenable":  {
+     "risk_score": 8.1,
+     "priority_level": "Critical",
+     "remediation": "Update Jupyterlab and Jupyter Notebook Python Libraries to latest versions",
+     "vulnerabilities": "Jupyterlab Python Library < 4.5.7 (CVE-2026-42557) and Jupyter Notebook Python Library 7.0.0 < 7.5.6 (CVE-2026-42557)"
+  },
+  "splunk":   {
+     "risk_score": 4.0,
+     "priority_level": "Medium",
+     "remediation": "Ensure cramfs kernel module is not available",
+     "log_type": "kernel module",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.1,
+  "overall_priority_level": "Critical",
+  "ai_summary": "High-risk vulnerabilities detected on lll-pubmed. Critical vulnerabilities in Jupyterlab and Jupyter Notebook Python Libraries. Medium-risk vulnerability in cramfs kernel module. Remediation required to prevent potential security breaches."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-010
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:11:59 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-win-akandur",
+  "tenable":  {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Update Windows, configure security settings",
+     "vulnerabilities": "Multiple high severity vulnerabilities found, including Windows Update Reboot Required and security settings misconfigurations"
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "log_type": "null",
+     "is_vulnerable": false,
+     "evidence_for_tenable": "null"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "High severity vulnerabilities found on lll-win-akandur, including Windows Update Reboot Required and security settings misconfigurations. Remediation required to update Windows and configure security settings."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-011
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:12:13 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-win-edward1",
+  "tenable":  {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Configure security settings according to best practices",
+     "vulnerabilities": "Multiple high severity vulnerabilities found, including incorrect security audit settings and disabled security features"
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "log_type": "null",
+     "is_vulnerable": false,
+     "evidence_for_tenable": "null"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "High severity vulnerabilities detected on lll-win-edward1, including security audit settings and disabled security features. Remediation is required to ensure system security."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-012
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:12:30 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-win-golnari",
+  "tenable":  {
+     "risk_score": 7.0,
+     "priority_level": "High",
+     "remediation": "Update Microsoft .NET Core to latest version",
+     "vulnerabilities": "Multiple vulnerabilities found in Microsoft .NET Core, including arbitrary file deletion and multiple vulnerabilities in Symantec Endpoint Protection Client"
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "log_type": "null",
+     "is_vulnerable": false,
+     "evidence_for_tenable": "null"
+  },
+  "overall_risk_score": 7.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Multiple vulnerabilities found in Microsoft .NET Core on lll-win-golnari, including arbitrary file deletion and multiple vulnerabilities in Symantec Endpoint Protection Client. High risk score of 7.0 indicates a high priority for remediation. Update Microsoft .NET Core to latest version to mitigate these vulnerabilities."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-013
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:12:47 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-win-loaner3",
+  "tenable":  {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Enable App Installer Local Archive Malware Scan Override, Turn on Basic feed authentication over HTTP, Configure multicast DNS (mDNS) protocol, Enable App Installer Microsoft Store Source Certificate Validation Bypass, Do not apply the Mark of the Web tag to files copied from insecure sources",
+     "vulnerabilities": "Multiple high severity vulnerabilities found, including App Installer Local Archive Malware Scan Override and Basic feed authentication over HTTP"
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "",
+     "log_type": "",
+     "is_vulnerable": false,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Multiple high severity vulnerabilities found on lll-win-loaner3, including App Installer Local Archive Malware Scan Override and Basic feed authentication over HTTP. Remediation is required to prevent potential security risks."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-014
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:13:03 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lll-win-mgalla1",
+  "tenable":  {
+     "risk_score": 8.5,
+     "priority_level": "High",
+     "remediation": "Apply security updates for Microsoft Office and Word products, and ensure 'Generate security audits' is set to 'LOCAL SERVICE, NETWORK SERVICE'.",
+     "vulnerabilities": "Multiple high-severity vulnerabilities found in Microsoft Office and Word products, and a configuration issue with 'Generate security audits'."
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required.",
+     "log_type": "null",
+     "is_vulnerable": false,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.5,
+  "overall_priority_level": "High",
+  "ai_summary": "Multiple high-severity vulnerabilities found in Microsoft Office and Word products on lll-win-mgalla1. Configuration issue with 'Generate security audits' also found. Remediation required to ensure security."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-015
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:13:17 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "lllem2",
+  "tenable":  {
+     "risk_score": 7.0,
+     "priority_level": "High",
+     "remediation": "Update Windows Defender and BigFix Server",
+     "vulnerabilities": "High severity vulnerabilities found in Windows Defender and BigFix Server"
+  },
+  "splunk":   {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "log_type": "null",
+     "is_vulnerable": false,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 7.0,
+  "overall_priority_level": "High",
+  "ai_summary": "High severity vulnerabilities found in Windows Defender and BigFix Server. Update Windows Defender and BigFix Server to remediate. No logs found in Splunk."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-016
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:13:30 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22142227cas",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Block suspicious PowerShell commands",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell commands detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Anomalous PowerShell commands detected on asset mmm22142227cas. These commands may indicate a potential security threat. Further investigation is required to determine the root cause and prevent future occurrences."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-017
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:13:44 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22205846pcm",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\*",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Potential privilege escalation detected via suspicious process creation. PowerShell and cmd.exe were used to access C:\\*. This may indicate an attempt to exploit a vulnerability or gain unauthorized access. Further investigation is required to determine the root cause and potential impact."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-018
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:13:58 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22205847pcm",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\*",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Unauthorized access to C:\\* directory"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Potential security risk detected on asset mmm22205847pcm. Unauthorized access to C:\\* directory. Restrict access to C:\\* to mitigate risk."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-019
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:14:11 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22205850coll",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Potential lateral movement detected via PowerShell and cmd.exe. Access to C:\\* has been compromised. Restrict access to C:\\* and monitor for suspicious activity to prevent further escalation."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-020
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:14:26 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22205882mms",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset 'mmm22205882mms' has a high risk score due to suspicious process creation events. The events indicate potential unauthorized access to the system. It is recommended to restrict access to C:\\* and monitor for suspicious activity to prevent further exploitation."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-021
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:14:44 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22205903pcm",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\*",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Potential privilege escalation vulnerability detected. An unknown user account 'mmm22205903PCM$' is executing a PowerShell script with elevated privileges. The script is attempting to list all .jar, .war, and .ear files on the system. This could be a sign of a malicious activity. Further investigation is required to determine the intent behind this action."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-022
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:15:00 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250003cas",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "An attacker may have gained access to the system by exploiting a vulnerability in the Windows PowerShell. The attacker may have used the Get-ChildItem cmdlet to retrieve a list of files on the system. The system is vulnerable to further attacks if the attacker is able to execute arbitrary code. The system administrator should restrict access to C:\\* and monitor for suspicious activity to prevent further attacks."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-023
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:15:13 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250009occs",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict PowerShell execution policy",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Unauthorized PowerShell execution"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "This asset has a high risk score due to unauthorized PowerShell execution. The execution policy should be restricted to prevent further vulnerabilities. The asset is vulnerable to potential attacks through PowerShell."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-024
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:15:29 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250037oams",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity with elevated privileges"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "This asset has a high risk score due to suspicious PowerShell and cmd.exe activity with elevated privileges. The activity suggests potential lateral movement or privilege escalation. It is recommended to restrict access to C:\\* and monitor for similar activity to prevent further attacks."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-025
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:15:44 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250057occs",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity with elevated privileges"
+  },
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "This asset has a medium overall risk score due to suspicious activity detected by Splunk. No vulnerabilities were found by Tenable. The Splunk log indicates potential lateral movement attempts via PowerShell and cmd.exe with elevated privileges. Further investigation is required to determine the root cause and potential impact."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-026
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:16:01 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250110occs",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict PowerShell execution policy",
+     "log_type": "Process creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "PowerShell execution with elevated privileges"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset 'mmm22250110occs' has a high risk score due to a potential vulnerability in PowerShell execution. The logs indicate that PowerShell was executed with elevated privileges, which could be a sign of a malicious activity. It is recommended to restrict PowerShell execution policy to mitigate this risk."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-027
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:16:15 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250731oet",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "An attacker may have gained access to the system by creating a new process with elevated privileges. The attacker may have used the Windows PowerShell to execute malicious code. The system may be vulnerable to further attacks if the attacker has access to the C:\\* directory."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-028
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:16:30 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250754oet",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "An attacker may have gained access to the system by creating a new process with elevated privileges. The process was created using PowerShell and cmd.exe. The attacker may have accessed sensitive files on the system. Further investigation is required to determine the full extent of the attack."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-029
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:16:47 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250758mms",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to PowerShell and cmd.exe",
+     "log_type": "Process creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset 'mmm22250758mms' has a high risk score due to suspicious PowerShell and cmd.exe activity. The risk score is 8.0, indicating a high priority level. The remediation action is to restrict access to PowerShell and cmd.exe. The asset has no vulnerabilities found by Tenable."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-030
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:17:02 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250766hmd",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "An attacker may have gained access to the system by creating a new process with elevated privileges. The process was created using PowerShell and cmd.exe. The attacker may have accessed sensitive files on the system. Further investigation is required to determine the full extent of the attack."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-031
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:17:18 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250768indx",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\*",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Unauthorized access to system directories"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "An unauthorized process was created on the system. The process was a PowerShell script that accessed system directories. This could be a sign of a malicious actor attempting to exploit the system. Further investigation is required to determine the full extent of the issue."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-032
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:17:31 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250769ab",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Monitor and block suspicious PowerShell and cmd.exe activity",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity detected"
+  },
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "Anomalous PowerShell and cmd.exe activity detected on host mmm22250769ab. No Tenable vulnerabilities found. Recommend monitoring and blocking suspicious activity."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-033
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:17:46 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250787ep",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Monitor and block suspicious PowerShell commands",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Suspicious PowerShell commands detected on host mmm22250787ep. These commands may be indicative of a potential security threat. Monitoring and blocking of these commands is recommended to prevent further exploitation."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-034
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:18:01 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250790ep",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity with elevated privileges"
+  },
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "This asset has a medium overall risk score due to suspicious PowerShell and cmd.exe activity with elevated privileges. However, no vulnerabilities were found in the Tenable scan. It is recommended to restrict access to C:\\* and monitor for suspicious activity."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-035
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:18:15 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250791ep",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Block suspicious PowerShell commands",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell commands detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Anomalous PowerShell commands detected on asset mmm22250791ep. These commands may indicate a potential security threat. Further investigation is required to determine the root cause. The asset is currently considered high-risk due to the suspicious activity."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-036
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:18:30 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250793ep",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Unauthorized access to C:\\* via PowerShell and cmd.exe"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "This asset has a high risk score due to suspicious activity detected by Splunk. The activity involves unauthorized access to C:\\* via PowerShell and cmd.exe. It is recommended to restrict access to C:\\* and monitor for similar activity in the future."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-037
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:18:46 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250898odoa",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "An attacker may have gained access to the system by exploiting a vulnerability in the Windows PowerShell. The attacker may have used the Get-ChildItem cmdlet to retrieve a list of files on the system. The attacker may have also used the cmd.exe to execute a command. The system is vulnerable to attacks that exploit the Windows PowerShell and cmd.exe."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-038
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:18:59 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250899doa",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict PowerShell execution policy",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Unauthorized PowerShell execution"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "This asset has a high risk score due to unauthorized PowerShell execution. The execution policy should be restricted to prevent further unauthorized execution. The asset is vulnerable to potential attacks through PowerShell."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-039
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:19:15 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250909ias",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "None"
+  },
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "The asset 'mmm22250909ias' has a medium overall risk score due to a high risk score from Splunk. The Splunk risk score is high because of suspicious PowerShell and cmd.exe activity. However, no vulnerabilities were found in Tenable. It is recommended to restrict access to C:\\* and monitor for suspicious activity."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-040
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:19:30 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250918occs",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Block suspicious PowerShell commands",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell commands detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "This asset has a high risk score due to suspicious PowerShell commands detected in the logs. The commands are attempting to execute Get-ChildItem with a recursive search and include specific file types. This could be indicative of a lateral movement attempt. Further investigation is required to determine the intent behind these commands."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-041
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:19:45 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250919occs",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Block suspicious PowerShell commands",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell commands detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Suspicious PowerShell commands detected on host mmm22250919occs. The commands may be attempting to execute malicious scripts. Block the suspicious commands to prevent potential security breaches. Further investigation is required to determine the root cause of the issue."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-042
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:20:01 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250935stb",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity with elevated privileges"
+  },
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "This asset has a medium overall risk score due to suspicious activity detected by Splunk. The activity involves elevated PowerShell and cmd.exe processes accessing sensitive areas of the system. However, no vulnerabilities were found by Tenable. It is recommended to restrict access to C:\\* and monitor for similar activity in the future."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-043
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:20:17 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250942oam",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset 'mmm22250942oam' has a high risk score due to suspicious process creation events. The events indicate the creation of new processes with elevated privileges, which could be indicative of a potential security threat. It is recommended to restrict access to C:\\* and monitor for suspicious activity to prevent further exploitation."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-044
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:20:33 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250963indx",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity with elevated privileges"
+  },
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "This asset has a medium overall risk score due to suspicious activity detected by Splunk. The activity involves elevated PowerShell and cmd.exe processes accessing C:\\*. No vulnerabilities were found by Tenable. It is recommended to restrict access to C:\\* and monitor for suspicious activity."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-045
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:20:48 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22250991mms",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Unauthorized access to C:\\* via PowerShell and cmd.exe"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "This asset has a high risk score due to unauthorized access to C:\\*. The access was made via PowerShell and cmd.exe. It is recommended to restrict access to C:\\* and monitor for suspicious activity."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-046
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:21:05 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281603pcm",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Disable PowerShell execution policy",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "PowerShell execution policy is set to RemoteSigned, which allows scripts to run from the internet"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "This asset has a high risk score due to a PowerShell vulnerability. The PowerShell execution policy is set to RemoteSigned, which allows scripts to run from the internet. This could potentially allow an attacker to execute malicious code. To remediate this issue, the PowerShell execution policy should be set to Restricted or AllSigned."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-047
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:21:20 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281697stb",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "An attacker may have gained access to the system by exploiting a vulnerability in the Windows PowerShell. The attacker may have used the Get-ChildItem cmdlet to retrieve a list of files on the system. The attacker may have also used the cmd.exe to execute a command. The system is vulnerable to attacks that exploit the Windows PowerShell and cmd.exe."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-048
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:21:34 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281699pcm",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Unauthorized access to C:\\* via PowerShell and cmd.exe"
+  },
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "This asset has a medium overall risk score due to a high risk score from Splunk logs indicating unauthorized access to C:\\*. However, no vulnerabilities were found in Tenable scans."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-049
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:21:48 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281775hmd",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Review and restrict PowerShell execution policy",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Unauthorized PowerShell execution"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "This asset has a high risk score due to unauthorized PowerShell execution. Review and restrict PowerShell execution policy to mitigate this risk. The asset has no vulnerabilities found by Tenable."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-050
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:22:02 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281796odoa",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Block suspicious PowerShell commands",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell commands detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Anomalous PowerShell commands detected on host mmm22281796odoa. The commands may be indicative of a potential security threat. Further investigation is required to determine the root cause. The host is currently considered high-risk."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-051
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:22:17 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281801ref",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Block suspicious PowerShell commands",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell commands detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Suspicious PowerShell commands detected on asset mmm22281801ref. PowerShell commands may be used for malicious activities. Block suspicious PowerShell commands to prevent potential security breaches."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-052
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:22:32 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281802sis",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "Potential security risk detected on mmm22281802sis. A process with elevated privileges was executed from the Windows command line. The process was attempting to list files with specific extensions on the C:\\ drive. This behavior is suspicious and may indicate a vulnerability. Further investigation is required to determine the root cause and potential impact."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-053
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:22:46 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281808mms",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Monitor and block suspicious PowerShell and cmd.exe activity",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Suspicious PowerShell and cmd.exe activity detected on asset mmm22281808mms. This may indicate a potential security threat. Monitoring and blocking of suspicious activity is recommended."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-054
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:23:00 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281821lab",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Monitor and block suspicious PowerShell commands",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell commands detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Anomalous PowerShell activity detected on mmm22281821lab. Two instances of suspicious PowerShell commands were executed, indicating potential lateral movement or privilege escalation. Further investigation is required to determine the root cause and prevent future occurrences."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-055
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:23:15 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281855hmd",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Monitor and block suspicious PowerShell and cmd.exe activity",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Suspicious PowerShell and cmd.exe activity detected on asset mmm22281855hmd. This may indicate a potential security threat. Monitoring and blocking of suspicious activity is recommended."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-056
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:23:29 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281860eng",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Monitor and block suspicious PowerShell and cmd.exe activity",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Suspicious PowerShell and cmd.exe activity detected on asset mmm22281860eng. This may indicate a potential security threat. Monitor and block suspicious activity to prevent further issues."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-057
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:23:44 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281874cas",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Block suspicious PowerShell commands",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell commands detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Anomalous PowerShell activity detected on asset mmm22281874cas. Two instances of suspicious PowerShell commands were executed, indicating potential malicious activity. Further investigation is required to determine the root cause and prevent future occurrences."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-058
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:23:59 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281908occs",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Monitor and investigate suspicious PowerShell activity",
+     "log_type": "Security",
+     "is_vulnerable": false,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "This asset has no known vulnerabilities but has a suspicious PowerShell activity. The activity is related to a process named 'dllhost.exe' and a PowerShell script that is running in a hidden window. This could be a sign of a potential threat or a false positive. Further investigation is required to determine the cause of this activity."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-059
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:24:14 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22281932stb",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to PowerShell and cmd.exe",
+     "log_type": "Process creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "This asset has a high risk score due to suspicious process creation events. The events indicate the use of PowerShell and cmd.exe to potentially access sensitive areas of the system. Further investigation is required to determine the root cause and implement necessary remediation steps."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-060
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:24:30 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324005stb",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "An attacker may have gained access to the system by exploiting a vulnerability in the Windows PowerShell. The attacker may have used the Get-ChildItem cmdlet to retrieve a list of files on the system. The system's security has been compromised, and it is recommended to restrict access to C:\\* and monitor for suspicious activity."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-061
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:24:46 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324015oams",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\*",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Potential privilege escalation detected. An attacker could potentially use this vulnerability to gain elevated privileges. The attacker could then use this access to execute malicious code or steal sensitive information. The vulnerability is caused by the execution of a PowerShell script that attempts to access sensitive files on the system."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-062
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:25:03 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324059stb",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Block suspicious PowerShell commands",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Suspicious PowerShell command detected on host mmm22324059stb. The command is attempting to stop a process with a specific ID. This could be a sign of a malicious activity. Further investigation is required to determine the intent behind this action."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-063
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:25:19 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324071stb",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity with elevated privileges"
+  },
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "This asset has a medium overall risk score due to suspicious activity detected by Splunk. The activity involves elevated PowerShell and cmd.exe processes accessing sensitive areas of the system. However, no vulnerabilities were found by Tenable. It is recommended to restrict access to C:\\* and monitor for similar activity in the future."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-064
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:25:34 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324081stb",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Potential privilege escalation vulnerability detected. An attacker could potentially use this vulnerability to gain elevated privileges on the system. The vulnerability is related to the creation of a new process with elevated privileges. The system is vulnerable due to the presence of suspicious PowerShell commands. It is recommended to restrict access to C:\\* and monitor for suspicious activity."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-065
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:25:50 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324083stb",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Unauthorized access to C:\\* via PowerShell and cmd.exe"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "An unauthorized user accessed the system via PowerShell and cmd.exe, potentially leading to data exfiltration or system compromise. The user accessed C:\\* and may have executed malicious scripts. This activity is likely a sign of a lateral movement attack. Further investigation is required to determine the scope and impact of the attack."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-066
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:26:05 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324167occs",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Disable PowerShell execution policy",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "PowerShell execution policy is set to RemoteSigned"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset 'mmm22324167occs' has a high risk score due to a potential vulnerability in PowerShell execution policy. The asset is vulnerable to unauthorized access due to the presence of suspicious PowerShell commands. It is recommended to disable PowerShell execution policy to mitigate this risk."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-067
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:26:20 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324205stb",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Disable PowerShell execution policy or restrict access to sensitive directories",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "PowerShell execution of Get-ChildItem with recursive search and specific file extensions"
+  },
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "Potential vulnerability detected in PowerShell execution on asset mmm22324205stb. PowerShell execution policy should be reviewed and restricted access to sensitive directories should be implemented. No vulnerabilities found in Tenable scan."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-068
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:26:35 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324210stb",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Anomalous PowerShell and cmd.exe activity detected on host mmm22324210stb. Possible lateral movement attempt. Restrict access to C:\\* and monitor for suspicious activity."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-069
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:26:51 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324220stb",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity with elevated privileges"
+  },
+  "overall_risk_score": 4.0,
+  "overall_priority_level": "Medium",
+  "ai_summary": "This asset has a medium overall risk score due to suspicious activity detected by Splunk. The activity involves elevated PowerShell and cmd.exe processes accessing sensitive areas of the system. However, no vulnerabilities were found by Tenable. It is recommended to restrict access to C:\\* and monitor for similar activity in the future."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-070
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:27:06 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324602stb",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell and cmd.exe activity with elevated privileges"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Anomalous PowerShell and cmd.exe activity detected on asset mmm22324602stb. Elevated privileges and access to C:\\* may indicate a security risk. Restrict access and monitor for further suspicious activity."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-071
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:27:21 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324629od",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Disable PowerShell and cmd.exe",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "PowerShell and cmd.exe execution with elevated privileges"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "The asset 'mmm22324629od' has a high risk score due to suspicious PowerShell and cmd.exe execution with elevated privileges. This activity may indicate a potential security threat. Further investigation is required to determine the root cause and take necessary remedial actions."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-072
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:27:36 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324632disc",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\*",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Execution of suspicious PowerShell command"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "An attacker may have gained access to the system by executing a suspicious PowerShell command. The command attempted to list all files with .jar, .war, and .ear extensions on the C:\\ drive. The system's security posture is at risk due to this potential vulnerability."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-073
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:27:50 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324637disc",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Monitor and block suspicious PowerShell commands",
+     "log_type": "Windows Security Event Log",
+     "is_vulnerable": true,
+     "evidence_for_tenable": null
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Suspicious PowerShell commands detected on the system. The commands are attempting to list all .jar, .war, and .ear files on the system. This could be indicative of a malicious activity. Monitoring and blocking these commands is recommended."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-074
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:28:04 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324652disc",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\*",
+     "log_type": "Process Creation",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Unauthorized access to system directories"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Potential unauthorized access to system directories detected. PowerShell and cmd.exe were used to access C:\\*. Restrict access to C:\\* to prevent further unauthorized access."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-075
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:28:18 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324659coll",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Block suspicious PowerShell commands",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell commands detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "This asset has a high risk score due to suspicious PowerShell commands detected in the logs. The commands are attempting to gather information about the system and may be indicative of a potential threat. It is recommended to block these commands and investigate further."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-076
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:28:33 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324671hds",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No vulnerabilities found",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Restrict access to C:\\* and monitor for suspicious activity",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Unauthorized access to C:\\* via PowerShell and cmd.exe"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "This asset has a high risk score due to suspicious activity detected by Splunk. The activity involves unauthorized access to C:\\* via PowerShell and cmd.exe. It is recommended to restrict access to C:\\* and monitor for similar activity in the future."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-077
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:28:47 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324675od",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Block suspicious PowerShell commands",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell commands detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Anomalous PowerShell activity detected on asset mmm22324675od. Two instances of suspicious PowerShell commands were executed, indicating potential malicious activity. Remediation is required to block such commands in the future."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-078
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:29:03 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324699ab",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Block suspicious PowerShell commands",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell commands detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Asset 'mmm22324699ab' has a high risk score due to suspicious PowerShell commands detected in the logs. The commands are attempting to execute Get-ChildItem with a wildcard path, which could be indicative of a lateral movement attack. No vulnerabilities were found in the Tenable scan."
+}
+================================================================================
+
+================================================================================
+ASSET       : ASSET-079
+MODEL       : meta-llama/Llama-3.1-8B-Instruct
+ENDPOINT    : http://192.168.50.102:8001/v1/chat/completions
+TIMESTAMP   : 2026-06-15 16:29:16 UTC
+STATUS      : OK
+--------------------------------------------------------------------------------
+{
+  "host_name": "mmm22324710ab",
+  "tenable":  {
+     "risk_score": 0.0,
+     "priority_level": "Low",
+     "remediation": "No remediation required",
+     "vulnerabilities": "No vulnerabilities found"
+  },
+  "splunk":   {
+     "risk_score": 8.0,
+     "priority_level": "High",
+     "remediation": "Block suspicious PowerShell commands",
+     "log_type": "Security",
+     "is_vulnerable": true,
+     "evidence_for_tenable": "Suspicious PowerShell commands detected"
+  },
+  "overall_risk_score": 8.0,
+  "overall_priority_level": "High",
+  "ai_summary": "Anomalous PowerShell activity detected on asset mmm22324710ab. Two instances of suspicious PowerShell commands were executed, indicating potential malicious activity. Remediation is required to block such commands in the future."
+}
+================================================================================
