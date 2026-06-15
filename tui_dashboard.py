@@ -91,6 +91,110 @@ def init_colors():
     """Initialize color pairs for the TUI."""
     curses.start_color()
     curses.use_default_colors()
+
+    neon_enabled = bool(
+        hasattr(curses, "can_change_color")
+        and hasattr(curses, "init_color")
+        and curses.can_change_color()
+        and getattr(curses, "COLORS", 0) >= 256
+    )
+
+    if neon_enabled:
+        neon_palette = {
+            "CYAN": (0, 217, 255),
+            "BLUE": (59, 130, 246),
+            "PURPLE": (168, 85, 247),
+            "PINK": (236, 72, 153),
+            "RED": (255, 77, 77),
+            "ORANGE": (255, 152, 0),
+            "YELLOW": (255, 213, 79),
+            "GREEN": (34, 197, 94),
+            "TEAL": (6, 182, 212),
+            "TEXT": (229, 231, 235),
+            "MUTED": (148, 163, 184),
+            "BLACK": (8, 10, 24),
+            "WHITE": (248, 250, 252),
+        }
+
+        def rgb_to_curses(red, green, blue):
+            return tuple(int(round(value * 1000 / 255)) for value in (red, green, blue))
+
+        color_slots = {
+            curses.COLOR_BLACK: "BLACK",
+            curses.COLOR_RED: "RED",
+            curses.COLOR_GREEN: "GREEN",
+            curses.COLOR_YELLOW: "YELLOW",
+            curses.COLOR_BLUE: "BLUE",
+            curses.COLOR_MAGENTA: "PURPLE",
+            curses.COLOR_CYAN: "CYAN",
+            curses.COLOR_WHITE: "WHITE",
+        }
+        for color_number, color_name in color_slots.items():
+            try:
+                curses.init_color(color_number, *rgb_to_curses(*neon_palette[color_name]))
+            except curses.error:
+                pass
+
+        try:
+            extra_colors = {
+                8: "ORANGE",
+                9: "PINK",
+                10: "TEAL",
+                11: "TEXT",
+                12: "MUTED",
+            }
+            for color_number, color_name in extra_colors.items():
+                if color_number < curses.COLORS:
+                    try:
+                        curses.init_color(color_number, *rgb_to_curses(*neon_palette[color_name]))
+                    except curses.error:
+                        pass
+        except Exception:
+            pass
+
+        neon_black = curses.COLOR_BLACK
+        neon_text = 11
+        neon_muted = 12
+        neon_orange = 8
+        neon_pink = 9
+        neon_teal = 10
+
+        pair_colors = {
+            PAIR_CRIT: curses.COLOR_RED,
+            PAIR_HIGH: neon_orange,
+            PAIR_MED: neon_teal,
+            PAIR_LOW: curses.COLOR_GREEN,
+            PAIR_DIM: neon_muted,
+            PAIR_HEADER: neon_teal,
+            PAIR_SEL: neon_black,
+            PAIR_TABA: neon_black,
+            PAIR_TABI: neon_text,
+            PAIR_BORDER: curses.COLOR_BLUE,
+            PAIR_LABEL: neon_text,
+            PAIR_WARN: neon_orange,
+            PAIR_BAR: curses.COLOR_GREEN,
+            PAIR_WHITE: neon_text,
+            PAIR_PENDING: neon_pink,
+            PAIR_STAT_BLUE: curses.COLOR_BLUE,
+            PAIR_STAT_PURPLE: curses.COLOR_MAGENTA,
+            PAIR_STAT_PINK: neon_pink,
+            PAIR_STAT_YELLOW: curses.COLOR_YELLOW,
+            PAIR_STAT_RED: curses.COLOR_RED,
+            PAIR_STAT_GREEN: curses.COLOR_GREEN,
+        }
+
+        for pair_id, fg_color in pair_colors.items():
+            bg_color = -1
+            if pair_id == PAIR_HEADER:
+                bg_color = neon_black
+            elif pair_id in (PAIR_SEL, PAIR_TABA):
+                fg_color, bg_color = neon_black, curses.COLOR_CYAN if pair_id == PAIR_SEL else curses.COLOR_WHITE
+            try:
+                curses.init_pair(pair_id, fg_color, bg_color)
+            except curses.error:
+                pass
+        return
+
     curses.init_pair(PAIR_CRIT, curses.COLOR_RED, -1)
     curses.init_pair(PAIR_HIGH, curses.COLOR_YELLOW, -1)
     curses.init_pair(PAIR_MED, curses.COLOR_CYAN, -1)
@@ -152,6 +256,63 @@ def draw_box(win, title="", color_pair=PAIR_BORDER):
         safe_addstr(win, 0, x, t, curses.color_pair(PAIR_HEADER) | curses.A_BOLD)
 
 
+def draw_neon_box(win, title, border_pair, title_pair):
+    """Draw a terminal-safe Unicode box with a colored border and title."""
+    h, w = win.getmaxyx()
+    if h <= 0 or w <= 0:
+        return
+
+    border_attr = curses.color_pair(border_pair)
+    title_attr = curses.color_pair(title_pair) | curses.A_BOLD
+
+    def safe_addch(y, x, ch, attr=0):
+        if y < 0 or x < 0 or y >= h or x >= w:
+            return
+        try:
+            win.addch(y, x, ch, attr)
+        except curses.error:
+            pass
+
+    def safe_addstr_local(y, x, text, attr=0):
+        if y < 0 or x < 0 or y >= h or x >= w:
+            return
+        try:
+            available = w - x
+            if available <= 0:
+                return
+            win.addstr(y, x, str(text)[:available], attr)
+        except curses.error:
+            pass
+
+    if h == 1 or w == 1:
+        safe_addstr_local(0, 0, str(title)[:w], title_attr)
+        return
+
+    tl, tr, bl, br = "┌", "┐", "└", "┘"
+    hz, vt = "─", "│"
+
+    for x in range(1, w - 1):
+        safe_addch(0, x, hz, border_attr)
+        safe_addch(h - 1, x, hz, border_attr)
+
+    for y in range(1, h - 1):
+        safe_addch(y, 0, vt, border_attr)
+        safe_addch(y, w - 1, vt, border_attr)
+
+    safe_addch(0, 0, tl, border_attr)
+    safe_addch(0, w - 1, tr, border_attr)
+    safe_addch(h - 1, 0, bl, border_attr)
+    safe_addch(h - 1, w - 1, br, border_attr)
+
+    title_text = f" {str(title).strip()} " if title is not None else " "
+    available = max(0, w - 2)
+    if available > 0:
+        if len(title_text) > available:
+            title_text = title_text[:available]
+        title_x = max(1, (w - len(title_text)) // 2)
+        safe_addstr_local(0, title_x, title_text, title_attr)
+
+
 def score_bar(score, width=10):
     """Return a bar string like '████░░░░░░' scaled to width."""
     filled = int(round(score / 10 * width))
@@ -171,23 +332,54 @@ def draw_stat_box(win, y, x, w, value, label, pair, label_color=None):
     except curses.error:
         return
     sub.erase()
-    attr = curses.color_pair(pair)
+    border_attr = curses.color_pair(pair)
+    bg_attr = curses.color_pair(PAIR_BORDER)
+    value_attr = curses.color_pair(pair) | curses.A_BOLD
+    label_attr = curses.color_pair(label_color) | curses.A_DIM
+
     try:
-        sub.attron(attr)
-        sub.border(0, 0, 0, 0, 0, 0, 0, 0)
-        sub.attroff(attr)
+        sub.bkgd(" ", curses.color_pair(PAIR_BORDER))
     except curses.error:
         pass
-    # left vertical accent bar
+
     try:
-        sub.attron(attr | curses.A_BOLD)
-        sub.addstr(1, 1, "│")
-        sub.addstr(2, 1, "│")
-        sub.attroff(attr | curses.A_BOLD)
+        sub.attron(bg_attr)
+        sub.addstr(0, 0, "┌" + ("─" * max(0, w - 2)) + "┐")
+        for row in range(1, h - 1):
+            sub.addstr(row, 0, "│")
+            if w > 1:
+                sub.addstr(row, w - 1, "│")
+        sub.addstr(h - 1, 0, "└" + ("─" * max(0, w - 2)) + "┘")
+        sub.attroff(bg_attr)
     except curses.error:
         pass
-    safe_addstr(sub, 1, 3, str(value), curses.A_BOLD)
-    safe_addstr(sub, 2, 3, label[: w - 5], curses.color_pair(label_color) | curses.A_DIM)
+
+    try:
+        if w > 1:
+            sub.attron(border_attr)
+            sub.addstr(0, 0, "┌")
+            if w > 2:
+                sub.addstr(0, 1, "─" * (w - 2))
+            if w > 1:
+                sub.addstr(0, w - 1, "┐")
+            for row in range(1, h - 1):
+                sub.addstr(row, 0, "│")
+                if w > 1:
+                    sub.addstr(row, w - 1, "│")
+            sub.addstr(h - 1, 0, "└")
+            if w > 2:
+                sub.addstr(h - 1, 1, "─" * (w - 2))
+            if w > 1:
+                sub.addstr(h - 1, w - 1, "┘")
+            sub.attroff(border_attr)
+    except curses.error:
+        pass
+
+    icon = "◉"
+    inner_x = 2
+    safe_addstr(sub, 1, inner_x, icon, curses.color_pair(pair) | curses.A_BOLD)
+    safe_addstr(sub, 1, inner_x + 2, str(value), value_attr)
+    safe_addstr(sub, 2, inner_x + 2, label[: max(0, w - inner_x - 4)], label_attr)
     sub.noutrefresh()
 
 
@@ -206,8 +398,8 @@ def draw_stats_panel(stdscr, stats, start_row=0):
 
     boxes = [
         (str(stats["n_total"]), "Total Assets", PAIR_STAT_GREEN),
-        (str(stats["n_correlated"]), "Correlated", PAIR_STAT_BLUE),
-        (str(stats["n_non_correlated"]), "Non-Correlated", PAIR_STAT_YELLOW),
+        # (str(stats["n_correlated"]), "Correlated", PAIR_STAT_BLUE),
+        # (str(stats["n_non_correlated"]), "Non-Correlated", PAIR_STAT_YELLOW),
         (str(stats["n_critical"]), "Critical", PAIR_CRIT),
         (str(stats["n_high"]), "High", PAIR_HIGH),
         (str(stats["n_medium"]), "Medium", PAIR_MED),
@@ -291,11 +483,22 @@ def draw_asset_list(win, assets, sel_idx, scroll_off):
     """Render the asset list in the left window."""
     win.erase()
     h, w = win.getmaxyx()
-    draw_box(win, "Assets", PAIR_BORDER)
+    try:
+        win.bkgd(" ", curses.color_pair(PAIR_HEADER))
+    except curses.error:
+        pass
+
+    draw_neon_box(win, "Assets", PAIR_MED, PAIR_MED)
 
     # Column header
     hdr = f"{'#':>3}  {'Hostname':<15}  {'Score':>5}  {'Risk Level':<10} IP Address"
-    safe_addstr(win, 1, 1, hdr[: w - 2], curses.color_pair(PAIR_HEADER) | curses.A_BOLD)
+    if w > 2:
+        header_attr = curses.color_pair(PAIR_BORDER) | curses.A_BOLD
+        try:
+            safe_addstr(win, 1, 1, " " * (w - 2), curses.color_pair(PAIR_HEADER))
+            safe_addstr(win, 1, 1, hdr[: w - 2], header_attr)
+        except curses.error:
+            pass
 
     list_h = h - 3
     visible = assets[scroll_off : scroll_off + list_h]
@@ -349,8 +552,15 @@ def draw_asset_list(win, assets, sel_idx, scroll_off):
 
     # Scrollbar indicator
     if len(assets) > list_h:
-        bar_top = int(scroll_off / max(1, len(assets)) * list_h)
-        safe_addstr(win, bar_top + 2, w - 1, "█", curses.color_pair(PAIR_BORDER))
+        scroll_track_attr = curses.color_pair(PAIR_DIM)
+        scroll_thumb_attr = curses.color_pair(PAIR_MED) | curses.A_BOLD
+        for row in range(2, h - 1):
+            safe_addstr(win, row, w - 1, "░", scroll_track_attr)
+        bar_h = max(1, int(list_h * list_h / max(1, len(assets))))
+        max_scroll = max(1, len(assets) - list_h)
+        bar_top = int((scroll_off / max_scroll) * max(1, list_h - bar_h))
+        for i in range(bar_h):
+            safe_addstr(win, 2 + bar_top + i, w - 1, "█", scroll_thumb_attr)
 
     win.noutrefresh()
 
@@ -363,7 +573,7 @@ def draw_detail(win, asset, scroll=0, focused=False):
     win.erase()
     h, w = win.getmaxyx()
     if asset is None:
-        draw_box(win, "Detail", PAIR_BORDER)
+        draw_neon_box(win, "Detail", PAIR_BORDER, PAIR_STAT_PURPLE)
         safe_addstr(
             win,
             h // 2,
@@ -383,54 +593,134 @@ def draw_detail(win, asset, scroll=0, focused=False):
     else:
         pair = LEVEL_PAIR.get(a.get("risk_level", "Low"), PAIR_LOW)
 
-    # Estimate pad height
-    pad_h = 60 + len(str(a.get("ai_reason", "")).split("\n"))
-    pad_w = max(w, 1)
-    try:
-        pad = curses.newpad(pad_h, pad_w)
-    except curses.error:
-        pad = win
+    import json
+    import textwrap
 
-    def lbl(y, label, value, vpair=PAIR_DIM):
-        lw = 18
-        safe_addstr(
-            pad, y, 2, f"{label:<{lw}}", curses.color_pair(PAIR_LABEL) | curses.A_BOLD
-        )
-        safe_addstr(pad, y, 2 + lw, str(value)[: w - lw - 4], curses.color_pair(vpair))
+    def parse_raw_rows(value):
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                return parsed if isinstance(parsed, list) else []
+            except Exception:
+                return []
+        return value if isinstance(value, list) else []
 
-    def lbl_white(y, label, value):
-        lw = 18
-        safe_addstr(
-            pad, y, 2, f"{label:<{lw}}", curses.color_pair(PAIR_LABEL) | curses.A_BOLD
-        )
-        safe_addstr(
-            pad,
-            y,
-            2 + lw,
-            str(value)[: w - lw - 4],
-            curses.color_pair(PAIR_WHITE) | curses.A_BOLD,
-        )
+    def wrap_lines(text, width):
+        text = str(text or "").strip()
+        if not text:
+            return [""]
+        lines = []
+        for paragraph in text.splitlines() or [""]:
+            chunk = paragraph.strip()
+            if not chunk:
+                lines.append("")
+            else:
+                lines.extend(textwrap.wrap(chunk, width=width, break_long_words=True, break_on_hyphens=False) or [""])
+        return lines or [""]
 
-    def sep(y):
-        safe_addstr(pad, y, 1, "─" * (w - 2), curses.color_pair(PAIR_BORDER))
+    def card_height(lines):
+        return 3 + max(1, len(lines))
 
-    row = 1
+    def draw_card(start_row, title, border_pair, title_pair, lines):
+        inner_left = 2
+        inner_width = max(10, w - 4)
+        top_width = max(2, inner_width)
+        title_text = f" {title} "
+        title_slice = title_text[: max(0, top_width - 2)]
+        border_attr = curses.color_pair(border_pair)
+        title_attr = curses.color_pair(title_pair) | curses.A_BOLD
+        body_attr = curses.color_pair(PAIR_DIM)
 
-    # Identity
-    safe_addstr(
-        pad, row, 2, " IDENTITY ", curses.color_pair(PAIR_HEADER) | curses.A_BOLD
-    )
-    row += 1
-    lbl_white(row, "Asset ID", a.get("asset_id", ""))
-    row += 1
-    lbl_white(row, "Hostname", a.get("asset_name", ""))
-    row += 1
-    lbl(row, "IP Address", a.get("ip_address", "—"))
-    row += 1
-    lbl(row, "Facing", a.get("facing", "Unknown"))
-    row += 1
-    
-    # Correlation status
+        safe_addstr(pad, start_row, inner_left, "┌" + ("─" * max(0, top_width - 2)) + "┐", border_attr)
+        if title_slice and top_width > 2:
+            title_x = inner_left + max(1, (top_width - len(title_slice)) // 2)
+            safe_addstr(pad, start_row, title_x, title_slice, title_attr)
+
+        content_row = start_row + 1
+        content_lines = lines or [""]
+        for line in content_lines:
+            safe_addstr(pad, content_row, inner_left, "│", border_attr)
+            safe_addstr(pad, content_row, inner_left + 1, f" {line}"[: max(0, top_width - 2)], body_attr)
+            safe_addstr(pad, content_row, inner_left + top_width - 1, "│", border_attr)
+            content_row += 1
+
+        safe_addstr(pad, content_row, inner_left, "└" + ("─" * max(0, top_width - 2)) + "┘", border_attr)
+        return content_row + 1
+
+    def kv_lines(items, label_width=16):
+        rendered = []
+        for label, value, value_pair in items:
+            rendered.append((f"{label:<{label_width}} {value}", value_pair))
+        return rendered
+
+    def draw_kv_card(start_row, title, border_pair, title_pair, items):
+        lines = []
+        for label, value, value_pair in items:
+            wrapped = wrap_lines(str(value), max(10, w - 24))
+            if not wrapped:
+                wrapped = [""]
+            first_line = f"{label:<16} {wrapped[0]}"
+            lines.append((first_line, value_pair))
+            for extra in wrapped[1:]:
+                lines.append((f"{'':<16} {extra}", value_pair))
+
+        inner_left = 2
+        inner_width = max(10, w - 4)
+        top_width = max(2, inner_width)
+        title_text = f" {title} "
+        title_slice = title_text[: max(0, top_width - 2)]
+        border_attr = curses.color_pair(border_pair)
+        title_attr = curses.color_pair(title_pair) | curses.A_BOLD
+        body_label_attr = curses.color_pair(PAIR_LABEL) | curses.A_BOLD
+
+        safe_addstr(pad, start_row, inner_left, "┌" + ("─" * max(0, top_width - 2)) + "┐", border_attr)
+        if title_slice and top_width > 2:
+            title_x = inner_left + max(1, (top_width - len(title_slice)) // 2)
+            safe_addstr(pad, start_row, title_x, title_slice, title_attr)
+
+        content_row = start_row + 1
+        for line, value_pair in lines or [("", PAIR_DIM)]:
+            safe_addstr(pad, content_row, inner_left, "│", border_attr)
+            label_part = line[:16]
+            value_part = line[17:] if len(line) > 17 else ""
+            safe_addstr(pad, content_row, inner_left + 1, f" {label_part:<16}", body_label_attr)
+            safe_addstr(pad, content_row, inner_left + 18, value_part[: max(0, top_width - 20)], curses.color_pair(value_pair))
+            safe_addstr(pad, content_row, inner_left + top_width - 1, "│", border_attr)
+            content_row += 1
+
+        safe_addstr(pad, content_row, inner_left, "└" + ("─" * max(0, top_width - 2)) + "┘", border_attr)
+        return content_row + 1
+
+    tenable_rows = parse_raw_rows(a.get("tenable_raw", []))
+    splunk_rows = parse_raw_rows(a.get("splunk_raw", []))
+    port_lines = []
+    seen_ports = set()
+    for source_rows in (tenable_rows, splunk_rows):
+        for record in source_rows:
+            if not isinstance(record, dict):
+                continue
+            port = record.get("Port") or record.get("port") or record.get("DestinationPort") or record.get("destination_port")
+            protocol = record.get("Protocol") or record.get("protocol")
+            service = record.get("Service") or record.get("service") or record.get("Plugin Name") or record.get("signature")
+            if port in (None, "", "None"):
+                continue
+            key = (str(port), str(protocol or ""), str(service or ""))
+            if key in seen_ports:
+                continue
+            seen_ports.add(key)
+            port_text = str(port)
+            if protocol:
+                port_text = f"{port_text}/{protocol}"
+            if service:
+                port_text = f"{port_text} — {service}"
+            port_lines.append(port_text)
+            if len(port_lines) >= 5:
+                break
+        if len(port_lines) >= 5:
+            break
+    if not port_lines:
+        port_lines = ["No open ports data available."]
+
     has_tenable = a.get("has_tenable", False)
     has_splunk = a.get("has_splunk", False)
     if has_tenable and has_splunk:
@@ -445,82 +735,86 @@ def draw_detail(win, asset, scroll=0, focused=False):
     else:
         corr_status = "No Data"
         corr_pair = PAIR_WARN
-    lbl(row, "Data Status", corr_status, corr_pair)
-    row += 1
-    sep(row)
-    row += 1
 
-    # Risk Score
-    safe_addstr(
-        pad, row, 2, " RISK SCORE ", curses.color_pair(PAIR_HEADER) | curses.A_BOLD
-    )
-    row += 1
-
-    if status in ("Pending", "Analyzing"):
-        lbl(row, "Status", status, PAIR_PENDING)
-        row += 1
-        if status == "Analyzing":
-            safe_addstr(pad, row, 2, "⏳ AI analysis in progress...", curses.color_pair(PAIR_PENDING))
-            row += 1
+    score = a.get("risk_score", 0.0)
+    risk_level = a.get("risk_level", "Unknown")
+    priority = a.get("overall_priority_level", "Unknown")
+    if priority == "Critical":
+        priority_display = "P1 - Immediate (≤24h)"
+    elif priority == "High":
+        priority_display = "P2 - Urgent (≤7d)"
+    elif priority == "Medium":
+        priority_display = "P3 - Planned (≤30d)"
+    elif priority == "Low":
+        priority_display = "P4 - Monitor"
     else:
-        score = a.get("risk_score", 0.0)
-        bar_w = min(30, w - 24)
-        bar_str = score_bar(score, bar_w) if score else ""
+        priority_display = priority
+
+    ai_reason = str(a.get("ai_reason", "No analysis available"))
+    remediation = str(a.get("remediation", "No remediation provided"))
+
+    identity_items = [
+        ("Asset ID", a.get("asset_id", ""), PAIR_WHITE),
+        ("Hostname", a.get("asset_name", ""), PAIR_WHITE),
+        ("IP Address", a.get("ip_address", "—"), PAIR_DIM),
+        ("Facing", a.get("facing", "Unknown"), PAIR_DIM),
+    ]
+    status_items = [
+        ("Data Status", corr_status, corr_pair),
+        ("Tenable", "Available" if has_tenable else "Missing", PAIR_LOW if has_tenable else PAIR_WARN),
+        ("Splunk", "Available" if has_splunk else "Missing", PAIR_LOW if has_splunk else PAIR_WARN),
+    ]
+
+    risk_lines = []
+    if status in ("Pending", "Analyzing"):
+        risk_lines.append(f"Status            {status}")
+        if status == "Analyzing":
+            risk_lines.append("⏳ AI analysis in progress...")
+    else:
+        score_bar_width = min(30, max(8, w - 24))
+        bar_str = score_bar(score, score_bar_width) if score else ""
         score_line = f"{score:4.1f}/10  {bar_str}" if score else "Not analyzed"
-        safe_addstr(
-            pad, row, 2, "Risk Score        ", curses.color_pair(PAIR_LABEL) | curses.A_BOLD
-        )
-        safe_addstr(
-            pad, row, 20, score_line[: w - 22], curses.color_pair(pair) | curses.A_BOLD
-        )
-        row += 1
-        lbl(row, "Risk Level", a.get("risk_level", "Unknown"), pair)
-        row += 1
-        
-        # Priority with timeframe
-        priority = a.get("overall_priority_level", "Unknown")
-        if priority == "Critical":
-            priority_display = "P1 - Immediate (≤24h)"
-        elif priority == "High":
-            priority_display = "P2 - Urgent (≤7d)"
-        elif priority == "Medium":
-            priority_display = "P3 - Planned (≤30d)"
-        elif priority == "Low":
-            priority_display = "P4 - Monitor"
-        else:
-            priority_display = priority
-        lbl(row, "Priority", priority_display, pair)
-        row += 1
+        risk_lines.append(f"Risk Score        {score_line}")
+        risk_lines.append(f"Risk Level        {risk_level}")
+        risk_lines.append(f"Priority          {priority_display}")
 
-    sep(row)
+    ai_lines = wrap_lines(ai_reason, max(10, w - 6)) if status not in ("Pending", "Analyzing") else [f"AI analysis not available while {status.lower()}."]
+    remediation_lines = wrap_lines(remediation, max(10, w - 6))
+    open_ports_lines = wrap_lines("\n".join(port_lines), max(10, w - 6))
+
+    pad_h = (
+        2
+        + card_height([f"{k:<16} {v}" for k, v, _ in identity_items])
+        + 1
+        + card_height([f"{k:<16} {v}" for k, v, _ in status_items])
+        + 1
+        + card_height(risk_lines)
+        + 1
+        + card_height(ai_lines)
+        + 1
+        + card_height(remediation_lines)
+        + 1
+        + card_height(open_ports_lines)
+        + 4
+    )
+    pad_w = max(w, 1)
+    try:
+        pad = curses.newpad(pad_h, pad_w)
+    except curses.error:
+        pad = win
+
+    row = 1
+    row = draw_kv_card(row, "Identity", PAIR_MED, PAIR_MED, identity_items)
     row += 1
-
-    # AI Analysis
-    if status not in ("Pending", "Analyzing"):
-        safe_addstr(
-            pad, row, 2, " AI ANALYSIS ", curses.color_pair(PAIR_HEADER) | curses.A_BOLD
-        )
-        row += 1
-
-        ai_reason = str(a.get("ai_reason", "No analysis available"))
-        for line in ai_reason.split("\n"):
-            safe_addstr(pad, row, 2, line[: w - 4], curses.color_pair(PAIR_DIM))
-            row += 1
-
-        row += 1
-        sep(row)
-        row += 1
-
-        # Remediation
-        safe_addstr(
-            pad, row, 2, " REMEDIATION ", curses.color_pair(PAIR_HEADER) | curses.A_BOLD
-        )
-        row += 1
-
-        remediation = str(a.get("remediation", "No remediation provided"))
-        for line in remediation.split("\n"):
-            safe_addstr(pad, row, 2, line[: w - 4], curses.color_pair(PAIR_DIM))
-            row += 1
+    row = draw_kv_card(row, "Data Status", PAIR_STAT_PURPLE, PAIR_STAT_PURPLE, status_items)
+    row += 1
+    row = draw_card(row, "Risk Score", PAIR_CRIT, PAIR_CRIT, risk_lines)
+    row += 1
+    row = draw_card(row, "AI Analysis", PAIR_STAT_GREEN, PAIR_STAT_GREEN, ai_lines)
+    row += 1
+    row = draw_card(row, "Remediation", PAIR_STAT_PURPLE, PAIR_STAT_PURPLE, remediation_lines)
+    row += 1
+    row = draw_card(row, "Open Ports", PAIR_STAT_BLUE, PAIR_STAT_BLUE, open_ports_lines)
 
     content_h = row + 1
 
@@ -537,7 +831,7 @@ def draw_detail(win, asset, scroll=0, focused=False):
         else ("  [SCROLLING]" if focused else "")
     )
     title = f"  {a.get('asset_name', 'Asset')}  —  {a.get('risk_level', 'Unknown')}{title_suffix}{focus_tag}  "
-    draw_box(win, title, pair)
+    draw_neon_box(win, title, pair, pair)
 
     # Copy visible slice of pad to window
     scroll = max(0, min(scroll, max_scroll))
@@ -604,14 +898,38 @@ def draw_status(stdscr, filtered_count, total_count, filt_name, analysis_msg, ro
     max_msg_len = W - 80  # Leave space for other info
     if len(analysis_msg) > max_msg_len:
         analysis_msg = analysis_msg[:max_msg_len - 3] + "..."
-    
-    status = (
-        f"  Filter: {filt_name}   Showing: {filtered_count}/{total_count} assets   "
-        f"{analysis_msg}   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  "
-    )
-    safe_addstr(
-        stdscr, row, 0, status.ljust(W)[:W], curses.color_pair(PAIR_HEADER)
-    )
+
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    filter_text = f"Filter: {filt_name}"
+    showing_text = f"Showing: {filtered_count}/{total_count} assets"
+    status_text = analysis_msg
+    if status_text and not status_text.endswith(" "):
+        status_text += " "
+
+    try:
+        stdscr.addstr(row, 0, " " * W, curses.color_pair(PAIR_BAR))
+    except curses.error:
+        pass
+
+    x = 1
+    segments = [
+        (filter_text, curses.color_pair(PAIR_WHITE) | curses.A_BOLD),
+        (" | ", curses.color_pair(PAIR_WHITE) | curses.A_BOLD),
+        (showing_text, curses.color_pair(PAIR_WHITE) | curses.A_BOLD),
+        (" | ", curses.color_pair(PAIR_WHITE) | curses.A_BOLD),
+        (status_text, curses.color_pair(PAIR_WHITE)),
+        (" | ", curses.color_pair(PAIR_WHITE) | curses.A_BOLD),
+        (timestamp, curses.color_pair(PAIR_BAR) | curses.A_BOLD),
+    ]
+
+    for text, attr in segments:
+        if x >= W:
+            break
+        safe_addstr(stdscr, row, x, text, attr)
+        x += len(text)
+
+    if x < W:
+        safe_addstr(stdscr, row, x, " " * (W - x - 1), curses.color_pair(PAIR_BAR))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -934,14 +1252,30 @@ def tui(stdscr, df_initial, assets_initial):
         right_w = W - left_w
 
         # Title bar
-        title_bar = " 🔒  VULNERABILITY RISK INTELLIGENCE DASHBOARD ".center(W)
-        safe_addstr(
-            stdscr,
-            title_row,
-            0,
-            title_bar[:W].ljust(W),
-            curses.color_pair(PAIR_HEADER) | curses.A_BOLD,
-        )
+        title_text = "VULNERABILITY RISK INTELLIGENCE DASHBOARD"
+        title_attr = curses.color_pair(PAIR_MED) | curses.A_BOLD
+        line_attr = curses.color_pair(PAIR_MED)
+        bg_attr = curses.color_pair(PAIR_HEADER)
+        try:
+            stdscr.addstr(title_row, 0, " " * W, bg_attr)
+        except curses.error:
+            pass
+        if W >= 2:
+            left_pad = 2
+            right_pad = 2
+            inner_width = max(0, W - left_pad - right_pad)
+            title_block = f" {title_text} "
+            if len(title_block) > inner_width:
+                title_block = title_block[:inner_width]
+            left_line = "─" * max(0, (inner_width - len(title_block)) // 2)
+            right_line = "─" * max(0, inner_width - len(left_line) - len(title_block))
+            safe_addstr(stdscr, title_row, 0, "╭", line_attr)
+            safe_addstr(stdscr, title_row, 1, left_line, line_attr)
+            safe_addstr(stdscr, title_row, 1 + len(left_line), title_block, title_attr)
+            safe_addstr(stdscr, title_row, 1 + len(left_line) + len(title_block), right_line, line_attr)
+            safe_addstr(stdscr, title_row, W - 1, "╮", line_attr)
+        else:
+            safe_addstr(stdscr, title_row, 0, title_text[:W], title_attr)
 
         # Stats panel - always recompute to reflect current state
         stats = compute_stats(assets_all)
