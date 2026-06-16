@@ -19,6 +19,8 @@ DATASET_FILES = {
     "splunk": SEED_DIR / "splunk",
 }
 
+FINDINGS_MAX = 8
+
 AI_ANALYSIS_COLUMNS = [
     "risk_score",
     "risk_level",
@@ -41,6 +43,7 @@ AI_ANALYSIS_COLUMNS = [
     "splunk_log_type",
     "splunk_is_vulnerable",
     "splunk_evidence_for_tenable",
+    "ai_analysis_detail_json",
 ]
 
 FLOAT_AI_ANALYSIS_COLUMNS = {
@@ -204,6 +207,102 @@ def clear_ai_analysis_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def parse_raw_json_list(value) -> list:
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+    return []
+
+
+def compute_asset_facts(tenable_rows: list, splunk_rows: list) -> dict:
+    """Derive deterministic counts, ports, CVEs, and telemetry from full source rows."""
+    counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    ports: set[int] = set()
+    cve_candidates: list[dict] = []
+    tenable_findings: list[dict] = []
+    severity_rank = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+
+    for row in tenable_rows:
+        sev_raw = str(row.get("Severity", "") or "").strip().lower()
+        if sev_raw in counts:
+            counts[sev_raw] += 1
+
+        port_val = row.get("Port")
+        if port_val is not None and str(port_val).strip().lower() not in ("", "0", "nan"):
+            try:
+                port_int = int(float(str(port_val).strip()))
+                if port_int > 0:
+                    ports.add(port_int)
+            except (TypeError, ValueError):
+                pass
+
+        plugin_name = str(row.get("Plugin Name", "") or row.get("Plugin", "") or "").strip()
+        sev_label = str(row.get("Severity", "Medium") or "Medium").strip().title()
+        if sev_label not in ("Critical", "High", "Medium", "Low"):
+            sev_label = "Medium"
+
+        if plugin_name:
+            tenable_findings.append(
+                {"source": "tenable", "title": plugin_name[:120], "severity": sev_label}
+            )
+
+        vpr_float = None
+        vpr_val = row.get("VPR")
+        if vpr_val is not None and str(vpr_val).strip().lower() not in ("", "nan"):
+            try:
+                vpr_float = float(vpr_val)
+            except (TypeError, ValueError):
+                pass
+
+        cve_match = re.search(r"CVE-\d{4}-\d+", plugin_name, re.IGNORECASE)
+        if cve_match:
+            cve_candidates.append(
+                {
+                    "cve": cve_match.group(0).upper(),
+                    "title": plugin_name[:120],
+                    "vpr": vpr_float,
+                    "severity": sev_label,
+                }
+            )
+
+    cve_candidates.sort(
+        key=lambda item: (
+            item.get("vpr") or 0.0,
+            severity_rank.get(str(item.get("severity", "")).lower(), 0),
+        ),
+        reverse=True,
+    )
+    top_cves: list[dict] = []
+    seen_cve: set[str] = set()
+    for item in cve_candidates:
+        key = item.get("cve") or item.get("title")
+        if not key or key in seen_cve:
+            continue
+        seen_cve.add(key)
+        top_cves.append(item)
+        if len(top_cves) >= 3:
+            break
+
+    tenable_findings.sort(
+        key=lambda item: severity_rank.get(str(item.get("severity", "")).lower(), 0),
+        reverse=True,
+    )
+
+    return {
+        "vulnerability_counts": counts,
+        "total_findings_tenable": len(tenable_rows),
+        "total_splunk_events": len(splunk_rows),
+        "open_ports": sorted(ports),
+        "top_cves": top_cves,
+        "tenable_findings_seed": tenable_findings[:FINDINGS_MAX],
+    }
+
+
 def extract_host(dns_name) -> str | None:
     if pd.isna(dns_name) or not isinstance(dns_name, str):
         return None
@@ -254,7 +353,7 @@ def load_dynamic_datasets():
     
     for path in all_csvs:
         try:
-            df = pd.read_csv(path)
+            df = pd.read_csv(path, low_memory=False)
             # Detect type by looking at columns
             cols = [str(c).lower().strip() for c in df.columns]
             if any(c in cols for c in ["dns name", "dns_name", "plugin", "plugin name"]):

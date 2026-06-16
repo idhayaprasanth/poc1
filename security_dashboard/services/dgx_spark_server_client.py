@@ -12,6 +12,10 @@ from pathlib import Path
 import requests
 from requests.exceptions import RequestException
 
+from security_dashboard.data.datasets import compute_asset_facts, parse_raw_json_list
+
+logger = logging.getLogger(__name__)
+
 SOURCES = ["tenable", "splunk"]
 PRIORITY_ORDER = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1}
 RISK_LEVEL_BY_PRIORITY = {
@@ -48,17 +52,25 @@ PRIORITY_COLOR = {
 }
 ANALYSIS_SYSTEM_PROMPT = (
     "You are a cybersecurity analyst. Analyse the vulnerability and log data and return "
-    "ONLY a valid JSON object - no markdown, no code fences, no explanation, "
+    "ONLY a valid JSON object - no markdown, no code fences, no explanation.\n"
     "All risk scores must be a float between 0.0 and 10.0.\n"
-    " Priority level must match risk score exactly:\n"
-    "   Critical = score >= 9.0\n"
-    "   High     = score >= 7.0 and < 9.0\n"
-    "   Medium   = score >= 4.0 and < 7.0\n"
-    "   Low      = score < 4.0\n"
-    "no preamble, and do not repeat the response.\n\n"
+    "Priority level must match risk score exactly:\n"
+    "  Critical = score >= 9.0\n"
+    "  High     = score >= 7.0 and < 9.0\n"
+    "  Medium   = score >= 4.0 and < 7.0\n"
+    "  Low      = score < 4.0\n"
+    "Use precomputed_facts for counts, ports, and top_cves when provided; do not invent numbers.\n"
+    "findings: max 8 items ordered by severity (highest first).\n"
+    "No preamble, and do not repeat the response.\n\n"
     "Required JSON structure:\n"
     "{\n"
     '  "host_name": "<hostname>",\n'
+    '  "vulnerability_counts": {"critical": 0, "high": 0, "medium": 0, "low": 0},\n'
+    '  "total_findings_tenable": 0,\n'
+    '  "total_splunk_events": 0,\n'
+    '  "open_ports": [22, 443],\n'
+    '  "top_cves": [{"cve": "CVE-2021-44228", "title": "<name>", "vpr": 9.8, "severity": "Critical"}],\n'
+    '  "findings": [{"source": "tenable|splunk", "title": "<short name>", "severity": "Critical|High|Medium|Low"}],\n'
     '  "tenable":  {\n'
     '     "risk_score": <0-10 float>,\n'
     '     "priority_level": "<Critical|High|Medium|Low>",\n'
@@ -75,9 +87,8 @@ ANALYSIS_SYSTEM_PROMPT = (
     '  },\n'
     '  "overall_risk_score": <0-10 float>,\n'
     '  "overall_priority_level": "<Critical|High|Medium|Low>",\n'
-    '  "ai_summary": "<Detailed, 4 -5 lines of summary\n\n'
-    '>"\n'
-    '}'
+    '  "ai_summary": "<Detailed 4-5 line summary>"\n'
+    "}"
 )
 SECURITY_KEYWORDS = tuple(
     keyword.lower()
@@ -142,6 +153,16 @@ class DGXSparkServerClient:
             Path(__file__).resolve().parents[1] / "data" / "raw_llm_responses.txt"
         )
         self._log_lock = threading.Lock()
+        logger.debug(
+            "[DEBUG] DGXSparkServerClient init endpoint_label=%s endpoint_url=%s region=%s read_timeout=%s connect_timeout=%s max_new_tokens=%s temperature=%s",
+            self.endpoint_label,
+            self.endpoint_url,
+            self.aws_region,
+            self.read_timeout,
+            self.connect_timeout,
+            self.max_new_tokens,
+            self.temperature,
+        )
 
     @staticmethod
     def _env_int(name: str, default: int) -> int:
@@ -209,19 +230,8 @@ class DGXSparkServerClient:
         return max(0.0, min(normalized, 10.0))
 
     def _build_asset_payload(self, record: dict) -> dict:
-        tenable_data = record.get("tenable_raw", [])
-        splunk_data = record.get("splunk_raw", [])
-
-        if isinstance(tenable_data, str):
-            try:
-                tenable_data = json.loads(tenable_data)
-            except Exception:
-                tenable_data = []
-        if isinstance(splunk_data, str):
-            try:
-                splunk_data = json.loads(splunk_data)
-            except Exception:
-                splunk_data = []
+        tenable_data = parse_raw_json_list(record.get("tenable_raw", []))
+        splunk_data = parse_raw_json_list(record.get("splunk_raw", []))
 
         tenable_data = self._compact_prompt_value(tenable_data)
         splunk_data = self._compact_prompt_value(splunk_data)
@@ -235,6 +245,13 @@ class DGXSparkServerClient:
             }
         }
         return payload
+
+    @staticmethod
+    def _load_source_rows(record: dict) -> tuple[list, list]:
+        return (
+            parse_raw_json_list(record.get("tenable_raw", [])),
+            parse_raw_json_list(record.get("splunk_raw", [])),
+        )
 
     @staticmethod
     def _compact_prompt_value(value, *, max_depth: int = 3, max_items: int = 6, max_chars: int = 300):
@@ -280,10 +297,14 @@ class DGXSparkServerClient:
         return value
 
     @staticmethod
-    def _build_analysis_prompt(payload: dict) -> str:
+    def _build_analysis_prompt(payload: dict, facts: dict) -> str:
         return (
-            f"Analyse the vulnerability and log data for asset '{payload.get('host_name') or payload.get('asset_id')}' "
-            f"collected from security tools:\n\n"
+            f"Analyse the vulnerability and log data for asset "
+            f"'{payload.get('host_name') or payload.get('asset_id')}' "
+            f"collected from security tools.\n\n"
+            f"precomputed_facts (authoritative counts — do not change these numbers):\n"
+            f"{json.dumps(facts, separators=(',', ':'), ensure_ascii=False)}\n\n"
+            f"source_data:\n"
             f"{json.dumps(payload, separators=(',', ':'), ensure_ascii=False)}\n\n"
             "Return ONLY the JSON object once. No markdown fences, no repetition, no extra text."
         )
@@ -386,7 +407,20 @@ class DGXSparkServerClient:
             return 1
         return max(1, min(self.max_new_tokens, available_tokens))
 
-    def _invoke_endpoint(self, *, system_prompt: str, user_prompt: str, expect_json: bool) -> str:
+    def _invoke_endpoint(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        expect_json: bool,
+        max_tokens: int | None = None,
+    ) -> str:
+        logger.debug(
+            "[DEBUG] _invoke_endpoint START endpoint=%s expect_json=%s user_prompt_chars=%s",
+            self.endpoint_label,
+            expect_json,
+            len(str(user_prompt or "")),
+        )
         payload = {
         "model": "meta-llama/Llama-3.1-8B-Instruct",
         "messages": [
@@ -399,7 +433,7 @@ class DGXSparkServerClient:
                 "content": user_prompt
             }
         ],
-        "max_tokens": 2000,
+        "max_tokens": max_tokens if max_tokens is not None else 2000,
         "temperature": 0.1
     }
 
@@ -445,9 +479,16 @@ class DGXSparkServerClient:
             )
             response.raise_for_status()
             raw = response.text
+            logger.debug(
+                "[DEBUG] _invoke_endpoint HTTP OK endpoint=%s response_chars=%s",
+                self.endpoint_label,
+                len(raw or ""),
+            )
         except RequestException as exc:
+            logger.exception("[DEBUG] _invoke_endpoint RequestException endpoint=%s", self.endpoint_label)
             raise DGXSparkServerInvocationError(str(exc)) from exc
         except Exception as exc:
+            logger.exception("[DEBUG] _invoke_endpoint unexpected exception endpoint=%s", self.endpoint_label)
             raise DGXSparkServerInvocationError(str(exc)) from exc
 
         if not raw:
@@ -541,7 +582,43 @@ class DGXSparkServerClient:
 
         raise ValueError("No parseable JSON found in model output")
 
-    def _normalize_analysis_result(self, *, record: dict, result: dict) -> dict:
+    @staticmethod
+    def _build_analysis_detail(*, facts: dict, result: dict) -> dict:
+        from security_dashboard.data.datasets import FINDINGS_MAX
+
+        fact_counts = facts.get("vulnerability_counts") or {}
+
+        findings = result.get("findings")
+        if not isinstance(findings, list) or not findings:
+            findings = facts.get("tenable_findings_seed") or []
+
+        top_cves = facts.get("top_cves") or []
+        top_vpr = None
+        for item in top_cves:
+            if isinstance(item, dict) and item.get("vpr") is not None:
+                try:
+                    vpr_val = float(item["vpr"])
+                except (TypeError, ValueError):
+                    continue
+                if top_vpr is None or vpr_val > top_vpr:
+                    top_vpr = vpr_val
+
+        return {
+            "vulnerability_counts": {
+                "critical": int(fact_counts.get("critical", 0)),
+                "high": int(fact_counts.get("high", 0)),
+                "medium": int(fact_counts.get("medium", 0)),
+                "low": int(fact_counts.get("low", 0)),
+            },
+            "total_findings_tenable": int(facts.get("total_findings_tenable", 0)),
+            "total_splunk_events": int(facts.get("total_splunk_events", 0)),
+            "open_ports": facts.get("open_ports") or [],
+            "top_cves": top_cves,
+            "top_vpr": top_vpr,
+            "findings": findings[:FINDINGS_MAX] if isinstance(findings, list) else [],
+        }
+
+    def _normalize_analysis_result(self, *, record: dict, result: dict, facts: dict | None = None) -> dict:
         def get_src_score(src_key: str):
             src = result.get(src_key) or {}
             return self._normalize_score(src.get("risk_score"))
@@ -590,6 +667,10 @@ class DGXSparkServerClient:
             "splunk_log_type": (result.get("splunk") or {}).get("log_type"),
             "splunk_is_vulnerable": (result.get("splunk") or {}).get("is_vulnerable"),
             "splunk_evidence_for_tenable": (result.get("splunk") or {}).get("evidence_for_tenable"),
+            "ai_analysis_detail_json": json.dumps(
+                self._build_analysis_detail(facts=facts or {}, result=result),
+                ensure_ascii=False,
+            ),
         }
         return normalized
 
@@ -603,8 +684,15 @@ class DGXSparkServerClient:
             )
 
         payload = self._build_asset_payload(asset_record)
-        prompt = self._build_analysis_prompt(payload)
+        tenable_rows, splunk_rows = self._load_source_rows(asset_record)
+        facts = compute_asset_facts(tenable_rows, splunk_rows)
+        prompt = self._build_analysis_prompt(payload, facts)
         asset_id = str(asset_record.get("asset_id") or asset_record.get("asset_name") or "").strip()
+        logger.info(
+            "[DEBUG] generate_asset_analysis START asset_id=%s endpoint=%s",
+            asset_id,
+            self.endpoint_label,
+        )
         self._print_asset_start(asset_id)
         self._print_query_start()
         raw_text = None
@@ -613,11 +701,17 @@ class DGXSparkServerClient:
                 system_prompt=ANALYSIS_SYSTEM_PROMPT,
                 user_prompt=prompt,
                 expect_json=True,
+                max_tokens=3500,
             )
             parsed = self._extract_analysis_json(raw_text)
             self.log_raw_response(asset_id=asset_id, raw_text=raw_text, status="OK")
             self._print_query_success()
             self._print_result(asset_id=asset_id, result=parsed)
+            logger.info(
+                "[DEBUG] generate_asset_analysis PARSED asset_id=%s keys=%s",
+                asset_id,
+                list(parsed.keys()) if isinstance(parsed, dict) else type(parsed).__name__,
+            )
         except DGXSparkServerInvocationError as exc:
             self.log_raw_response(
                 asset_id=asset_id,
@@ -641,7 +735,16 @@ class DGXSparkServerClient:
                 status="ERROR",
             )
             raise
-        normalized = self._normalize_analysis_result(record=asset_record, result=parsed)
+        normalized = self._normalize_analysis_result(
+            record=asset_record,
+            result=parsed,
+            facts=facts,
+        )
+        logger.info(
+            "[DEBUG] generate_asset_analysis END asset_id=%s normalized_keys=%s",
+            asset_id,
+            list(normalized.keys()) if isinstance(normalized, dict) else type(normalized).__name__,
+        )
         return normalized
 
     def generate_dashboard_analysis(self, *, asset_records: list[dict]) -> dict:

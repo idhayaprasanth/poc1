@@ -31,6 +31,8 @@ import platform
 import threading
 import time
 import logging
+import textwrap
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -50,7 +52,7 @@ project_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(project_root))
 
 from security_dashboard.config import load_env_file
-from security_dashboard.data.datasets import build_merged_dataset, ensure_ai_analysis_columns
+from security_dashboard.data.datasets import build_merged_dataset, ensure_ai_analysis_columns, compute_asset_facts, parse_raw_json_list, FINDINGS_MAX
 from security_dashboard.analysis import AnalysisBackgroundState, run_analysis_worker_thread
 from security_dashboard.filters import analysis_pending_mask, analysis_completion_mask
 from security_dashboard.services.dgx_spark_server_client import DGXSparkServerClient
@@ -61,13 +63,15 @@ load_env_file()
 # Setup logging to file for AI analysis
 LOG_FILE = project_root / "tui_ai_analysis.log"
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8'),
-    ]
+        logging.FileHandler(LOG_FILE, mode='a', encoding='utf-8'),
+    ],
+    force=True,
 )
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 # ──────────────────────────────────────────────────────────────────────────────
 #  DEBUG: Log platform/environment at module import time
@@ -173,8 +177,8 @@ def init_colors():
     logger.info(f"[DEBUG] init_colors: COLORS={curses.COLORS} COLOR_PAIRS={curses.COLOR_PAIRS}")
     logger.info(f"[DEBUG] init_colors: has_colors={curses.has_colors()} can_change_color={curses.can_change_color()}")
 
-    # ===== MAIN BACKGROUND COLOR - BLACK for dark cyberpunk aesthetic =====
-    BG_COLOR = 17  # BLACK background for dark terminal look
+    # ===== MAIN BACKGROUND COLOR - dark navy blue cyberpunk aesthetic =====
+    BG_COLOR = 17
     
     # ===== RISK LEVEL COLORS - Used for asset risk level display =====
     curses.init_pair(PAIR_CRIT, curses.COLOR_RED, BG_COLOR)  # Critical risk level (RED text)
@@ -189,7 +193,7 @@ def init_colors():
     curses.init_pair(PAIR_TABA, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Active filter tab (WHITE background)
     curses.init_pair(PAIR_TABI, curses.COLOR_WHITE, BG_COLOR)  # Inactive filter tabs
     curses.init_pair(PAIR_BORDER, curses.COLOR_CYAN, BG_COLOR)  # Generic border lines (CYAN neon)
-    curses.init_pair(PAIR_LABEL, curses.COLOR_WHITE, 17)  # Labels in detail panel - forest green background
+    curses.init_pair(PAIR_LABEL, curses.COLOR_WHITE, BG_COLOR)  # Labels in detail panel
     curses.init_pair(PAIR_WARN, curses.COLOR_RED, BG_COLOR)  # Warning/error messages (RED text)
     curses.init_pair(PAIR_BAR, curses.COLOR_GREEN, BG_COLOR)  # Progress bars
     curses.init_pair(PAIR_WHITE, curses.COLOR_WHITE, BG_COLOR)  # White text on black background
@@ -216,16 +220,16 @@ def init_colors():
     curses.init_pair(PAIR_TABLE_HEADER, curses.COLOR_WHITE, BG_COLOR)  # Table column headers (WHITE on BLACK)
     
     # ===== DETAIL PANEL BACKGROUND AND TEXT COLORS =====
-    curses.init_pair(PAIR_DETAIL_BG, curses.COLOR_WHITE, 17)  # Forest green background for detail panel
-    curses.init_pair(PAIR_DETAIL_WHITE, curses.COLOR_WHITE, 17)  # White text on forest green
-    curses.init_pair(PAIR_DETAIL_DIM, curses.COLOR_WHITE, 17)  # Dim/secondary text on forest green
-    curses.init_pair(PAIR_DETAIL_HEADER, curses.COLOR_CYAN, 17)  # Cyan headers on forest green
-    curses.init_pair(PAIR_DETAIL_CRIT, curses.COLOR_RED, 17)  # Critical (red) on forest green
-    curses.init_pair(PAIR_DETAIL_HIGH, curses.COLOR_YELLOW, 17)  # High (yellow) on forest green
-    curses.init_pair(PAIR_DETAIL_MED, curses.COLOR_CYAN, 17)  # Medium (cyan) on forest green
-    curses.init_pair(PAIR_DETAIL_LOW, curses.COLOR_GREEN, 17)  # Low (green) on forest green
-    curses.init_pair(PAIR_DETAIL_PENDING, curses.COLOR_MAGENTA, 17)  # Pending (magenta) on forest green
-    curses.init_pair(PAIR_DETAIL_WARN, curses.COLOR_RED, 17)  # Warning (red) on forest green
+    curses.init_pair(PAIR_DETAIL_BG, curses.COLOR_WHITE, BG_COLOR)  # Detail panel background
+    curses.init_pair(PAIR_DETAIL_WHITE, curses.COLOR_WHITE, BG_COLOR)  # White text on black
+    curses.init_pair(PAIR_DETAIL_DIM, curses.COLOR_WHITE, BG_COLOR)  # Dim/secondary text on black
+    curses.init_pair(PAIR_DETAIL_HEADER, curses.COLOR_CYAN, BG_COLOR)  # Cyan headers on black
+    curses.init_pair(PAIR_DETAIL_CRIT, curses.COLOR_RED, BG_COLOR)  # Critical (red) on black
+    curses.init_pair(PAIR_DETAIL_HIGH, curses.COLOR_YELLOW, BG_COLOR)  # High (yellow) on black
+    curses.init_pair(PAIR_DETAIL_MED, curses.COLOR_CYAN, BG_COLOR)  # Medium (cyan) on black
+    curses.init_pair(PAIR_DETAIL_LOW, curses.COLOR_GREEN, BG_COLOR)  # Low (green) on black
+    curses.init_pair(PAIR_DETAIL_PENDING, curses.COLOR_MAGENTA, BG_COLOR)  # Pending (magenta) on black
+    curses.init_pair(PAIR_DETAIL_WARN, curses.COLOR_RED, BG_COLOR)  # Warning (red) on black
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -235,19 +239,50 @@ def safe_addstr(win, y, x, text, attr=0):
     """Add string that silently ignores out-of-bounds writes."""
     h, w = win.getmaxyx()
     if y < 0 or y >= h or x < 0 or x >= w:
+        logger.debug(
+            "[DEBUG] safe_addstr SKIP_OOB y=%s x=%s win=(%s,%s) text=%r",
+            y,
+            x,
+            h,
+            w,
+            str(text)[:80],
+        )
         return
     available = w - x
     if available <= 0:
+        logger.debug(
+            "[DEBUG] safe_addstr SKIP_NO_SPACE y=%s x=%s win=(%s,%s) text=%r",
+            y,
+            x,
+            h,
+            w,
+            str(text)[:80],
+        )
         return
     text = text[:available]
     if y == h - 1:
         text = text[: w - x - 1]
     if not text:
+        logger.debug(
+            "[DEBUG] safe_addstr SKIP_EMPTY y=%s x=%s win=(%s,%s)",
+            y,
+            x,
+            h,
+            w,
+        )
         return
     try:
         win.addstr(y, x, text, attr)
-    except curses.error:
-        pass
+    except curses.error as exc:
+        logger.debug(
+            "[DEBUG] safe_addstr ADDSTR_FAIL y=%s x=%s win=(%s,%s) text=%r err=%r",
+            y,
+            x,
+            h,
+            w,
+            str(text)[:80],
+            exc,
+        )
 
 
 def draw_box(win, title="", color_pair=PAIR_BORDER):
@@ -331,6 +366,13 @@ def stats_panel_layout(W, n_boxes=8):
 def draw_stats_panel(stdscr, stats, start_row=0):
     """Draw the top stats panel - ALL BOXES IN SINGLE ROW."""
     H, W = stdscr.getmaxyx()
+    logger.debug(
+        "[DEBUG] draw_stats_panel ENTER start_row=%s H=%s W=%s stats=%s",
+        start_row,
+        H,
+        W,
+        stats,
+    )
 
     # Stats boxes configuration (removed correlated/uncorrelated cards)
     # Colors indicate: GREEN=Total, RED=Critical, YELLOW=High, CYAN=Medium, GREEN=Low, MAGENTA=Pending, PURPLE=Analyzed
@@ -355,6 +397,7 @@ def draw_stats_panel(stdscr, stats, start_row=0):
             break
         draw_stat_box(stdscr, y, x, box_w, value, label, pair)
         x += box_w + gap
+    logger.debug("[DEBUG] draw_stats_panel EXIT")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -362,6 +405,12 @@ def draw_stats_panel(stdscr, stats, start_row=0):
 # ══════════════════════════════════════════════════════════════════════════════
 def draw_filter_bar(stdscr, active_idx, assets_all, row):
     """Draw the horizontal filter tab bar with scrolling support."""
+    logger.debug(
+        "[DEBUG] draw_filter_bar ENTER row=%s active_idx=%s assets=%s",
+        row,
+        active_idx,
+        len(assets_all),
+    )
     counts = {}
     for f in FILTERS[1:]:
         if f == "Pending":
@@ -409,6 +458,7 @@ def draw_filter_bar(stdscr, active_idx, assets_all, row):
     
     if visible_end < len(FILTERS):
         safe_addstr(stdscr, row, x, " ► ", curses.color_pair(PAIR_DIM))
+    logger.debug("[DEBUG] draw_filter_bar EXIT active_idx=%s visible_start=%s visible_end=%s", active_idx, visible_start, visible_end)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -422,14 +472,14 @@ def draw_asset_list(win, assets, sel_idx, scroll_off):
         sel_idx,
         scroll_off,
     )
-    win.erase()
     h, w = win.getmaxyx()
-    # Set black background for asset list panel
+    # Fix 1: bkgd BEFORE erase so erase fills with the correct background on Linux ncurses
     win.bkgd(' ', curses.color_pair(PAIR_NAVY_BG))
+    win.erase()
     draw_box(win, "Assets", PAIR_LIST_SECTION)  # Cyan neon borders for asset list section
 
     # DEBUG: temporary diagnostic text — confirms this window is rendered on screen
-    _dbg_text = "ASSET PANEL WORKING"
+    _dbg_text = ""
     safe_addstr(win, 0, max(1, w - len(_dbg_text) - 2), _dbg_text,
                 curses.color_pair(PAIR_WARN) | curses.A_BOLD)
 
@@ -492,7 +542,10 @@ def draw_asset_list(win, assets, sel_idx, scroll_off):
         bar_top = int(scroll_off / max(1, len(assets)) * list_h)
         safe_addstr(win, bar_top + 2, w - 1, "█", curses.color_pair(PAIR_LIST_SECTION))
 
+    # Fix 2: touchwin forces Linux ncurses to mark every line dirty before refresh
+    win.touchwin()
     win.noutrefresh()
+    logger.debug("[DEBUG] draw_asset_list EXIT")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -506,10 +559,10 @@ def draw_detail(win, asset, scroll=0, focused=False):
         scroll,
         focused,
     )
-    win.erase()
     h, w = win.getmaxyx()
-    # Set forest green background for detail panel
+    # Fix 1: bkgd BEFORE erase so erase fills with the correct background on Linux ncurses
     win.bkgd(' ', curses.color_pair(PAIR_DETAIL_BG))
+    win.erase()
 
     # DEBUG: temporary diagnostic text — confirms this window is rendered on screen
     _dbg_text = "DETAIL PANEL WORKING"
@@ -525,6 +578,7 @@ def draw_detail(win, asset, scroll=0, focused=False):
             "← Select an asset",
             curses.color_pair(PAIR_DETAIL_DIM) | curses.A_DIM,
         )
+        win.touchwin()
         win.noutrefresh()
         return 0
 
@@ -547,12 +601,15 @@ def draw_detail(win, asset, scroll=0, focused=False):
             pair = PAIR_DETAIL_LOW
 
     # Estimate pad height
-    pad_h = 60 + len(str(a.get("ai_reason", "")).split("\n"))
+    detail = a.get("ai_analysis_detail") or {}
+    findings_count = min(len(detail.get("findings") or []), FINDINGS_MAX) if status not in ("Pending", "Analyzing") else 0
+    pad_h = (140 if status not in ("Pending", "Analyzing") else 40) + len(_safe_str(a.get("ai_reason")).split("\n")) + findings_count * 2
     pad_w = max(w, 1)
     try:
         pad = curses.newpad(pad_h, pad_w)
-        # Set forest green background for the pad content
+        # Fix 1 (pad): bkgd before erase so the pad fills with the right background on Linux
         pad.bkgd(' ', curses.color_pair(PAIR_DETAIL_BG))
+        pad.erase()
         logger.info("[DEBUG] draw_detail: newpad(%s,%s) OK", pad_h, pad_w)
     except curses.error as _exc:
         logger.error(
@@ -580,6 +637,23 @@ def draw_detail(win, asset, scroll=0, focused=False):
             str(value)[: w - lw - 4],
             curses.color_pair(PAIR_DETAIL_WHITE) | curses.A_BOLD,
         )
+
+    def sev_counts_row(y, counts):
+        lw = 18
+        safe_addstr(
+            pad, y, 2, f"{'Severity':<{lw}}", curses.color_pair(PAIR_DETAIL_WHITE) | curses.A_BOLD
+        )
+        x = 2 + lw
+        segments = (
+            ("Critical: ", counts.get("critical", 0), PAIR_DETAIL_CRIT),
+            ("  High: ", counts.get("high", 0), PAIR_DETAIL_HIGH),
+            ("  Med: ", counts.get("medium", 0), PAIR_DETAIL_MED),
+            ("  Low: ", counts.get("low", 0), PAIR_DETAIL_LOW),
+        )
+        for label, value, pair in segments:
+            text = f"{label}{value}"
+            safe_addstr(pad, y, x, text, curses.color_pair(pair) | curses.A_BOLD)
+            x += len(text)
 
     def sep(y):
         # Separator line in detail panel - magenta to match detail section
@@ -633,6 +707,12 @@ def draw_detail(win, asset, scroll=0, focused=False):
         if status == "Analyzing":
             safe_addstr(pad, row, 2, "⏳ AI analysis in progress...", curses.color_pair(PAIR_DETAIL_PENDING))
             row += 1
+        elif _safe_str(a.get("ai_reason")).startswith("Analysis failed:"):
+            wrap_w = max(1, w - 4)
+            fail_text = _safe_str(a.get("ai_reason"))
+            for part in textwrap.wrap(fail_text, width=wrap_w) or [""]:
+                safe_addstr(pad, row, 2, part[:wrap_w], curses.color_pair(PAIR_DETAIL_WARN))
+                row += 1
     else:
         score = a.get("risk_score", 0.0)
         bar_w = min(30, w - 24)
@@ -651,11 +731,11 @@ def draw_detail(win, asset, scroll=0, focused=False):
         # Priority with timeframe
         priority = a.get("overall_priority_level", "Unknown")
         if priority == "Critical":
-            priority_display = "P1 - Immediate (≤24h)"
+            priority_display = "P1 - Immediate "
         elif priority == "High":
-            priority_display = "P2 - Urgent (≤7d)"
+            priority_display = "P2 - Urgent "
         elif priority == "Medium":
-            priority_display = "P3 - Planned (≤30d)"
+            priority_display = "P3 - Planned "
         elif priority == "Low":
             priority_display = "P4 - Monitor"
         else:
@@ -663,8 +743,106 @@ def draw_detail(win, asset, scroll=0, focused=False):
         lbl(row, "Priority", priority_display, pair)
         row += 1
 
+        top_vpr = detail.get("top_vpr")
+        if top_vpr is None:
+            for cve_item in detail.get("top_cves") or []:
+                if isinstance(cve_item, dict) and cve_item.get("vpr") is not None:
+                    try:
+                        vpr_val = float(cve_item["vpr"])
+                    except (TypeError, ValueError):
+                        continue
+                    if top_vpr is None or vpr_val > top_vpr:
+                        top_vpr = vpr_val
+        if top_vpr is not None:
+            lbl(row, "Top VPR", f"{top_vpr:.1f}", pair)
+            row += 1
+
     sep(row)
     row += 1
+
+    # Extended analysis detail — only after analysis completes
+    if status not in ("Pending", "Analyzing") and detail:
+        counts = detail.get("vulnerability_counts") or {}
+        if counts or detail.get("total_findings_tenable") is not None:
+            safe_addstr(
+                pad,
+                row,
+                2,
+                " VULNERABILITY COUNTS ",
+                curses.color_pair(PAIR_DETAIL_HEADER) | curses.A_BOLD,
+            )
+            row += 1
+            sev_counts_row(row, counts)
+            row += 1
+            totals_line = (
+                f"Total Findings Tenable: {detail.get('total_findings_tenable', 0)} | "
+                f"Splunk events: {detail.get('total_splunk_events', 0)}"
+            )
+            lbl(row, "Totals", totals_line)
+            row += 1
+            sep(row)
+            row += 1
+
+        ports = detail.get("open_ports") or []
+        if ports:
+            safe_addstr(
+                pad,
+                row,
+                2,
+                " OPEN PORTS ",
+                curses.color_pair(PAIR_DETAIL_HEADER) | curses.A_BOLD,
+            )
+            row += 1
+            ports_line = "  ".join(str(p) for p in ports)
+            lbl(row, "Ports", ports_line or "—")
+            row += 1
+            sep(row)
+            row += 1
+
+        top_cves = [
+            item for item in (detail.get("top_cves") or [])
+            if isinstance(item, dict) and item.get("cve")
+        ]
+        if top_cves:
+            safe_addstr(
+                pad,
+                row,
+                2,
+                " TOP CVEs ",
+                curses.color_pair(PAIR_DETAIL_HEADER) | curses.A_BOLD,
+            )
+            row += 1
+            cve_line = "  ".join(
+                str(item.get("cve", ""))
+                for item in top_cves[:3]
+                if str(item.get("cve", ""))
+            )
+            lbl(row, "CVEs", cve_line or "—")
+            row += 1
+            sep(row)
+            row += 1
+
+        findings = (detail.get("findings") or [])[:FINDINGS_MAX]
+        if findings:
+            safe_addstr(
+                pad,
+                row,
+                2,
+                " FINDINGS ",
+                curses.color_pair(PAIR_DETAIL_HEADER) | curses.A_BOLD,
+            )
+            row += 1
+            wrap_w = max(1, w - 6)
+            for idx, finding in enumerate(findings, 1):
+                if not isinstance(finding, dict):
+                    continue
+                title = str(finding.get("title", "Unknown finding"))
+                finding_line = f"{idx}. {title}"
+                for part in textwrap.wrap(finding_line, width=wrap_w) or [finding_line]:
+                    safe_addstr(pad, row, 2, part[:wrap_w], curses.color_pair(PAIR_DETAIL_DIM))
+                    row += 1
+            sep(row)
+            row += 1
 
     # AI Analysis
     if status not in ("Pending", "Analyzing"):
@@ -673,10 +851,13 @@ def draw_detail(win, asset, scroll=0, focused=False):
         )
         row += 1
 
-        ai_reason = str(a.get("ai_reason", "No analysis available"))
-        for line in ai_reason.split("\n"):
-            safe_addstr(pad, row, 2, line[: w - 4], curses.color_pair(PAIR_DETAIL_DIM))
-            row += 1
+        ai_reason = _safe_str(a.get("ai_reason"), "No analysis available")
+        wrap_w = max(1, w - 4)
+        for raw_line in ai_reason.split("\n"):
+            parts = textwrap.wrap(raw_line, width=wrap_w) or [""]
+            for part in parts:
+                safe_addstr(pad, row, 2, part[:wrap_w], curses.color_pair(PAIR_DETAIL_DIM))
+                row += 1
 
         row += 1
         sep(row)
@@ -688,10 +869,13 @@ def draw_detail(win, asset, scroll=0, focused=False):
         )
         row += 1
 
-        remediation = str(a.get("remediation", "No remediation provided"))
-        for line in remediation.split("\n"):
-            safe_addstr(pad, row, 2, line[: w - 4], curses.color_pair(PAIR_DETAIL_DIM))
-            row += 1
+        remediation = _safe_str(a.get("remediation"), "No remediation provided")
+        wrap_w = max(1, w - 4)
+        for raw_line in remediation.split("\n"):
+            parts = textwrap.wrap(raw_line, width=wrap_w) or [""]
+            for part in parts:
+                safe_addstr(pad, row, 2, part[:wrap_w], curses.color_pair(PAIR_DETAIL_DIM))
+                row += 1
 
     content_h = row + 1
 
@@ -759,7 +943,10 @@ def draw_detail(win, asset, scroll=0, focused=False):
             curses.color_pair(PAIR_DETAIL_DIM) | curses.A_DIM,
         )
 
+    # Fix 2: touchwin forces Linux ncurses to mark every line dirty before refresh
+    win.touchwin()
     win.noutrefresh()
+    logger.debug("[DEBUG] draw_detail EXIT content_h=%s", content_h)
     return content_h
 
 
@@ -768,6 +955,14 @@ def draw_detail(win, asset, scroll=0, focused=False):
 # ══════════════════════════════════════════════════════════════════════════════
 def draw_controls_bar(stdscr, row, focus="list", analyzing=False):
     H, W = stdscr.getmaxyx()
+    logger.debug(
+        "[DEBUG] draw_controls_bar ENTER row=%s focus=%s analyzing=%s H=%s W=%s",
+        row,
+        focus,
+        analyzing,
+        H,
+        W,
+    )
     if analyzing:
         controls = "  AI Analysis Running...    F5 Reload Data    ↑ ↓ Navigate    Q / Esc Quit  "
     elif focus == "detail":
@@ -781,10 +976,19 @@ def draw_controls_bar(stdscr, row, focus="list", analyzing=False):
         controls.ljust(W)[:W],
         curses.color_pair(PAIR_DIM) | curses.A_DIM,
     )
+    logger.debug("[DEBUG] draw_controls_bar EXIT")
 
 
 def draw_status(stdscr, filtered_count, total_count, filt_name, analysis_msg, row):
     H, W = stdscr.getmaxyx()
+    logger.debug(
+        "[DEBUG] draw_status ENTER row=%s filt=%s filtered=%s total=%s msg=%s",
+        row,
+        filt_name,
+        filtered_count,
+        total_count,
+        analysis_msg,
+    )
     # Truncate long messages to fit
     max_msg_len = W - 80  # Leave space for other info
     if len(analysis_msg) > max_msg_len:
@@ -797,53 +1001,220 @@ def draw_status(stdscr, filtered_count, total_count, filt_name, analysis_msg, ro
     safe_addstr(
         stdscr, row, 0, status.ljust(W)[:W], curses.color_pair(PAIR_HEADER)
     )
+    logger.debug("[DEBUG] draw_status EXIT")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  DATA MANAGEMENT
 # ══════════════════════════════════════════════════════════════════════════════
+def _safe_str(value, default: str = "") -> str:
+    """Convert a value to str, treating pandas NA/NaN/None as *default*."""
+    if value is None:
+        return default
+    try:
+        if pd.isna(value):
+            return default
+    except (TypeError, ValueError):
+        pass
+    text = str(value).strip()
+    if text.lower() in ("nan", "nat", "none", "<na>"):
+        return default
+    return text
+
+
+def _parse_detail_json(raw) -> dict:
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
+        return {}
+    if isinstance(raw, dict):
+        return raw
+    try:
+        return json.loads(raw) if isinstance(raw, str) else {}
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return {}
+
+
+def _top_vpr_from_cves(top_cves) -> float | None:
+    top_vpr = None
+    for item in top_cves or []:
+        if isinstance(item, dict) and item.get("vpr") is not None:
+            try:
+                vpr_val = float(item["vpr"])
+            except (TypeError, ValueError):
+                continue
+            if top_vpr is None or vpr_val > top_vpr:
+                top_vpr = vpr_val
+    return top_vpr
+
+
+def _detail_from_row(row, *, is_complete: bool = False) -> dict:
+    """Build detail dict from stored LLM JSON merged with deterministic CSV facts."""
+    detail = _parse_detail_json(row.get("ai_analysis_detail_json"))
+    if not is_complete:
+        return detail
+
+    tenable_rows = parse_raw_json_list(row.get("tenable_raw"))
+    splunk_rows = parse_raw_json_list(row.get("splunk_raw"))
+    if not tenable_rows and not splunk_rows:
+        return detail
+
+    facts = compute_asset_facts(tenable_rows, splunk_rows)
+    top_cves = facts.get("top_cves") or []
+    factual = {
+        "vulnerability_counts": facts.get("vulnerability_counts"),
+        "total_findings_tenable": facts.get("total_findings_tenable"),
+        "total_splunk_events": facts.get("total_splunk_events"),
+        "open_ports": facts.get("open_ports"),
+        "top_cves": top_cves,
+        "top_vpr": _top_vpr_from_cves(top_cves),
+        "findings": (facts.get("tenable_findings_seed") or [])[:FINDINGS_MAX],
+    }
+    if not detail:
+        return factual
+
+    merged = dict(factual)
+    merged.update(detail)
+    merged["vulnerability_counts"] = factual.get("vulnerability_counts")
+    merged["total_findings_tenable"] = factual.get("total_findings_tenable")
+    merged["total_splunk_events"] = factual.get("total_splunk_events")
+    merged["open_ports"] = factual.get("open_ports")
+    if factual.get("top_cves"):
+        merged["top_cves"] = factual.get("top_cves")
+        merged["top_vpr"] = factual.get("top_vpr")
+    if not detail.get("findings"):
+        merged["findings"] = factual.get("findings")
+    elif isinstance(merged.get("findings"), list):
+        merged["findings"] = merged["findings"][:FINDINGS_MAX]
+    if merged.get("top_vpr") is None:
+        merged["top_vpr"] = _top_vpr_from_cves(merged.get("top_cves"))
+    return merged
+
+
+def _row_analysis_complete(row) -> bool:
+    value = row.get("ai_analysis_complete")
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes")
+    if pd.isna(value):
+        return False
+    if isinstance(value, bool):
+        return value
+    try:
+        return bool(int(value))
+    except (TypeError, ValueError):
+        return bool(value)
+
+
+def _row_has_analysis_error(row) -> bool:
+    err = row.get("ai_analysis_error")
+    return pd.notna(err) and str(err).strip().lower() not in ("", "nan", "none")
+
+
+def _resolve_df_index(df_updated, idx):
+    if idx in df_updated.index:
+        return idx
+    try:
+        int_idx = int(idx)
+        if int_idx in df_updated.index:
+            return int_idx
+    except (TypeError, ValueError):
+        pass
+    str_idx = str(idx)
+    if str_idx in df_updated.index:
+        return str_idx
+    return None
+
+
+def _sync_asset_from_row(asset: dict, row) -> bool:
+    """Apply dataframe row analysis fields onto a TUI asset dict. Returns True if changed."""
+    prev_status = asset.get("status")
+    prev_score = asset.get("risk_score")
+
+    if _row_analysis_complete(row):
+        asset["status"] = "Complete"
+        risk_score = row.get("risk_score")
+        asset["risk_score"] = float(risk_score) if pd.notna(risk_score) else None
+        asset["risk_level"] = _safe_str(row.get("risk_level")) or _safe_str(row.get("overall_priority_level")) or "Low"
+        asset["overall_priority_level"] = _safe_str(row.get("overall_priority_level"), "Unknown")
+        asset["ai_reason"] = _safe_str(row.get("ai_reason"))
+        asset["remediation"] = _safe_str(row.get("remediation"))
+        asset["ai_analysis_detail"] = _detail_from_row(row, is_complete=True)
+    elif _row_has_analysis_error(row) and prev_status in ("Analyzing", "Pending"):
+        asset["status"] = "Pending"
+        err_text = _safe_str(row.get("ai_analysis_error"), "Unknown error")
+        asset["ai_reason"] = f"Analysis failed: {err_text[:180]}"
+        asset["ai_analysis_detail"] = {}
+    else:
+        return False
+
+    return prev_status != asset.get("status") or prev_score != asset.get("risk_score")
+
+
 def load_data():
     """Load and prepare asset data."""
+    logger.info("[DEBUG] load_data ENTER")
     df = build_merged_dataset()
     df = ensure_ai_analysis_columns(df)
+    logger.debug(
+        "[DEBUG] load_data dataframe loaded rows=%s cols=%s",
+        len(df),
+        len(df.columns),
+    )
 
     assets = []
     for idx, row in df.iterrows():
         # Check for tenable and splunk data
         tenable_raw = row.get("tenable_raw", "[]")
         splunk_raw = row.get("splunk_raw", "[]")
-        has_tenable = tenable_raw and tenable_raw != "[]" and len(tenable_raw) > 2
-        has_splunk = splunk_raw and splunk_raw != "[]" and len(splunk_raw) > 2
+        t_raw = _safe_str(tenable_raw, "[]")
+        s_raw = _safe_str(splunk_raw, "[]")
+        has_tenable = t_raw != "[]" and len(t_raw) > 2
+        has_splunk = s_raw != "[]" and len(s_raw) > 2
         
         # Determine status
-        if pd.isna(row.get("ai_analysis_complete")) or not row.get("ai_analysis_complete"):
+        if _row_analysis_complete(row):
+            status = "Complete"
+            risk_level = row.get("risk_level", "Low")
+            risk_score = row.get("risk_score")
+        elif _row_has_analysis_error(row):
             status = "Pending"
             risk_level = "Unknown"
             risk_score = None
         else:
-            status = "Complete"
-            risk_level = row.get("risk_level", "Low")
-            risk_score = row.get("risk_score")
+            status = "Pending"
+            risk_level = "Unknown"
+            risk_score = None
 
+        is_complete = status == "Complete"
+        ai_reason = _safe_str(row.get("ai_reason"))
+        if status == "Pending" and _row_has_analysis_error(row):
+            ai_reason = f"Analysis failed: {_safe_str(row.get('ai_analysis_error'), 'Unknown error')[:180]}"
         asset = {
-            "asset_id": row.get("asset_id", ""),
-            "asset_name": row.get("asset_name", "unknown"),
-            "ip_address": row.get("ip_address", "—"),
-            "facing": row.get("facing", "Unknown"),
-            "risk_score": risk_score,
-            "risk_level": risk_level,
-            "overall_priority_level": row.get("overall_priority_level"),
-            "ai_reason": row.get("ai_reason"),
-            "remediation": row.get("remediation"),
+            "asset_id": _safe_str(row.get("asset_id")),
+            "asset_name": _safe_str(row.get("asset_name"), "unknown"),
+            "ip_address": _safe_str(row.get("ip_address"), "—"),
+            "facing": _safe_str(row.get("facing"), "Unknown"),
+            "risk_score": float(risk_score) if is_complete and pd.notna(risk_score) else None,
+            "risk_level": _safe_str(risk_level, "Unknown") if is_complete else "Unknown",
+            "overall_priority_level": _safe_str(row.get("overall_priority_level")),
+            "ai_reason": ai_reason,
+            "remediation": _safe_str(row.get("remediation")),
+            "ai_analysis_detail": _detail_from_row(row, is_complete=is_complete),
             "status": status,
             "df_index": idx,
             "has_tenable": has_tenable,
             "has_splunk": has_splunk,
+            "tenable_raw": tenable_raw,
+            "splunk_raw": splunk_raw,
         }
         assets.append(asset)
 
     # Sort: complete by score desc, then pending
     assets.sort(key=lambda x: (x["status"] == "Pending", -(x["risk_score"] or 0)))
+    logger.info(
+        "[DEBUG] load_data EXIT assets=%s pending=%s complete=%s",
+        len(assets),
+        sum(1 for a in assets if a.get("status") in ("Pending", "Analyzing")),
+        sum(1 for a in assets if a.get("status") == "Complete"),
+    )
 
     return df, assets
 
@@ -866,6 +1237,20 @@ def compute_stats(assets):
     n_no_splunk = sum(1 for a in assets if not a.get("has_splunk"))
     
     progress_pct = (n_complete / total * 100) if total > 0 else 0
+    logger.debug(
+        "[DEBUG] compute_stats total=%s critical=%s high=%s medium=%s low=%s pending=%s complete=%s correlated=%s no_tenable=%s no_splunk=%s progress=%.2f",
+        total,
+        n_critical,
+        n_high,
+        n_medium,
+        n_low,
+        n_pending,
+        n_complete,
+        n_correlated,
+        n_no_tenable,
+        n_no_splunk,
+        progress_pct,
+    )
 
     return {
         "n_total": total,
@@ -909,6 +1294,12 @@ def tui(stdscr, df_initial, assets_initial):
     analysis_msg = ""
     reload_requested = False
 
+    # Persistent pane windows — created once and reused every frame to avoid flicker.
+    # Recreated only when the terminal size or layout dimensions change.
+    _left_win = None
+    _right_win = None
+    _pane_cache_key = None  # (list_h, left_w, pane_h, right_w, pane_top)
+
     def filtered():
         f = FILTERS[filt_idx]
         if f == "All":
@@ -924,6 +1315,7 @@ def tui(stdscr, df_initial, assets_initial):
     def reload_data():
         nonlocal df, assets_all, analysis_msg, sel_idx, scroll, reload_requested
         try:
+            logger.info("[DEBUG] reload_data TRIGGERED")
             analysis_msg = "Reloading data from CSV files..."
             new_df, new_assets = load_data()
             df = new_df
@@ -932,14 +1324,18 @@ def tui(stdscr, df_initial, assets_initial):
             scroll = 0
             analysis_msg = f"Data reloaded: {len(assets_all)} assets"
             reload_requested = False
+            logger.info("[DEBUG] reload_data COMPLETE assets=%s", len(assets_all))
         except Exception as e:
             analysis_msg = f"ERROR: Failed to reload data - {str(e)}"
+            logger.exception("[DEBUG] reload_data FAILED")
             reload_requested = False
 
     def start_analysis():
         nonlocal analysis_msg
         try:
+            logger.info("[DEBUG] start_analysis TRIGGERED")
             pending_assets = [a for a in assets_all if a.get("status") == "Pending"]
+            logger.debug("[DEBUG] start_analysis pending_assets=%s", len(pending_assets))
             if not pending_assets:
                 analysis_msg = "No pending assets to analyze"
                 logger.info("No pending assets to analyze")
@@ -951,9 +1347,13 @@ def tui(stdscr, df_initial, assets_initial):
                 logger.error("DGX Spark Server not configured")
                 return
 
-            # Mark assets as analyzing
+            # Mark assets as analyzing and clear prior errors so retries work
             for a in pending_assets:
                 a["status"] = "Analyzing"
+                idx = a.get("df_index")
+                if idx is not None and idx in df.index:
+                    df.at[idx, "ai_analysis_error"] = pd.NA
+                    df.at[idx, "ai_analysis_complete"] = False
 
             analysis_msg = f"Starting AI analysis for {len(pending_assets)} assets..."
             logger.info("="*70)
@@ -977,6 +1377,7 @@ def tui(stdscr, df_initial, assets_initial):
             )
             analysis_state.set_thread(thread)
             thread.start()
+            logger.info("[DEBUG] start_analysis THREAD_STARTED request_id=%s", request_id)
         except Exception as e:
             analysis_msg = f"ERROR: Failed to start analysis - {str(e)}"
             logger.error(f"Failed to start analysis: {e}", exc_info=True)
@@ -986,6 +1387,13 @@ def tui(stdscr, df_initial, assets_initial):
         nonlocal df, assets_all, analysis_msg, sel_idx
         try:
             running, request_id, df_json, status = analysis_state.get_state()
+            logger.debug(
+                "[DEBUG] update_from_analysis state running=%s request_id=%s has_df_json=%s status=%s",
+                running,
+                request_id,
+                bool(df_json),
+                status,
+            )
             
             # Update status message if available
             if status:
@@ -998,6 +1406,11 @@ def tui(stdscr, df_initial, assets_initial):
                     from io import StringIO
                     # Use StringIO to parse JSON string properly
                     df_updated = pd.read_json(StringIO(df_json), orient="split")
+                    logger.debug(
+                        "[DEBUG] update_from_analysis parsed dataframe rows=%s cols=%s",
+                        len(df_updated),
+                        len(df_updated.columns),
+                    )
                     
                     # Track which assets were just completed
                     newly_completed = []
@@ -1005,44 +1418,50 @@ def tui(stdscr, df_initial, assets_initial):
                     
                     # Update assets with latest analysis results
                     for asset in assets_all:
-                        idx = asset["df_index"]
-                        if idx in df_updated.index:
-                            row = df_updated.loc[idx]
-                            
-                            # Check if this asset just completed
-                            is_complete = bool(row.get("ai_analysis_complete"))
-                            was_complete = asset["status"] == "Complete"
-                            
-                            if is_complete and not was_complete:
-                                # Asset just completed
-                                asset["status"] = "Complete"
-                                risk_score = row.get("risk_score")
-                                asset["risk_score"] = float(risk_score) if pd.notna(risk_score) else None
-                                asset["risk_level"] = str(row.get("risk_level", "Low"))
-                                asset["overall_priority_level"] = str(row.get("overall_priority_level", "Unknown"))
-                                asset["ai_reason"] = str(row.get("ai_reason", ""))
-                                asset["remediation"] = str(row.get("remediation", ""))
-                                
-                                score_str = f"({asset['risk_score']:.1f})" if asset['risk_score'] else ""
+                        idx = _resolve_df_index(df_updated, asset["df_index"])
+                        if idx is None:
+                            continue
+                        row = df_updated.loc[idx]
+
+                        if asset.get("status") not in ("Analyzing", "Pending", "Complete"):
+                            continue
+
+                        prev_status = asset.get("status")
+                        if _sync_asset_from_row(asset, row):
+                            if asset.get("status") == "Complete" and prev_status != "Complete":
+                                score_str = (
+                                    f"({asset['risk_score']:.1f})"
+                                    if asset.get("risk_score") is not None
+                                    else ""
+                                )
                                 newly_completed.append(asset["asset_name"])
                                 updates_made = True
-                                logger.info(f"✓ Completed: {asset['asset_name']} - Risk: {asset['risk_level']} {score_str}")
-                            elif is_complete and was_complete:
-                                # Already complete, just update data in case it changed
-                                risk_score = row.get("risk_score")
-                                asset["risk_score"] = float(risk_score) if pd.notna(risk_score) else None
-                                asset["risk_level"] = str(row.get("risk_level", "Low"))
-                                asset["overall_priority_level"] = str(row.get("overall_priority_level", "Unknown"))
-                                asset["ai_reason"] = str(row.get("ai_reason", ""))
-                                asset["remediation"] = str(row.get("remediation", ""))
+                                logger.info(
+                                    "Completed: %s - Risk: %s %s",
+                                    asset["asset_name"],
+                                    asset.get("risk_level"),
+                                    score_str,
+                                )
+                            elif asset.get("status") == "Pending" and prev_status == "Analyzing":
+                                updates_made = True
+                                logger.info(
+                                    "Analysis failed for %s (reset to Pending)",
+                                    asset["asset_name"],
+                                )
                     
                     # Update dataframe reference
                     df = df_updated
                     
                     if updates_made:
-                        # Re-sort when assets complete
-                        assets_all.sort(key=lambda x: (x["status"] in ("Pending", "Analyzing"), -(x["risk_score"] or 0)))
-                        logger.info(f"TUI updated: {len(newly_completed)} asset(s) completed")
+                        # Re-sort when assets complete or fail
+                        assets_all.sort(
+                            key=lambda x: (
+                                x["status"] in ("Pending", "Analyzing"),
+                                -(x["risk_score"] or 0),
+                            )
+                        )
+                        logger.info("TUI updated: %s asset(s) completed", len(newly_completed))
+                        logger.debug("[DEBUG] newly_completed=%s", newly_completed)
                         
                 except (ValueError, json.JSONDecodeError) as e:
                     # JSON parsing error - ignore and wait for next update
@@ -1061,11 +1480,20 @@ def tui(stdscr, df_initial, assets_initial):
                     df = new_df
                     assets_all = new_assets
                     sel_idx = min(sel_idx, len(assets_all) - 1) if assets_all else 0
-                    logger.info(f"Final reload complete: {len(assets_all)} assets")
-                    analysis_msg = "Analysis complete! All data updated."
+                    logger.info("Final reload complete: %s assets", len(assets_all))
+                    analysis_msg = status.get("message") or "Analysis complete! All data updated."
                 except Exception as e:
+                    # Fallback: reset any stuck Analyzing rows from last known df
+                    for asset in assets_all:
+                        if asset.get("status") != "Analyzing":
+                            continue
+                        idx = _resolve_df_index(df, asset["df_index"])
+                        if idx is not None:
+                            _sync_asset_from_row(asset, df.loc[idx])
+                        else:
+                            asset["status"] = "Pending"
                     analysis_msg = f"WARNING: Could not reload final data - {str(e)[:50]}"
-                    logger.error(f"Reload failed: {e}", exc_info=True)
+                    logger.error("Reload failed: %s", e, exc_info=True)
                 analysis_state.reset()
         except Exception as e:
             # Don't crash on update errors, just log and continue
@@ -1077,7 +1505,9 @@ def tui(stdscr, df_initial, assets_initial):
     while True:
         _debug_frame += 1
         H, W = stdscr.getmaxyx()
+        logger.debug("[DEBUG] FRAME START frame=%s H=%s W=%s", _debug_frame, H, W)
         if H < 30 or W < 70:
+            logger.warning("[DEBUG] frame=%s terminal too small H=%s W=%s", _debug_frame, H, W)
             stdscr.erase()
             safe_addstr(
                 stdscr,
@@ -1094,6 +1524,7 @@ def tui(stdscr, df_initial, assets_initial):
 
         # Handle data reload request
         if reload_requested:
+            logger.info("[DEBUG] FRAME %s reload_requested=True", _debug_frame)
             reload_data()
             continue
 
@@ -1103,6 +1534,17 @@ def tui(stdscr, df_initial, assets_initial):
         update_from_analysis()
 
         vis_assets = filtered()
+        logger.debug(
+            "[DEBUG] FRAME %s post-filter assets=%s running=%s focus=%s sel_idx=%s scroll=%s detail_scroll=%s analysis_msg=%s",
+            _debug_frame,
+            len(vis_assets),
+            running,
+            focus,
+            sel_idx,
+            scroll,
+            detail_scroll,
+            analysis_msg,
+        )
         if not vis_assets:
             sel_idx = 0
             scroll = 0
@@ -1179,58 +1621,82 @@ def tui(stdscr, df_initial, assets_initial):
 
         # Stats panel - always recompute to reflect current state
         stats = compute_stats(assets_all)
+        logger.debug("[DEBUG] FRAME %s render stats panel", _debug_frame)
         draw_stats_panel(stdscr, stats, start_row=stats_row)
 
         # Filter tabs
+        logger.debug("[DEBUG] FRAME %s render filter bar", _debug_frame)
         draw_filter_bar(stdscr, filt_idx, assets_all, filter_row)
 
-        # Left pane - asset list
+        # Controls bar and status bar should be queued before pane subwindows on Linux ncurses.
+        # This avoids the full-screen stdscr refresh clobbering the left/right panes.
+        logger.debug("[DEBUG] FRAME %s render controls/status bars", _debug_frame)
+        draw_controls_bar(stdscr, controls_row, focus, running)
+
+        try:
+            current_stats = compute_stats(assets_all)
+            status_msg = analysis_msg if analysis_msg else f"Ready - {current_stats['n_complete']} analyzed, {current_stats['n_pending']} pending"
+            status_msg = status_msg.replace('\n', ' ').replace('\r', ' ')
+            draw_status(
+                stdscr,
+                len(vis_assets),
+                len(assets_all),
+                FILTERS[filt_idx],
+                status_msg,
+                status_row,
+            )
+        except Exception as e:
+            safe_addstr(stdscr, status_row, 0, f"Status Error: {str(e)[:50]}", curses.color_pair(PAIR_WARN))
+
+        stdscr.noutrefresh()
+
+        # Left and right pane windows — reuse cached windows to stop per-frame flicker.
+        # Only recreate when terminal size or layout dimensions change.
         if sel_idx < scroll:
             scroll = sel_idx
         elif sel_idx >= scroll + (list_h - 3):
             scroll = sel_idx - (list_h - 3) + 1
         scroll = max(0, scroll)
 
-        # DEBUG: log newwin args before creation
-        logger.info(
-            f"[DEBUG] Creating left_win: newwin(nlines={list_h}, ncols={left_w}, "
-            f"begin_y={pane_top}, begin_x=0) terminal=({H}x{W})"
-        )
-        try:
-            left_win = curses.newwin(list_h, left_w, pane_top, 0)
-        except curses.error as _exc:
-            logger.error(
-                f"[DEBUG] LEFT_WIN newwin FAILED — "
-                f"args: nlines={list_h}, ncols={left_w}, begin_y={pane_top}, begin_x=0 | "
-                f"terminal: H={H}, W={W} | error: {_exc!r}"
+        _new_cache_key = (list_h, left_w, pane_h, right_w, pane_top)
+        if _pane_cache_key != _new_cache_key:
+            logger.info(
+                "[DEBUG] Pane windows (re)created: left=newwin(%s,%s,y=%s,x=0) "
+                "right=newwin(%s,%s,y=%s,x=%s) terminal=(%sx%s)",
+                list_h, left_w, pane_top,
+                pane_h, right_w, pane_top, left_w,
+                H, W,
             )
-            raise  # re-raise so the traceback is visible
+            try:
+                _left_win = curses.newwin(list_h, left_w, pane_top, 0)
+            except curses.error as _exc:
+                logger.error(
+                    "[DEBUG] LEFT_WIN newwin FAILED args=(%s,%s,y=%s,x=0) terminal=(%sx%s) err=%r",
+                    list_h, left_w, pane_top, H, W, _exc,
+                )
+                raise
+            try:
+                _right_win = curses.newwin(pane_h, right_w, pane_top, left_w)
+            except curses.error as _exc:
+                logger.error(
+                    "[DEBUG] RIGHT_WIN newwin FAILED args=(%s,%s,y=%s,x=%s) terminal=(%sx%s) err=%r",
+                    pane_h, right_w, pane_top, left_w, H, W, _exc,
+                )
+                raise
+            # clearok only on newly created windows — forces one full repaint, not every frame
+            _left_win.clearok(True)
+            _right_win.clearok(True)
+            _pane_cache_key = _new_cache_key
+
+        left_win = _left_win
+        right_win = _right_win
 
         logger.info(
             "[DEBUG] Calling draw_asset_list: win_size=(%s,%s) assets=%s sel_idx=%s scroll=%s",
-            list_h,
-            left_w,
-            len(vis_assets),
-            sel_idx,
-            scroll,
+            list_h, left_w, len(vis_assets), sel_idx, scroll,
         )
         draw_asset_list(left_win, vis_assets, sel_idx, scroll)
         logger.info("[DEBUG] draw_asset_list returned")
-
-        # Right pane - detail
-        logger.info(
-            f"[DEBUG] Creating right_win: newwin(nlines={pane_h}, ncols={right_w}, "
-            f"begin_y={pane_top}, begin_x={left_w}) terminal=({H}x{W})"
-        )
-        try:
-            right_win = curses.newwin(pane_h, right_w, pane_top, left_w)
-        except curses.error as _exc:
-            logger.error(
-                f"[DEBUG] RIGHT_WIN newwin FAILED — "
-                f"args: nlines={pane_h}, ncols={right_w}, begin_y={pane_top}, begin_x={left_w} | "
-                f"terminal: H={H}, W={W} | error: {_exc!r}"
-            )
-            raise  # re-raise so the traceback is visible
 
         sel_asset = vis_assets[sel_idx] if vis_assets else None
 
@@ -1253,87 +1719,89 @@ def tui(stdscr, df_initial, assets_initial):
         detail_visible_h = pane_h - 2
         detail_max_scroll = max(0, detail_content_h - detail_visible_h)
         detail_scroll = max(0, min(detail_scroll, detail_max_scroll))
-
-        # Controls bar
-        draw_controls_bar(stdscr, controls_row, focus, running)
-
-        # Status bar - show accurate counts
-        try:
-            current_stats = compute_stats(assets_all)
-            status_msg = analysis_msg if analysis_msg else f"Ready - {current_stats['n_complete']} analyzed, {current_stats['n_pending']} pending"
-            # Sanitize message to prevent display issues
-            status_msg = status_msg.replace('\n', ' ').replace('\r', ' ')
-            draw_status(
-                stdscr,
-                len(vis_assets),
-                len(assets_all),
-                FILTERS[filt_idx],
-                status_msg,
-                status_row,
-            )
-        except Exception as e:
-            # Fallback status if there's an error
-            safe_addstr(stdscr, status_row, 0, f"Status Error: {str(e)[:50]}", curses.color_pair(PAIR_WARN))
-
-        stdscr.noutrefresh()
         curses.doupdate()
+        logger.debug("[DEBUG] FRAME END frame=%s doupdate complete", _debug_frame)
 
         # Input
         key = stdscr.getch()
+        try:
+            key_name = curses.keyname(key).decode("utf-8", errors="replace") if key != -1 else "NO_KEY"
+        except Exception:
+            key_name = str(key)
+        logger.debug("[DEBUG] INPUT frame=%s key=%s key_name=%s", _debug_frame, key, key_name)
 
         if key in (ord("q"), ord("Q"), 27):  # Q / Esc → quit
+            logger.info("[DEBUG] INPUT action=quit frame=%s", _debug_frame)
             break
         elif key in (ord("r"), ord("R")) and not running:  # R → run analysis
+            logger.info("[DEBUG] INPUT action=start_analysis frame=%s", _debug_frame)
             start_analysis()
         elif key == curses.KEY_F5 or key == 269:  # F5 → reload data (269 is F5 on some terminals)
             if not running:
+                logger.info("[DEBUG] INPUT action=reload_requested frame=%s", _debug_frame)
                 reload_requested = True
             else:
+                logger.info("[DEBUG] INPUT action=reload_blocked_running frame=%s", _debug_frame)
                 analysis_msg = "Cannot reload while analysis is running"
         elif key in (ord("\t"), 9):  # Tab → toggle focus
             focus = "detail" if focus == "list" else "list"
+            logger.info("[DEBUG] INPUT action=toggle_focus new_focus=%s frame=%s", focus, _debug_frame)
         elif key == curses.KEY_LEFT:  # ← filter
             filt_idx = (filt_idx - 1) % len(FILTERS)
             sel_idx = 0
             scroll = 0
+            logger.info("[DEBUG] INPUT action=filter_left new_filter=%s frame=%s", FILTERS[filt_idx], _debug_frame)
         elif key == curses.KEY_RIGHT:  # → filter
             filt_idx = (filt_idx + 1) % len(FILTERS)
             sel_idx = 0
             scroll = 0
+            logger.info("[DEBUG] INPUT action=filter_right new_filter=%s frame=%s", FILTERS[filt_idx], _debug_frame)
         elif key == curses.KEY_UP:  # ↑
             if focus == "detail":
                 detail_scroll = max(0, detail_scroll - 1)
+                logger.debug("[DEBUG] INPUT action=detail_scroll_up frame=%s detail_scroll=%s", _debug_frame, detail_scroll)
             else:
                 sel_idx = max(0, sel_idx - 1)
+                logger.debug("[DEBUG] INPUT action=select_up frame=%s sel_idx=%s", _debug_frame, sel_idx)
         elif key == curses.KEY_DOWN:  # ↓
             if focus == "detail":
                 detail_scroll = min(detail_max_scroll, detail_scroll + 1)
+                logger.debug("[DEBUG] INPUT action=detail_scroll_down frame=%s detail_scroll=%s", _debug_frame, detail_scroll)
             else:
                 if vis_assets:
                     sel_idx = min(len(vis_assets) - 1, sel_idx + 1)
+                    logger.debug("[DEBUG] INPUT action=select_down frame=%s sel_idx=%s", _debug_frame, sel_idx)
         elif key == curses.KEY_PPAGE:  # Page Up
             if focus == "detail":
                 detail_scroll = max(0, detail_scroll - (detail_visible_h - 1))
+                logger.debug("[DEBUG] INPUT action=detail_page_up frame=%s detail_scroll=%s", _debug_frame, detail_scroll)
             else:
                 sel_idx = max(0, sel_idx - (list_h - 3))
+                logger.debug("[DEBUG] INPUT action=list_page_up frame=%s sel_idx=%s", _debug_frame, sel_idx)
         elif key == curses.KEY_NPAGE:  # Page Down
             if focus == "detail":
                 detail_scroll = min(detail_max_scroll, detail_scroll + (detail_visible_h - 1))
+                logger.debug("[DEBUG] INPUT action=detail_page_down frame=%s detail_scroll=%s", _debug_frame, detail_scroll)
             else:
                 if vis_assets:
                     sel_idx = min(len(vis_assets) - 1, sel_idx + (list_h - 3))
+                    logger.debug("[DEBUG] INPUT action=list_page_down frame=%s sel_idx=%s", _debug_frame, sel_idx)
         elif key == curses.KEY_HOME:  # Home
             if focus == "detail":
                 detail_scroll = 0
+                logger.debug("[DEBUG] INPUT action=detail_home frame=%s", _debug_frame)
             else:
                 sel_idx = 0
                 scroll = 0
+                logger.debug("[DEBUG] INPUT action=list_home frame=%s", _debug_frame)
         elif key == curses.KEY_END:  # End
             if focus == "detail":
                 detail_scroll = detail_max_scroll
+                logger.debug("[DEBUG] INPUT action=detail_end frame=%s detail_scroll=%s", _debug_frame, detail_scroll)
             else:
                 if vis_assets:
                     sel_idx = len(vis_assets) - 1
+                    logger.debug("[DEBUG] INPUT action=list_end frame=%s sel_idx=%s", _debug_frame, sel_idx)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1341,13 +1809,16 @@ def tui(stdscr, df_initial, assets_initial):
 # ══════════════════════════════════════════════════════════════════════════════
 def main():
     """Main entry point."""
-    print("Loading data…", end=" ", flush=True)
+    logger.info("[DEBUG] main ENTER log_file=%s", LOG_FILE)
+    logger.info("Loading data...")
     df, assets = load_data()
-    print(f"{len(assets)} assets loaded.")
-    print(f"\nAI Analysis logs will be written to: {LOG_FILE}")
-    print("To monitor in real-time, open another terminal and run:")
-    print(f"  powershell -Command \"Get-Content '{LOG_FILE}' -Wait -Tail 20\"")
-    print("\nLaunching TUI…")
+    logger.info("%s assets loaded.", len(assets))
+    logger.info("AI Analysis logs are written to: %s", LOG_FILE)
+    logger.info("To monitor in real-time on Windows PowerShell:")
+    logger.info("  Get-Content '%s' -Wait -Tail 200", LOG_FILE)
+    logger.info("To monitor in real-time on Linux/DGX:")
+    logger.info("  tail -f %s", LOG_FILE)
+    logger.info("Launching TUI...")
     logger.info("="*70)
     logger.info("TUI Dashboard Started")
     logger.info(f"Total assets loaded: {len(assets)}")
@@ -1357,7 +1828,7 @@ def main():
     except KeyboardInterrupt:
         pass
     logger.info("Dashboard closed.")
-    print("Dashboard closed.")
+    logger.info("[DEBUG] main EXIT")
 
 
 if __name__ == "__main__":

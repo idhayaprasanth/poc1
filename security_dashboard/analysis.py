@@ -137,6 +137,12 @@ def run_analysis_worker_thread(
         batch_size: Number of rows per LLM batch
         state: Shared AnalysisBackgroundState object
     """
+    logger.info(
+        "[DEBUG] analysis.worker ENTER request_id=%s batch_size=%s total_rows=%s",
+        request_id,
+        batch_size,
+        len(df),
+    )
     client = DGXSparkServerClient()
     total_rows = len(df)
     total_completed = 0
@@ -148,6 +154,7 @@ def run_analysis_worker_thread(
         pending = analysis_pending_mask(df)
         batch_indices = list(df.index[pending][:batch_size])
         if not batch_indices:
+            logger.debug("[DEBUG] analysis.worker no batch indices remain")
             break
 
         batch_number += 1
@@ -167,6 +174,11 @@ def run_analysis_worker_thread(
             batch_number,
             len(batch_indices),
             ", ".join(batch_assets),
+        )
+        logger.debug(
+            "[DEBUG] analysis.worker batch_number=%s batch_indices=%s",
+            batch_number,
+            batch_indices,
         )
 
         max_workers = min(4, len(batch_indices))
@@ -206,6 +218,13 @@ def run_analysis_worker_thread(
                     logger.exception("AI analysis failed for asset %s", asset_label)
                     df.at[idx, "ai_analysis_error"] = str(exc)
                     total_failed += 1
+                logger.debug(
+                    "[DEBUG] analysis.worker row_complete idx=%s completed=%s failed=%s pending_left=%s",
+                    idx,
+                    total_completed,
+                    total_failed,
+                    int(analysis_pending_mask(df).sum()),
+                )
 
                 # Update progress in state immediately after each row completes
                 pending_left = int(analysis_pending_mask(df).sum())
@@ -253,6 +272,13 @@ def run_analysis_worker_thread(
     state.finish_analysis(
         df.to_json(date_format="iso", orient="split"),
         status,
+    )
+    logger.info(
+        "[DEBUG] analysis.worker EXIT status=%s completed=%s failed=%s pending_left=%s",
+        status,
+        total_completed,
+        total_failed,
+        pending_left,
     )
 
     # Log final summary

@@ -3,12 +3,23 @@
 Launcher script for the TUI Dashboard.
 This script checks dependencies and launches the TUI.
 """
+import logging
 import sys
 from pathlib import Path
 
+LOG_FILE = Path(__file__).parent / "tui_ai_analysis.log"
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler(LOG_FILE, mode="a", encoding="utf-8")],
+    force=True,
+)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 # Check Python version
 if sys.version_info < (3, 8):
-    print("ERROR: Python 3.8 or higher is required")
+    logger.error("Python 3.8 or higher is required")
     sys.exit(1)
 
 # Check dependencies
@@ -29,10 +40,10 @@ except ImportError:
     missing_deps.append("requests")
 
 if missing_deps:
-    print("ERROR: Missing required dependencies:")
+    logger.error("Missing required dependencies:")
     for dep in missing_deps:
-        print(f"  - {dep}")
-    print("\nInstall with: pip install -r requirements.txt")
+        logger.error("  - %s", dep)
+    logger.error("Install with: pip install -r requirements.txt")
     sys.exit(1)
 
 # Check for data files
@@ -41,19 +52,19 @@ tenable_dir = data_dir / "tenable"
 splunk_dir = data_dir / "splunk"
 
 if not tenable_dir.exists() or not splunk_dir.exists():
-    print("WARNING: Data directories not found")
-    print(f"  Tenable: {tenable_dir}")
-    print(f"  Splunk: {splunk_dir}")
-    print("\nPlease add CSV files to these directories.")
+    logger.warning("Data directories not found")
+    logger.warning("  Tenable: %s", tenable_dir)
+    logger.warning("  Splunk: %s", splunk_dir)
+    logger.warning("Please add CSV files to these directories.")
 
 tenable_files = list(tenable_dir.glob("*.csv")) if tenable_dir.exists() else []
 splunk_files = list(splunk_dir.glob("*.csv")) if splunk_dir.exists() else []
 
 if not tenable_files and not splunk_files:
-    print("WARNING: No CSV files found in data directories")
-    print("The dashboard will start but may not show any data.")
-    print("\nAdd Tenable CSV files to: security_dashboard/data/seed_data/tenable/")
-    print("Add Splunk CSV files to: security_dashboard/data/seed_data/splunk/")
+    logger.warning("No CSV files found in data directories")
+    logger.warning("The dashboard will start but may not show any data.")
+    logger.warning("Add Tenable CSV files to: security_dashboard/data/seed_data/tenable/")
+    logger.warning("Add Splunk CSV files to: security_dashboard/data/seed_data/splunk/")
     response = input("\nContinue anyway? (y/n): ")
     if response.lower() != 'y':
         sys.exit(0)
@@ -64,7 +75,7 @@ import os
 # Load .env file if it exists
 env_file = Path(__file__).parent / ".env"
 if env_file.exists():
-    print(f"\nLoading environment from: {env_file}")
+    logger.info("Loading environment from: %s", env_file)
     with open(env_file, 'r') as f:
         for line in f:
             line = line.strip()
@@ -76,34 +87,32 @@ if env_file.exists():
 
 dgx_endpoint = os.getenv("DGX_SPARK_SERVER_ENDPOINT_URL")
 if not dgx_endpoint:
-    print("\nWARNING: DGX_SPARK_SERVER_ENDPOINT_URL not set")
-    print("AI analysis will not work without this endpoint.")
-    print("Set it with: export DGX_SPARK_SERVER_ENDPOINT_URL=<your-endpoint>")
-    print("Or add it to .env file in the project root")
-    print("\nYou can still view existing cached analysis results.")
+    logger.warning("DGX_SPARK_SERVER_ENDPOINT_URL not set")
+    logger.warning("AI analysis will not work without this endpoint.")
+    logger.warning("Set it with: export DGX_SPARK_SERVER_ENDPOINT_URL=<your-endpoint>")
+    logger.warning("Or add it to .env file in the project root")
+    logger.warning("You can still view existing cached analysis results.")
 
-print("\n" + "="*70)
-print("  VULNERABILITY RISK INTELLIGENCE DASHBOARD - TUI")
-print("="*70)
+logger.info("=" * 70)
+logger.info("  VULNERABILITY RISK INTELLIGENCE DASHBOARD - TUI")
+logger.info("=" * 70)
 if tenable_files:
-    print(f"  Tenable files: {len(tenable_files)}")
+    logger.info("  Tenable files: %s", len(tenable_files))
 if splunk_files:
-    print(f"  Splunk files: {len(splunk_files)}")
+    logger.info("  Splunk files: %s", len(splunk_files))
 if dgx_endpoint:
-    print(f"  AI Endpoint: Configured")
+    logger.info("  AI Endpoint: Configured")
 else:
-    print(f"  AI Endpoint: NOT CONFIGURED (AI analysis disabled)")
-print("="*70)
-print("\nStarting dashboard...\n")
+    logger.info("  AI Endpoint: NOT CONFIGURED (AI analysis disabled)")
+logger.info("=" * 70)
+logger.info("Starting dashboard...")
 
 # Launch TUI
 try:
     from tui_dashboard import main
     main()
 except KeyboardInterrupt:
-    print("\n\nDashboard interrupted by user.")
+    logger.info("Dashboard interrupted by user.")
 except Exception as e:
-    print(f"\n\nERROR: Dashboard crashed: {e}")
-    import traceback
-    traceback.print_exc()
+    logger.exception("Dashboard crashed: %s", e)
     sys.exit(1)
